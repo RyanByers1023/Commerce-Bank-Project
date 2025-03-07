@@ -1,13 +1,119 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="/src/output.css" rel="stylesheet">
+    <title>Stock Market Graph</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-<h1 class="text-3xl font-bold underline bg-green-500">
-    Stock Market Sim placeholder
-</h1>
+<body class="bg-gray-100 flex flex-col items-center justify-center h-screen">
+    <div class="mb-4 flex space-x-2">
+        <button class="bg-gray-400 px-4 py-2 text-white rounded hover:scale-105 transition" onclick="setTimeframe('1D')">1 Day</button>
+        <button class="bg-gray-400 px-4 py-2 text-white rounded hover:scale-105 transition" onclick="setTimeframe('1W')">1 Week</button>
+        <button class="bg-gray-400 px-4 py-2 text-white rounded hover:scale-105 transition" onclick="setTimeframe('1M')">1 Month</button>
+        <select id="stockSelect" class="px-3 py-2 border rounded" onchange="changeStock()">
+            <option value="AAPL">Apple</option>
+            <option value="GOOGL">Google</option>
+            <option value="TSLA">Tesla</option>
+            <option value="AMZN">Amazon</option>
+        </select>
+    </div>
+    <canvas id="stockCanvas" width="800" height="400" class="border-2 border-gray-500 bg-gray-200 shadow-lg"></canvas>
+    <script>
+        const canvas = document.getElementById("stockCanvas");
+        const ctx = canvas.getContext("2d");
+        
+        const width = canvas.width;
+        const height = canvas.height;
+        const graphPadding = 60;
+        let timeframe = '1D';
+        let numPoints = 50;
+        let hypeFactor = 0;
+        let stockPrices = Array(numPoints).fill(100);
+        let currentStock = "AAPL";
+        let timeSinceLastCrash = 0;
+        let timeSinceLastBoost = 0;
+        
+        async function fetchStockData() {
+            try {
+                const response = await fetch(`/api/stocks?symbol=${currentStock}&timeframe=${timeframe}`);
+                if (!response.ok) throw new Error("Network response was not ok");
+                const data = await response.json();
+                stockPrices = data.prices || stockPrices;
+                hypeFactor = data.hypeFactor || 0;
+                timeSinceLastCrash = data.timeSinceLastCrash || 0;
+                timeSinceLastBoost = data.timeSinceLastBoost || 0;
+                drawGraph();
+            } catch (error) {
+                console.error("Error fetching stock data:", error);
+            }
+        }
+        
+        function smoothPriceUpdate() {
+            let lastPrice = stockPrices[stockPrices.length - 1];
+            let change = (Math.random() - 0.5) * 2.5;
+            change += hypeFactor;
+            timeSinceLastCrash++;
+            timeSinceLastBoost++;
+            
+            if (timeSinceLastCrash > 40 && Math.random() < 0.07) {
+                change -= Math.random() * 18;
+                timeSinceLastCrash = 0;
+            }
+            
+            if (timeSinceLastBoost > 40 && Math.random() < 0.07) {
+                change += Math.random() * 18;
+                timeSinceLastBoost = 0;
+            }
+            
+            let newPrice = lastPrice + change;
+            newPrice = Math.max(50, Math.min(200, newPrice));
+            stockPrices.shift();
+            stockPrices.push(newPrice);
+            drawGraph();
+        }
+        
+        function drawGraph() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.strokeStyle = "#6B7280";
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.5;
+            for (let i = 0; i <= 5; i++) {
+                let y = graphPadding + (i * (height - 2 * graphPadding) / 5);
+                ctx.beginPath();
+                ctx.moveTo(graphPadding, y);
+                ctx.lineTo(width - graphPadding, y);
+                ctx.stroke();
+                ctx.fillStyle = "#374151";
+                ctx.globalAlpha = 1;
+                ctx.fillText("$" + (150 - i * 25).toFixed(0), 10, y + 5);
+            }
+            
+            ctx.strokeStyle = "#374151";
+            ctx.lineWidth = 3;
+            ctx.globalAlpha = 1;
+            ctx.beginPath();
+            for (let i = 0; i < stockPrices.length; i++) {
+                let x = graphPadding + (i * (width - 2 * graphPadding) / numPoints);
+                let y = height - graphPadding - (stockPrices[i] - 50) * (height - 2 * graphPadding) / 100;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+        
+        function setTimeframe(tf) {
+            timeframe = tf;
+            fetchStockData();
+        }
+        
+        function changeStock() {
+            currentStock = document.getElementById("stockSelect").value;
+            fetchStockData();
+        }
+        
+        setInterval(smoothPriceUpdate, 500);
+        fetchStockData();
+    </script>
 </body>
 </html>
