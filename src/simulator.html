@@ -1,12 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Market Graph</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
 <body class="bg-gray-100 flex flex-col items-center justify-center h-screen">
+
+    <!--Timeframe buttons:-->
     <div class="mb-4 flex space-x-2">
         <button class="bg-gray-400 px-4 py-2 text-white rounded hover:scale-105 transition" onclick="setTimeframe('1D')">1 Day</button>
         <button class="bg-gray-400 px-4 py-2 text-white rounded hover:scale-105 transition" onclick="setTimeframe('1W')">1 Week</button>
@@ -18,24 +12,41 @@
             <option value="AMZN">Amazon</option>
         </select>
     </div>
+
+    <!--Graph canvas-->
     <canvas id="stockCanvas" width="800" height="400" class="border-2 border-gray-500 bg-gray-200 shadow-lg"></canvas>
+
+    <!--<script></script> block can be moved to js (Javascript) folder (/src/js) to reduce clutter-->
     <script>
+        //canvas graph will be drawn onto
         const canvas = document.getElementById("stockCanvas");
-        const ctx = canvas.getContext("2d");
+
+        //Get 2D drawing context, store as ctx for later access
+        const ctx = canvas.getContext("2d"); 
         
         const width = canvas.width;
         const height = canvas.height;
+
         const graphPadding = 60;
+
+        //allows user to zoom in/out of graph: '1D', '1W', '1M', '1Y', etc.
         let timeframe = '1D';
+
         let numPoints = 50;
+
         let hypeFactor = 0;
+
         let stockPrices = Array(numPoints).fill(100);
+
         let currentStock = "AAPL";
+
         let timeSinceLastCrash = 0;
+        
         let timeSinceLastBoost = 0;
         
-        async function fetchStockData() {
+        async function fetchStockData(currentStock, timeFrame) {
             try {
+                //maybe this is where we can make a call to our LLM (ChatGPT or something of the like):
                 const response = await fetch(`/api/stocks?symbol=${currentStock}&timeframe=${timeframe}`);
                 if (!response.ok) throw new Error("Network response was not ok");
                 const data = await response.json();
@@ -49,30 +60,52 @@
             }
         }
         
-        function smoothPriceUpdate() {
+        function smoothPriceUpdate(currentStock) {
+            const PRICE_MIN = 50;
+            const PRICE_MAX = 200;
+
+            //scales the change for this iteration by 2.5
+            const RANDOM_CHANGE_SCALE = 2.5;
+
+            const CRASH_BOOST_THRESHOLD = 40;
+            const CRASH_BOOST_PROBABILITY = 0.07;
+            const CRASH_BOOST_IMPACT = 18;
+            const RESET_SCALING_FACTOR = 0.3;
+
             let lastPrice = stockPrices[stockPrices.length - 1];
-            let change = (Math.random() - 0.5) * 2.5;
+            
+            // Random price change with hype factor
+            let change = (Math.random() - 0.5) * RANDOM_CHANGE_SCALE;
             change += hypeFactor;
+
+            // Increment time trackers
             timeSinceLastCrash++;
             timeSinceLastBoost++;
-            
-            if (timeSinceLastCrash > 40 && Math.random() < 0.07) {
-                change -= Math.random() * 18;
-                timeSinceLastCrash = 0;
+
+            // Possible crash event
+            if (timeSinceLastCrash > CRASH_BOOST_THRESHOLD && Math.random() < CRASH_BOOST_PROBABILITY) {
+                change -= Math.random() * CRASH_BOOST_IMPACT;
+                timeSinceLastCrash = Math.floor(timeSinceLastCrash * RESET_SCALING_FACTOR);
             }
-            
-            if (timeSinceLastBoost > 40 && Math.random() < 0.07) {
-                change += Math.random() * 18;
-                timeSinceLastBoost = 0;
+
+            // Possible boost event
+            if (timeSinceLastBoost > CRASH_BOOST_THRESHOLD && Math.random() < CRASH_BOOST_PROBABILITY) {
+                change += Math.random() * CRASH_BOOST_IMPACT;
+                timeSinceLastBoost = Math.floor(timeSinceLastBoost * RESET_SCALING_FACTOR);
             }
-            
-            let newPrice = lastPrice + change;
-            newPrice = Math.max(50, Math.min(200, newPrice));
+
+            // Apply price bounds
+            let newPrice = Math.max(PRICE_MIN, Math.min(PRICE_MAX, lastPrice + change));
+
+            // Update stock price list
             stockPrices.shift();
             stockPrices.push(newPrice);
+
+            // Update the graph
             drawGraph();
-        }
+}
         
+        //FIX-ME: many magic numbers need to be replaced w/ named 
         function drawGraph() {
             ctx.clearRect(0, 0, width, height);
             ctx.strokeStyle = "#6B7280";
@@ -112,6 +145,7 @@
             fetchStockData();
         }
         
+        //FIX-ME: magic number
         setInterval(smoothPriceUpdate, 500);
         fetchStockData();
     </script>
