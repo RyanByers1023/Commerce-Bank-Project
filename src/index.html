@@ -3,17 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>Simulator Splash Page</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="flex items-center justify-center h-screen bg-[#28332D]">
-<div class="text-center bg-[#4D705F] p-8 rounded-lg shadow-lg">
-    <h1 class="text-3xl font-bold mb-6">The Project Last Minute Stock Market Simulator</h1>
-    <div class="space-x-4">
-        <a href="login.html" class="px-6 py-2 bg-[#46C586] text-white rounded-lg hover:bg-[#2EF090]">Login</a> 
-        <a href="register.html" class="px-6 py-2 bg-[#46C586] text-white rounded-lg hover:bg-[#2EF090]">Register</a>
+<body class="bg-[#28332D] text-white">
+
+    <!-- Navbar Placeholder -->
+    <div id="navbar-container"></div>
+
+    <!-- Load Navbar -->
+    <script src="navbar.js"></script>
+ 
+     <!-- Main Content Container -->
+    <div class="flex items-center justify-center min-h-screen bg-[#28332D] pt-16">
+
+        <!-- Centered Box Wrapper -->
+        <div class="flex flex-col items-center space-y-4">
+
+            <!-- Main Content -->
+            <div class="flex items-center justify-center h-screen bg-[#28332D] pt-16">
+                <div class="text-center bg-[#4D705F] p-8 rounded-lg shadow-lg w-96">
+
+                    <h1 class="text-3xl font-bold mb-6">The Project Last Minute Stock Market Simulator</h1>
+
+                    <!-- Login & Register Buttons -->
+                    <div class="space-x-4 mb-6">
+                        <a href="login.html" class="px-6 py-2 bg-[#46C586] text-white rounded-lg hover:bg-[#2EF090]">Login</a> 
+                        <a href="register.html" class="px-6 py-2 bg-[#46C586] text-white rounded-lg hover:bg-[#2EF090]">Register</a>
+                    </div>    
+                </div>
+            </div>
+
+            <!-- Market News Box (Separated) -->
+            <div class="bg-[#5E8A75] p-6 rounded-lg shadow-md w-96 text-center">
+                <h2 class="text-xl font-semibold mb-2">Market News</h2>
+                <p class="text-sm text-gray-200">Learn more about the simulator.</p>
+                <a href="about.html" class="mt-2 inline-block px-4 py-2 bg-[#46C586] text-white rounded-md hover:bg-[#2EF090]">Learn More</a>
+            </div>
+        </div>
     </div>
-</div>
+
+</body>
+</html>
+
 </body>
 </html>
 

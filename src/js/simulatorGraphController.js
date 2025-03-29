@@ -39,6 +39,14 @@ let stockPrices = Array(NUM_POINTS).fill(DEFAULT_PRICE);
 let timeSinceLastCrash = 0;
 let timeSinceLastBoost = 0;
 
+// Example list of user-invested stocks
+const userStocks = [
+    new Stock("AAPL", "Apple Inc.", 175.30, 5000000),
+    new Stock("GOOGL", "Alphabet Inc.", 2800.50, 3000000),
+    new Stock("TSLA", "Tesla Inc.", 850.75, 7000000),
+    new Stock("AMZN", "Amazon.com Inc.", 3450.20, 4000000)
+];
+
 /**
  * Fetches stock data from the API
  */
@@ -57,6 +65,19 @@ async function fetchStockData() {
     } catch (error) {
         console.error("Error fetching stock data:", error);
     }
+}
+
+// Function to populate the stock select dropdown
+function populateStockDropdown() {
+    const stockSelect = document.getElementById("stockSelect");
+    stockSelect.innerHTML = ""; // Clear existing options
+
+    userStocks.forEach(stock => {
+        const option = document.createElement("option");
+        option.value = stock.symbol;
+        option.textContent = stock.name;
+        stockSelect.appendChild(option);
+    });
 }
 
 /**
@@ -145,7 +166,7 @@ function setTimeframe(tf) {
 /**
  * Changes the selected stock
  */
-function changeStock() {
+function changeFocusedStock() {
     currentStock = document.getElementById("stockSelect").value;
     fetchStockData();
 }

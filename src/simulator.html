@@ -1,16 +1,19 @@
 <body class="bg-gray-100 flex flex-col items-center justify-center h-screen">
 
+        <!-- Navbar Placeholder -->
+        <div id="navbar-container"></div>
+
+        <!-- Load Navbar -->
+        <script src="navbar.js"></script>
+     
+
     <!--Timeframe buttons:-->
     <div class="mb-4 flex space-x-2">
         <button class="bg-gray-400 px-4 py-2 text-white rounded hover:scale-105 transition" onclick="setTimeframe('1D')">1 Day</button>
         <button class="bg-gray-400 px-4 py-2 text-white rounded hover:scale-105 transition" onclick="setTimeframe('1W')">1 Week</button>
         <button class="bg-gray-400 px-4 py-2 text-white rounded hover:scale-105 transition" onclick="setTimeframe('1M')">1 Month</button>
-        <select id="stockSelect" class="px-3 py-2 border rounded" onchange="changeStock()">
-            <option value="AAPL">Apple</option>
-            <option value="GOOGL">Google</option>
-            <option value="TSLA">Tesla</option>
-            <option value="AMZN">Amazon</option>
-        </select>
+        <select id="stockSelect" class="px-3 py-2 border rounded" onchange="changeFocusedStock()">
+            <!-- Options will be populated dynamically -->
     </div>
 
     <!--Graph canvas-->
