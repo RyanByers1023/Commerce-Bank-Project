@@ -18,6 +18,7 @@ class Stock {
         this.sector = this.assignSector(); // e.g., "Technology", "Healthcare", etc.
     }
 
+    //
     // Assign a random sector to the stock
     assignSector() {
         const sectors = [
@@ -35,6 +36,9 @@ class Stock {
 
         // Influence from market trend (overall market direction)
         let marketFactor = marketTrend * 0.2;
+
+        //FIXME-- add more influence from sector movement?
+        //let sectorFactor = sectorTrend * 0.3
 
         // Influence from sentiment (news)
         let sentimentImpact = this.sentimentFactor * 0.3;
