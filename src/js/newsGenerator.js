@@ -1,8 +1,10 @@
 // News Generator - Creates simulated news items that affect stock prices
 
 class NewsGenerator {
+    //TODO: stockList is a hardcoded array, implement user stock choice
     constructor(stockList) {
         this.stocks = stockList;
+        //TODO: make sector into an attribute for stock.js instead of binding the data together using a map
         this.sectors = [...new Set(stockList.map(stock => stock.sector))]; // Get unique sectors
         this.newsHistory = [];
         this.newsTypes = {
