@@ -2,6 +2,7 @@ class Stock {
     constructor(symbol, name, price, volume) {
         this.symbol = symbol; // AAPL, META, etc.
         this.name = name; // Apple Corporation, Meta Corporation, etc.
+        this.sector = this.assignSector; // technology, healthcare, etc.
         this.price = price; // current price of the stock
         this.volume = volume; // how much of the stock is currently being traded in the market (for the day)
 
@@ -9,6 +10,8 @@ class Stock {
         this.openPrice = price; // price of stock at market open time
         this.highestPrice = price; // greatest price stock achieved (over the course of the day)
         this.lowestPrice = price; // lowest price stock achieved (over the course of the day)
+
+        //TODO: obtain previousClosePrice via API instead of simulating a price
         this.previousClosePrice = price * (1 - (Math.random() * 0.04 - 0.02)); // simulated previous close
         this.priceHistory = [price]; // array that tracks the price of the stock over time
 
@@ -18,7 +21,9 @@ class Stock {
         this.sector = this.assignSector(); // e.g., "Technology", "Healthcare", etc.
     }
 
-    //
+    //setters
+
+    // TODO: assign sectors dynamically based on selected stock. eg AAPL = Technology, 
     // Assign a random sector to the stock
     assignSector() {
         const sectors = [
@@ -31,40 +36,13 @@ class Stock {
 
     // Update the stock price based on market conditions and sentiment
     updatePrice(marketTrend = 0) {
-        // Base random movement
-        let randomFactor = (Math.random() - 0.5) * this.volatility;
-
-        // Influence from market trend (overall market direction)
-        let marketFactor = marketTrend * 0.2;
-
-        //FIXME-- add more influence from sector movement?
-        //let sectorFactor = sectorTrend * 0.3
-
-        // Influence from sentiment (news)
-        let sentimentImpact = this.sentimentFactor * 0.3;
-
-        // Calculate percentage change
-        let percentChange = randomFactor + marketFactor + sentimentImpact;
+        priceChangePercentage = calculatePriceChange(marketTrend);
 
         // Apply change to price
         let oldPrice = this.price;
         this.price = Math.max(0.01, this.price * (1 + percentChange));
 
-        // Update tracking values
-        if (this.price > this.highestPrice) {
-            this.highestPrice = this.price;
-        }
-        if (this.price < this.lowestPrice || this.lowestPrice === 0) {
-            this.lowestPrice = this.price;
-        }
-
-        // Add to price history
-        this.priceHistory.push(this.price);
-
-        // Limit history size to prevent memory issues
-        if (this.priceHistory.length > 1000) {
-            this.priceHistory.shift();
-        }
+        updatePriceMetadata();
 
         return {
             oldPrice: oldPrice,
@@ -73,11 +51,49 @@ class Stock {
         };
     }
 
+    calculatePriceChange(marketTrend = 0){
+        // Base random movement
+        let randomFactor = (Math.random() - 0.5) * this.volatility;
+
+        // Influence from market trend (overall market direction)
+        let marketFactor = marketTrend * 0.2;
+
+        //TODO: add more influence from sector movement?
+        //let sectorFactor = sectorTrend * 0.3
+
+        // Influence from sentiment (news)
+        let sentimentImpact = this.sentimentFactor * 0.3;
+
+        // Calculate percentage change
+        //TODO: fine tune this calculation, values currently increase towards +infinity
+        return randomFactor + marketFactor + sentimentImpact;
+    }
+
+    updatePriceMetadata(){
+        // Update tracking values
+        if (this.price > this.highestPrice) {
+            this.highestPrice = this.price;
+        }
+        if (this.price < this.lowestPrice || this.lowestPrice === 0) {
+            this.lowestPrice = this.price;
+        }
+
+        // Limit history size to prevent memory issues
+        if (this.priceHistory.length > 1000) {
+            this.priceHistory.shift();
+        }
+        
+        // track price history, 
+        this.priceHistory.push(this.price);
+    }
+
     // Apply sentiment change from news
     applySentimentChange(change) {
         this.sentimentFactor = Math.max(-1, Math.min(1, this.sentimentFactor + change));
         return this.sentimentFactor;
     }
+
+    //getters:
 
     // Calculate current day's change
     getDayChange() {
