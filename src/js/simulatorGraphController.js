@@ -1,5 +1,6 @@
 // Updated simulator graph controller
 // This handles the stock chart visualization and interactions
+//FIXME: problem with graph line rendering in after my refactor, will fix
 
 // Canvas graph setup
 const canvas = document.getElementById("stockCanvas");
@@ -46,7 +47,6 @@ function changeFocusedStock() {
     const stockSelect = document.getElementById("stockSelect");
     currentStock = stockSelect.value;
 
-    //FIXME: selectedStock is never used
     // Reset price history
     const selectedStock = getCurrentStock();
 
