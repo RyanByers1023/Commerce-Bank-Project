@@ -2,7 +2,6 @@ class Stock {
     constructor(symbol, name, price, volume) {
         this.symbol = symbol; // AAPL, META, etc.
         this.name = name; // Apple Corporation, Meta Corporation, etc.
-        //this.sector = this.assignSector; // technology, healthcare, etc.
         this.price = price; // current price of the stock
         this.volume = volume; // how much of the stock is currently being traded in the market (for the day)
 
