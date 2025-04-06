@@ -70,27 +70,28 @@ class NewsGenerator {
         }
     }
 
-    // Market-wide news (30% chance)
-    generateMarketNews(company){
-        const marketTemplateIndex = Math.floor(Math.random() * this.newsTypes.marketWide.length);
-        let newsTemplate = this.newsTypes.marketWide[marketTemplateIndex];
+    // Company-specific news (40% chance)
+    generateCompanyNews(){
+        let newsType, newsTarget, newsTemplate;
+        newsType = Math.random() < 0.5 ? 'positive' : 'negative';
+        newsTarget = this.stocks[Math.floor(Math.random() * this.stocks.length)];
+        newsTemplate = this.newsTypes[newsType][Math.floor(Math.random() * this.newsTypes[newsType].length)];
 
         // Create news item
         const newsItem = {
-            headline: newsTemplate.text,
-            type: 'marketWide',
+            headline: newsTemplate.text.replace('{company}', newsTarget.name),
+            type: newsType,
             target: {
-                type: 'market',
-                name: 'All Stocks'
+                type: 'company',
+                symbol: newsTarget.symbol,
+                name: newsTarget.name
             },
             impact: newsTemplate.impact,
             timestamp: new Date()
         };
 
-        // Apply impact to all stocks
-        this.stocks.forEach(stock => {
-            stock.applySentimentChange(newsTemplate.impact * 0.7); // Reduced impact as it's spread across all stocks
-        });
+        // Apply impact to stock's sentiment
+        newsTarget.applySentimentChange(newsTemplate.impact);
 
         return newsItem;
     }
@@ -124,28 +125,27 @@ class NewsGenerator {
         return newsItem;
     }
 
-    // Company-specific news (40% chance)
-    generateCompanyNews(stock){
-        let newsType, newsTarget, newsTemplate;
-        newsType = Math.random() < 0.5 ? 'positive' : 'negative';
-        newsTarget = this.stocks[Math.floor(Math.random() * this.stocks.length)];
-        newsTemplate = this.newsTypes[newsType][Math.floor(Math.random() * this.newsTypes[newsType].length)];
+    // Market-wide news (30% chance)
+    generateMarketNews(){
+        const marketTemplateIndex = Math.floor(Math.random() * this.newsTypes.marketWide.length);
+        let newsTemplate = this.newsTypes.marketWide[marketTemplateIndex];
 
         // Create news item
         const newsItem = {
-            headline: newsTemplate.text.replace('{company}', newsTarget.name),
-            type: newsType,
+            headline: newsTemplate.text,
+            type: 'marketWide',
             target: {
-                type: 'company',
-                symbol: newsTarget.symbol,
-                name: newsTarget.name
+                type: 'market',
+                name: 'All Stocks'
             },
             impact: newsTemplate.impact,
             timestamp: new Date()
         };
 
-        // Apply impact to stock's sentiment
-        newsTarget.applySentimentChange(newsTemplate.impact);
+        // Apply impact to all stocks
+        this.stocks.forEach(stock => {
+            stock.applySentimentChange(newsTemplate.impact * 0.7); // Reduced impact as it's spread across all stocks
+        });
 
         return newsItem;
     }
