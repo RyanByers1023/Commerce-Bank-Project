@@ -4,9 +4,12 @@ class NewsGenerator {
     //TODO: stockList is a hardcoded array, implement user stock choice
     constructor(stockList) {
         this.stocks = stockList;
+
         //TODO: make sector into an attribute for stock.js instead of binding the data together using a map
         this.sectors = [...new Set(stockList.map(stock => stock.sector))]; // Get unique sectors
+
         this.newsHistory = [];
+
         this.newsTypes = {
             positive: [
                 { text: "{company} Reports Strong Quarterly Earnings", impact: 0.08 },
@@ -49,87 +52,90 @@ class NewsGenerator {
         };
     }
 
-    // Generate a news item
-    generateNewsItem() {
+    //TODO: provide parameter(s) for generateNewsItem to influence the type of new story based on current market status
+    generateNewsItem(company) {
+
         // Decide news type
         const newsTypeRoll = Math.random();
-        let newsType, newsTarget, newsTemplate;
 
+        // generate company-specific news (40% chance)
         if (newsTypeRoll < 0.4) {
-            // Company-specific news (40% chance)
-            newsType = Math.random() < 0.5 ? 'positive' : 'negative';
-            newsTarget = this.stocks[Math.floor(Math.random() * this.stocks.length)];
-            newsTemplate = this.newsTypes[newsType][Math.floor(Math.random() * this.newsTypes[newsType].length)];
-
-            // Create news item
-            const newsItem = {
-                headline: newsTemplate.text.replace('{company}', newsTarget.name),
-                type: newsType,
-                target: {
-                    type: 'company',
-                    symbol: newsTarget.symbol,
-                    name: newsTarget.name
-                },
-                impact: newsTemplate.impact,
-                timestamp: new Date()
-            };
-
-            // Apply impact to stock's sentiment
-            newsTarget.applySentimentChange(newsTemplate.impact);
-
-            return newsItem;
+            return this.generateCompanyNews(company);
         }
+        // generate sector-wide news (30% chance)
         else if (newsTypeRoll < 0.7) {
-            // Sector-wide news (30% chance)
-            newsType = Math.random() < 0.5 ? 'sectorPositive' : 'sectorNegative';
-            const selectedSector = this.sectors[Math.floor(Math.random() * this.sectors.length)];
-            newsTemplate = this.newsTypes[newsType][Math.floor(Math.random() * this.newsTypes[newsType].length)];
-
-            // Create news item
-            const newsItem = {
-                headline: newsTemplate.text.replace('{sector}', selectedSector),
-                type: newsType,
-                target: {
-                    type: 'sector',
-                    name: selectedSector
-                },
-                impact: newsTemplate.impact,
-                timestamp: new Date()
-            };
-
-            // Apply impact to all stocks in this sector
-            this.stocks.forEach(stock => {
-                if (stock.sector === selectedSector) {
-                    stock.applySentimentChange(newsTemplate.impact);
-                }
-            });
-
-            return newsItem;
+            return generateSectorNews(company);
         }
+        // generate market-wide news (30% chance)
         else {
-            // Market-wide news (30% chance)
-            const marketTemplateIndex = Math.floor(Math.random() * this.newsTypes.marketWide.length);
-            newsTemplate = this.newsTypes.marketWide[marketTemplateIndex];
-
-            // Create news item
-            const newsItem = {
-                headline: newsTemplate.text,
-                type: 'marketWide',
-                target: {
-                    type: 'market',
-                    name: 'All Stocks'
-                },
-                impact: newsTemplate.impact,
-                timestamp: new Date()
-            };
-
-            // Apply impact to all stocks
-            this.stocks.forEach(stock => {
-                stock.applySentimentChange(newsTemplate.impact * 0.7); // Reduced impact as it's spread across all stocks
-            });
-
-            return newsItem;
+            return generateMarketNews(company)
         }
+    }
+
+    createNewsItem(company){
+        const newsItem = {
+            headline: newsTemplate.text.replace('{company}', newsTarget.name),
+            type: newsType,
+            target: {
+                type: 'company',
+                symbol: newsTarget.symbol,
+                name: newsTarget.name
+            },
+            impact: newsTemplate.impact,
+            timestamp: new Date()
+        };
+
+        return newsItem;
+    }
+
+    // Market-wide news (30% chance)
+    generateMarketNews(company){
+        let newsTemplate;
+        const marketTemplateIndex = Math.floor(Math.random() * this.newsTypes.marketWide.length);
+        newsTemplate = this.newsTypes.marketWide[marketTemplateIndex];
+
+        // Create news item
+        const newsItem = this.createNewsItem(company);
+
+        // Apply impact to all stocks
+        this.stocks.forEach(stock => {
+            stock.applySentimentChange(newsTemplate.impact * 0.7); // Reduced impact as it's spread across all stocks
+        });
+
+        return newsItem;
+    }
+
+    // Sector-wide news (30% chance)
+    generateSectorNews(){
+        let newsType, newsTemplate;
+        newsType = Math.random() < 0.5 ? 'sectorPositive' : 'sectorNegative';
+        const selectedSector = this.sectors[Math.floor(Math.random() * this.sectors.length)];
+        newsTemplate = this.newsTypes[newsType][Math.floor(Math.random() * this.newsTypes[newsType].length)];
+
+        // Create news item
+        const newsItem = this.createNewsItem(company);
+
+        // Apply impact to all stocks in this sector
+        this.stocks.forEach(stock => {
+            if (stock.sector === selectedSector) {
+                stock.applySentimentChange(newsTemplate.impact);
+            }
+        });
+
+        return newsItem;
+    }
+
+    // Company-specific news (40% chance)
+    generateCompanyNews(){
+        let newsType, newsTarget, newsTemplate;
+        newsType = Math.random() < 0.5 ? 'positive' : 'negative';
+        newsTarget = this.stocks[Math.floor(Math.random() * this.stocks.length)];
+        newsTemplate = this.newsTypes[newsType][Math.floor(Math.random() * this.newsTypes[newsType].length)];
+
+        // Apply impact to stock's sentiment
+        newsTarget.applySentimentChange(newsTemplate.impact);
+
+        return newsItem;
     }
 
     // Generate multiple news items

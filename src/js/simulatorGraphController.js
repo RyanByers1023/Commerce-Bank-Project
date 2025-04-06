@@ -46,6 +46,7 @@ function changeFocusedStock() {
     const stockSelect = document.getElementById("stockSelect");
     currentStock = stockSelect.value;
 
+    //FIXME: selectedStock is never used
     // Reset price history
     const selectedStock = getCurrentStock();
 
