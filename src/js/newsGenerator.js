@@ -1,11 +1,9 @@
 // News Generator - Creates simulated news items that affect stock prices
 
 class NewsGenerator {
-    //TODO: stockList is a hardcoded array, implement user stock choice
     constructor(stockList) {
         this.stocks = stockList;
 
-        //TODO: make sector into an attribute for stock.js instead of binding the data together using a map
         this.sectors = [...new Set(stockList.map(stock => stock.sector))]; // Get unique sectors
 
         this.newsHistory = [];
@@ -53,49 +51,41 @@ class NewsGenerator {
     }
 
     //TODO: provide parameter(s) for generateNewsItem to influence the type of new story based on current market status
-    generateNewsItem(company) {
+    generateNewsItem() {
 
         // Decide news type
         const newsTypeRoll = Math.random();
 
         // generate company-specific news (40% chance)
         if (newsTypeRoll < 0.4) {
-            return this.generateCompanyNews(company);
+            return this.generateCompanyNews();
         }
         // generate sector-wide news (30% chance)
         else if (newsTypeRoll < 0.7) {
-            return generateSectorNews(company);
+            return this.generateSectorNews();
         }
         // generate market-wide news (30% chance)
         else {
-            return generateMarketNews(company)
+            return this.generateMarketNews()
         }
-    }
-
-    createNewsItem(company){
-        const newsItem = {
-            headline: newsTemplate.text.replace('{company}', newsTarget.name),
-            type: newsType,
-            target: {
-                type: 'company',
-                symbol: newsTarget.symbol,
-                name: newsTarget.name
-            },
-            impact: newsTemplate.impact,
-            timestamp: new Date()
-        };
-
-        return newsItem;
     }
 
     // Market-wide news (30% chance)
     generateMarketNews(company){
-        let newsTemplate;
         const marketTemplateIndex = Math.floor(Math.random() * this.newsTypes.marketWide.length);
-        newsTemplate = this.newsTypes.marketWide[marketTemplateIndex];
+        let newsTemplate = this.newsTypes.marketWide[marketTemplateIndex];
 
         // Create news item
-        const newsItem = this.createNewsItem(company);
+        const newsItem = {
+            headline: newsTemplate.text,
+            type: 'marketWide',
+            target: {
+                type: 'market',
+                name: 'All Stocks'
+            },
+            impact: newsTemplate.impact,
+            timestamp: new Date()
+        };
 
         // Apply impact to all stocks
         this.stocks.forEach(stock => {
@@ -113,7 +103,16 @@ class NewsGenerator {
         newsTemplate = this.newsTypes[newsType][Math.floor(Math.random() * this.newsTypes[newsType].length)];
 
         // Create news item
-        const newsItem = this.createNewsItem(company);
+        const newsItem = {
+            headline: newsTemplate.text.replace('{sector}', selectedSector),
+            type: newsType,
+            target: {
+                type: 'sector',
+                name: selectedSector
+            },
+            impact: newsTemplate.impact,
+            timestamp: new Date()
+        };
 
         // Apply impact to all stocks in this sector
         this.stocks.forEach(stock => {
@@ -126,11 +125,24 @@ class NewsGenerator {
     }
 
     // Company-specific news (40% chance)
-    generateCompanyNews(){
+    generateCompanyNews(stock){
         let newsType, newsTarget, newsTemplate;
         newsType = Math.random() < 0.5 ? 'positive' : 'negative';
         newsTarget = this.stocks[Math.floor(Math.random() * this.stocks.length)];
         newsTemplate = this.newsTypes[newsType][Math.floor(Math.random() * this.newsTypes[newsType].length)];
+
+        // Create news item
+        const newsItem = {
+            headline: newsTemplate.text.replace('{company}', newsTarget.name),
+            type: newsType,
+            target: {
+                type: 'company',
+                symbol: newsTarget.symbol,
+                name: newsTarget.name
+            },
+            impact: newsTemplate.impact,
+            timestamp: new Date()
+        };
 
         // Apply impact to stock's sentiment
         newsTarget.applySentimentChange(newsTemplate.impact);
