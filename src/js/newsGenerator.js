@@ -52,16 +52,19 @@ class NewsGenerator {
 
     //TODO: provide parameter(s) for generateNewsItem to influence the type of new story based on current market status
     generateNewsItem() {
-
         // Decide news type
         const newsTypeRoll = Math.random();
 
         // generate company-specific news (40% chance)
         if (newsTypeRoll < 0.4) {
+            //company randomly chosen within generateCompanyNews()
+            //may be better to choose company in a seperate function
+            //then pass the company via parameter to generateCompanyNews
             return this.generateCompanyNews();
         }
         // generate sector-wide news (30% chance)
         else if (newsTypeRoll < 0.7) {
+            //sector randomly chosen within generateSectorNews()
             return this.generateSectorNews();
         }
         // generate market-wide news (30% chance)
@@ -73,11 +76,19 @@ class NewsGenerator {
     // Company-specific news (40% chance)
     generateCompanyNews(){
         let newsType, newsTarget, newsTemplate;
+
+        //type of news (positive or negative)
+        //50/50 chance of positive or negative news
         newsType = Math.random() < 0.5 ? 'positive' : 'negative';
+
+        //choose random stock to write article about, store in newsTarget
         newsTarget = this.stocks[Math.floor(Math.random() * this.stocks.length)];
+
+        //newsTemplate grabs a random story from either the positive or negative lists
         newsTemplate = this.newsTypes[newsType][Math.floor(Math.random() * this.newsTypes[newsType].length)];
 
-        // Create news item
+        //newsItem is a compilation of all information to be displayed to the user
+        //for any given story in the news side panel in simulator.html
         const newsItem = {
             headline: newsTemplate.text.replace('{company}', newsTarget.name),
             type: newsType,
@@ -219,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize with stock list
     newsGenerator = new NewsGenerator(userStocks);
 
-    // Generate initial news
+    // Generate initial news (5 stories)
     newsGenerator.generateNews(5);
     newsGenerator.updateNewsDisplay();
 
