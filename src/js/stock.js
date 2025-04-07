@@ -35,13 +35,13 @@ class Stock {
 
     // Update the stock price based on market conditions and sentiment
     updatePrice(marketTrend = 0) {
-        percentChange = calculatePriceChange(marketTrend);
+        let percentChange = this.calculatePriceChange(marketTrend);
 
         // Apply change to price
         let oldPrice = this.price;
         this.price = Math.max(0.01, this.price * (1 + percentChange));
 
-        updatePriceMetadata();
+        this.updatePriceMetadata();
 
         return {
             oldPrice: oldPrice,
