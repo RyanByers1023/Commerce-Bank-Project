@@ -55,11 +55,12 @@ class NewsGenerator {
         // Decide news type
         const newsTypeRoll = Math.random();
 
+        //TODO: company randomly chosen within generateCompanyNews()
+        //may be better to choose company in a seperate function
+        //then pass the company via parameter to generateCompanyNews
+
         // generate company-specific news (40% chance)
         if (newsTypeRoll < 0.4) {
-            //company randomly chosen within generateCompanyNews()
-            //may be better to choose company in a seperate function
-            //then pass the company via parameter to generateCompanyNews
             return this.generateCompanyNews();
         }
         // generate sector-wide news (30% chance)
@@ -89,6 +90,8 @@ class NewsGenerator {
 
         //newsItem is a compilation of all information to be displayed to the user
         //for any given story in the news side panel in simulator.html
+
+        //TODO: to reduce redundant code, newsItem can become an object of its own
         const newsItem = {
             headline: newsTemplate.text.replace('{company}', newsTarget.name),
             type: newsType,
