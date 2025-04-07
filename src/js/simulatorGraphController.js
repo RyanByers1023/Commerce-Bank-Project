@@ -1,6 +1,5 @@
 // Updated simulator graph controller
 // This handles the stock chart visualization and interactions
-//FIXME: problem with graph line rendering in after my refactor, will fix
 
 // Canvas graph setup
 const canvas = document.getElementById("stockCanvas");
