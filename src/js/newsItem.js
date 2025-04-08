@@ -1,15 +1,20 @@
 class NewsItem {
-    constructor(newsType, newsTemplate, newsTarget = null) {
-        this.type = newsType;
+    constructor(newsTemplate, newsType) {
+        this.newsType = newsType;
+
+        //float in range (0.1 - 0.9).
         this.impact = newsTemplate.impact;
         this.timestamp = new Date();
 
-        //if there is a target (a company or a sector)
-        //this method will construct the target, if it can't (newsTarget == NULL)
-        //otherwise, target is not needed, and is set to NULL
-        this.target = this.generateNewsTarget(newsTarget);
+        //if there is a target (not market wide, but rather a company or a sector),
+        //generateNewsTarget() will construct the target. if it can't (e.g. newsTarget == NULL),
+        //target is not needed, and is set to NULL
+        this.target = this.generateNewsTarget();
         
-        this.headline = newsTemplate.text.replace('{company}', this.target?.name || 'Unknown Company');
+        this.headline = newsTemplate.text.replace(
+            '{company}',
+            this.type === 'marketWide' || !this.target ? 'Unknown Company' : this.target.name
+        );
     }
 
     generateNewsTarget(newsTarget){
