@@ -18,7 +18,8 @@
   "description": "",
   "dependencies": {
     "@tailwindcss/cli": "^4.0.7",
-    "@tailwindcss/vite": "^4.0.7"
+    "@tailwindcss/vite": "^4.0.7",
+    "node-cron": "^3.0.3"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
