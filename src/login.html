@@ -3,20 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="/src/output.css" rel="stylesheet">
+    <title>Login - Stock Market Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    
+<body class="bg-[#28332D] text-white min-h-screen">
     <!-- Navbar Placeholder -->
     <div id="navbar-container"></div>
 
     <!-- Load Navbar -->
     <script src="js/navbar.js"></script>
  
-<h1 class="text-3xl font-bold underline bg-red-500">
-    Login page placeholder
-</h1>
+    <!-- Login Container -->
+    <div class="flex items-center justify-center min-h-screen pt-16">
+        <div class="bg-[#4D705F] p-8 rounded-lg shadow-lg w-full max-w-md">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold">Welcome Back</h1>
+                <p class="text-gray-200 mt-2">Sign in to access your portfolio</p>
+            </div>
+
+            <form class="space-y-6">
+                <!-- Email Input -->
+                <div>
+                    <label for="email" class="block text-sm font-medium mb-2">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        class="w-full px-4 py-3 bg-[#3A4F41] border border-[#5E8A75] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2EF090]" 
+                        placeholder="name@example.com"
+                        required
+                    >
+                </div>
+
+                <!-- Password Input -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label for="password" class="block text-sm font-medium">Password</label>
+                        <a href="#" class="text-sm text-[#2EF090] hover:underline">Forgot password?</a>
+                    </div>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        class="w-full px-4 py-3 bg-[#3A4F41] border border-[#5E8A75] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2EF090]" 
+                        placeholder="••••••••"
+                        required
+                    >
+                </div>
+
+                <!-- Remember Me Checkbox -->
+                <div class="flex items-center">
+                    <input 
+                        type="checkbox" 
+                        id="remember" 
+                        class="h-4 w-4 bg-[#3A4F41] border-[#5E8A75] rounded"
+                    >
+                    <label for="remember" class="ml-2 block text-sm">Remember me</label>
+                </div>
+
+                <!-- Sign In Button -->
+                <div>
+                    <button 
+                        type="submit" 
+                        class="w-full bg-[#46C586] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#2EF090] transition-colors duration-300"
+                    >
+                        Sign In
+                    </button>
+                </div>
+            </form>
+
+            <!-- Registration Link -->
+            <div class="text-center mt-6">
+                <p class="text-sm">
+                    Don't have an account? 
+                    <a href="register.html" class="text-[#2EF090] hover:underline">Register now</a>
+                </p>
+            </div>
+
+            <!-- Demo Account Info -->
+            <div class="mt-8 p-4 bg-[#3A4F41] rounded-lg text-sm">
+                <p class="font-medium mb-2">Demo Account:</p>
+                <p>Email: demo@stocksim.com</p>
+                <p>Password: demo123</p>
+                <p class="mt-2 text-xs text-gray-300">For testing purposes only. Your actual data will be secure.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Simple Footer -->
+    <footer class="py-6 text-center text-gray-400 text-sm">
+        <p>The Project Last Minute Stock Market Simulator</p>
+    </footer>
 
 </body>
 </html>
