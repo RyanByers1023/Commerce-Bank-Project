@@ -5,54 +5,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulator Splash Page</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // color palette for home page:
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            light: '#2EF090',
+                            DEFAULT: '#46C586',
+                            dark: '#519B76'
+                        },
+                        secondary: '#4D705F',
+                        tertiary: '#5E8A75',
+                        background: '#28332D'
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body class="bg-[#28332D] text-white">
-
+<body class="bg-background text-white">
     <!-- Navbar Placeholder -->
     <div id="navbar-container"></div>
 
     <!-- Load Navbar -->
     <script src="js/navbar.js"></script>
  
-     <!-- Main Content Container -->
-    <div class="flex items-center justify-center min-h-screen bg-[#28332D] pt-16">
+    <!-- Main Content Container -->
+    <div class="flex items-center justify-center min-h-screen pt-16 pb-10 px-4">
+        <!-- Content Wrapper -->
+        <div class="flex flex-col items-center space-y-8 w-full max-w-lg">
+            <!-- Main Content Box -->
+            <div class="text-center bg-secondary p-8 rounded-lg shadow-lg w-full">
+                <h1 class="text-3xl font-bold mb-6">The InvestED Stock Market Simulator</h1>
+                
+                <!-- Logo/Icon Placeholder -->
+                <div class="mb-6">
 
-        <!-- Centered Box Wrapper -->
-        <div class="flex flex-col items-center space-y-4">
+                </div>
 
-            <!-- Main Content -->
-            <div class="flex items-center justify-center h-screen bg-[#28332D] pt-16">
-                <div class="text-center bg-[#4D705F] p-8 rounded-lg shadow-lg w-96">
+                <!-- Login & Register Buttons -->
+                <div class="flex flex-col sm:flex-row sm:justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                    <a href="login.html" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition duration-200">Login</a> 
+                    <a href="register.html" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition duration-200">Quickly make an account</a>
+                </div>    
+            </div>
 
-                    <h1 class="text-3xl font-bold mb-6">The Project Last Minute Stock Market Simulator</h1>
+            <!-- About Box: -->
+            <div class="bg-tertiary p-6 rounded-lg shadow-md w-full text-center">
+                <h2 class="text-xl font-semibold mb-2">What does this simulator do?</h2>
+                <p class="text-sm text-gray-200 mb-4">Learn how the simulator functions, and why we made the decisions we made.</p>
+                <a href="about.html" class="inline-block px-5 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition duration-200">How does it work?</a>
+            </div>
 
-                    <!-- Login & Register Buttons -->
-                    <div class="space-x-4 mb-6">
-                        <a href="login.html" class="px-6 py-2 bg-[#46C586] text-white rounded-lg hover:bg-[#2EF090]">Login</a> 
-                        <a href="register.html" class="px-6 py-2 bg-[#46C586] text-white rounded-lg hover:bg-[#2EF090]">Register</a>
-                    </div>    
+            <!-- Features Section -->
+            <img src="img/sim_demo.jpg" alt="Description" class="w-128 h-auto rounded-lg shadow-md" />
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                <div class="bg-secondary/80 p-4 rounded-lg text-center">
+                    <h3 class="font-semibold mb-2">Real-time Simulator</h3>
+                    <p class="text-sm">Company wide, sector wide, and even market wide events occur in real time.</p>
+                </div>
+                <div class="bg-secondary/80 p-4 rounded-lg text-center">
+                    <h3 class="font-semibold mb-2">Portfolio Tracking</h3>
+                    <p class="text-sm">Monitor how much money you are making (or losing) on the stocks you choose to purchase.</p>
+                    <p class="text-sm">With an account with us, your portfolio is saved, and can be returned to at any time!</p>
                 </div>
             </div>
 
-            <!-- Market News Box (Separated) -->
-            <div class="bg-[#5E8A75] p-6 rounded-lg shadow-md w-96 text-center">
-                <h2 class="text-xl font-semibold mb-2">Market News</h2>
-                <p class="text-sm text-gray-200">Learn more about the simulator.</p>
-                <a href="about.html" class="mt-2 inline-block px-4 py-2 bg-[#46C586] text-white rounded-md hover:bg-[#2EF090]">Learn More</a>
+            <!-- About Us Box: -->
+            <div class="bg-tertiary p-6 rounded-lg shadow-md w-full text-center">
+                <h2 class="text-xl font-semibold mb-2">Who made this?</h2>
+                <p class="text-sm text-gray-200 mb-4">We are Team Last Minute. We have four members: Logan, Hayley, Ryan, and Ibraham. This is our software engineering capstone project; this project's guidelines were provided via a collaboration between Commerce Bank and The University of Missouri-Kansas City.</p>
+                <p class="text-sm text-gray-200 mb-4">Even with this being a college project, our hope still is that you are able to extract some meaningful trading information from your time with our simulator!</p>
             </div>
+
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer class="bg-background/50 text-center py-4 border-t border-gray-700">
+        <p class="text-sm text-gray-400">The InvestEd Stock Market Simulator</p>
+    </footer>
 </body>
 </html>
-
-</body>
-</html>
-
-"<!--color palatte (WIP): (from: https://color.adobe.com/create/color-wheel) 
-#46C586 (login/register button color)
-#519B76 (login/register button hover color)
-#2EF08F (text color)
-#4D705F (Login/register container color)
-#28332D (page background color)-->
-
