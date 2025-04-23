@@ -10,10 +10,10 @@ class Stock {
 
         this.companyName = null;
 
-        // this is the key you use to access the API
+        // this is the key you use to access the API to retrieve real stock prices
         this.apiKey = '43c4bdb7a0mshac6db6fb0a5241ep1a044bjsn071e9eadf8a3';
 
-        // this is Yahoo Finance's API
+        // this is Yahoo Finance's API for retrieving stock prices
         this.apiHost = 'yh-finance.p.rapidapi.com';
 
         // the price the stock was at end of the last trading day
@@ -40,7 +40,7 @@ class Stock {
         this.priceHistory = [null]; // array that tracks the price of the stock over time
 
         // set all the above stock values using real values via Yahoo Finance's API
-        this.getIntialStockValues();
+        this.getIntialStockValues()
     }
 
     // get stock info from Yahoo Finance's API
@@ -55,28 +55,40 @@ class Stock {
     }
 
     async obtainStockInfoAPI() {
-        const url = `https://${this.apiHost}/stock/v2/get-summary?symbol=${this.symbol}`;
-        const options = {
-            method: 'GET',
-            headers: {
-                'X-RapidAPI-Key': this.apiKey,
-                'X-RapidAPI-Host': this.apiHost
-            }
-        };
+        try {
+            const url = `https://${this.apiHost}/stock/v2/get-summary?symbol=${this.symbol}`;
+            const options = {
+                method: 'GET',
+                headers: {
+                    'X-RapidAPI-Key': this.apiKey,
+                    'X-RapidAPI-Host': this.apiHost
+                }
+            };
 
-        this.previousClosePrice = data.summaryDetail?.previousClose?.raw ?? null;
-        this.marketPrice = data.price?.regularMarketPrice?.raw ?? null;
-        this.openPrice = data.summaryDetail?.open?.raw ?? null;
-        this.priceHistory = [this.openPrice];
-        this.beta = data.summaryDetail?.beta?.raw ?? null;
-        this.volatility = this.beta ? this.beta * 0.02 : (Math.random() * 0.05 + 0.01);
-        this.sector = data.summaryProfile?.sector ?? 'Unknown';
-        this.companyName = data.price?.longName ?? data.price?.shortName ?? 'Unknown';
-        this.volume = data.price?.regularMarketVolume?.raw ?? null;
-        this.sector = data.summaryProfile?.sector ?? 'Unknown';
+            const response = await fetch(url, options);
+            const data = await response.json();
 
-        console.log(`Fetched data for ${this.symbol}`);
+            //use contents of data to assign real initial attributes for this stock.
+            this.previousClosePrice = data.summaryDetail?.previousClose?.raw ?? null;
+            this.marketPrice = data.price?.regularMarketPrice?.raw ?? null;
+            this.openPrice = data.summaryDetail?.open?.raw ?? null;
+            this.priceHistory = [this.openPrice];
+            this.beta = data.summaryDetail?.beta?.raw ?? null;
+            this.volatility = this.beta ? this.beta * 0.02 : (Math.random() * 0.05 + 0.01);
+            this.sector = data.summaryProfile?.sector ?? 'Unknown';
+            this.companyName = data.price?.longName ?? data.price?.shortName ?? 'Unknown';
+            this.volume = data.price?.regularMarketVolume?.raw ?? null;
+            this.sector = data.summaryProfile?.sector ?? 'Unknown';
+
+            console.log(`Fetched data for ${this.symbol}`);
+
+        } catch (error) {
+            console.error(`Error fetching ${this.symbol} data:`, error);
+            this.simulatePreviousClose();
+        }
     }
+
+
 
     //in the off chance the API goes down, key stops working, etc.,
     //this function will allow for the sim to work offline
@@ -97,20 +109,23 @@ class Stock {
     }
 
     // Update the stock price based on market conditions and sentiment
-    updatePrice(marketTrend = 0) {
-        let percentChange = this.calculatePriceChange(marketTrend);
+    updatePrice() {
+        // Calculate new price based on volatility and sentiment
+        const change = this.marketPrice * this.volatility * (Math.random() * 2 - 1 + this.sentimentFactor);
+        this.marketPrice += change;
 
-        // Apply change to price
-        let oldPrice = this.marketPrice;
-        this.marketPrice = Math.max(0.01, this.marketPrice * (1 + percentChange));
+        // Ensure price doesn't go negative
+        this.marketPrice = Math.max(this.marketPrice, 0.01);
 
-        this.updatePriceMetadata();
+        // Add to price history
+        this.priceHistory.push(this.marketPrice);
 
-        return {
-            oldPrice: oldPrice,
-            newPrice: this.marketPrice,
-            percentChange: percentChange
-        };
+        // Keep price history limited to a reasonable size
+        if (this.priceHistory.length > 100) {
+            this.priceHistory.shift();
+        }
+
+        return this.marketPrice;
     }
 
     changeStock(input){
@@ -240,137 +255,3 @@ class Stock {
 }
 
 export default Stock;
-
-
-//---old stock object:---//
-
-/*class Stock {
-    constructor(symbol, name, price, volume) {
-        this.symbol = symbol; // AAPL, META, etc.
-        this.name = name; // Apple Corporation, Meta Corporation, etc.
-        this.price = price; // current price of the stock
-        this.volume = volume; // how much of the stock is currently being traded in the market (for the day)
-
-        // Additional attributes for tracking performance
-        this.openPrice = price; // price of stock at market open time
-        this.highestPrice = price; // greatest price stock achieved (over the course of the day)
-        this.lowestPrice = price; // lowest price stock achieved (over the course of the day)
-
-        //TODO: obtain previousClosePrice via API instead of simulating a price
-        this.previousClosePrice = price * (1 - (Math.random() * 0.04 - 0.02)); // simulated previous close
-        this.priceHistory = [price]; // array that tracks the price of the stock over time
-
-        // Additional attributes for market sentiment
-        this.volatility = Math.random() * 0.05 + 0.01; // how much the stock price fluctuates
-        this.sentimentFactor = 0; // influenced by news, ranges from -1 (very negative) to 1 (very positive)
-        this.sector = this.assignSector(); // e.g., "Technology", "Healthcare", etc.
-    }
-
-    //setters
-
-    // TODO: assign sectors dynamically based on selected stock. eg AAPL = Technology, 
-    // Assign a random sector to the stock
-    assignSector() {
-        const sectors = [
-            "Technology", "Healthcare", "Financial Services",
-            "Consumer Goods", "Energy", "Telecommunications",
-            "Real Estate", "Utilities", "Materials", "Industrials"
-        ];
-        return sectors[Math.floor(Math.random() * sectors.length)];
-    }
-
-    // Update the stock price based on market conditions and sentiment
-    updatePrice(marketTrend = 0) {
-        let percentChange = this.calculatePriceChange(marketTrend);
-
-        // Apply change to price
-        let oldPrice = this.price;
-        this.price = Math.max(0.01, this.price * (1 + percentChange));
-
-        this.updatePriceMetadata();
-
-        return {
-            oldPrice: oldPrice,
-            newPrice: this.price,
-            percentChange: percentChange
-        };
-    }
-
-    calculatePriceChange(marketTrend = 0){
-        // Base random movement
-        let randomFactor = (Math.random() - 0.5) * this.volatility;
-
-        // Influence from market trend (overall market direction)
-        let marketFactor = marketTrend * 0.2;
-
-        //TODO: add more influence from sector movement?
-        //let sectorFactor = sectorTrend * 0.3
-
-        // Influence from sentiment (news)
-        let sentimentImpact = this.sentimentFactor * 0.3;
-
-        // Calculate percentage change
-        return randomFactor + marketFactor + sentimentImpact;
-    }
-
-    updatePriceMetadata(){
-        // Update tracking values
-        if (this.price > this.highestPrice) {
-            this.highestPrice = this.price;
-        }
-        if (this.price < this.lowestPrice || this.lowestPrice === 0) {
-            this.lowestPrice = this.price;
-        }
-
-        // Limit history size to prevent memory issues
-        if (this.priceHistory.length > 1000) {
-            this.priceHistory.shift();
-        }
-        
-        // track price history, 
-        this.priceHistory.push(this.price);
-    }
-
-    // Apply sentiment change from news
-    applySentimentChange(change) {
-        this.sentimentFactor = Math.max(-1, Math.min(1, this.sentimentFactor + change));
-        return this.sentimentFactor;
-    }
-
-    //getters:
-
-    // Calculate current day's change
-    getDayChange() {
-        return {
-            value: this.price - this.openPrice,
-            percent: ((this.price / this.openPrice) - 1) * 100
-        };
-    }
-
-    // Get formatted price
-    getFormattedPrice() {
-        return `$${this.price.toFixed(2)}`;
-    }
-
-    // Get stock information as an object
-    getInfo() {
-        return {
-            symbol: this.symbol,
-            name: this.name,
-            price: this.price,
-            openPrice: this.openPrice,
-            highestPrice: this.highestPrice,
-            lowestPrice: this.lowestPrice,
-            previousClose: this.previousClosePrice,
-            dayChange: this.getDayChange(),
-            volume: this.volume,
-            sector: this.sector
-        };
-    }
-
-    // Get string representation for debugging
-    toString() {
-        return `Stock: ${this.name} (${this.symbol}) | Price: $${this.price.toFixed(2)} | Change: ${this.getDayChange().percent.toFixed(2)}% | Sector: ${this.sector}`;
-    }
-}
-*/

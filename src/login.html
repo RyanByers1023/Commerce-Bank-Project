@@ -83,15 +83,21 @@
                 <p class="font-medium mb-2">Demo Account:</p>
                 <p>Email: demo@stocksim.com</p>
                 <p>Password: demo123</p>
-                <p class="mt-2 text-xs text-gray-300">For testing purposes only. Your actual data will be secure.</p>
+                <p class="mt-2 text-xs text-gray-300">For testing purposes.</p>
             </div>
         </div>
     </div>
 
-    <!-- Simple Footer -->
-    <footer class="py-6 text-center text-gray-400 text-sm">
-        <p>The Project Last Minute Stock Market Simulator</p>
-    </footer>
+    <!-- Footer -->
+    <div id="footer-container"></div>
+
+    <script>
+        fetch('footer.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('footer-container').innerHTML = data;
+            });
+    </script>
 
 </body>
 </html>

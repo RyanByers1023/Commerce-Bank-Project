@@ -4,26 +4,8 @@
 // Canvas graph setup
 import Stock from "./stock";
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize canvas context
-    const canvas = document.getElementById("stockCanvas");
-    let ctx;
-
-    if (canvas) {
-        ctx = canvas.getContext("2d");
-
-        // Make ctx available to other functions by setting it as a property of window
-        window.ctx = ctx;
-
-        // Set up initial display
-        updateCurrentStockDisplay();
-
-        // Start price updates
-        resetUpdateInterval();
-    } else {
-        console.error("Canvas element not found");
-    }
-});
+let canvas;
+let ctx;
 
 // Graph constants
 const CANVAS_WIDTH = canvas.width;
@@ -85,6 +67,33 @@ function changeFocusedStock() {
  * Sets the stock timeframe
  */
 
+function updateCurrentStockDisplay() {
+    const stock = getCurrentStock();
+    if (!stock) return;
+
+    // Update stock price display
+    const priceElement = document.getElementById("stockPrice");
+    if (priceElement) {
+        priceElement.textContent = `$${stock.marketPrice.toFixed(2)}`;
+    }
+
+    // Update stock name/symbol display
+    const nameElement = document.getElementById("stockName");
+    if (nameElement) {
+        nameElement.textContent = `${stock.companyName} (${stock.symbol})`;
+    }
+
+    // Update price change
+    const changeElement = document.getElementById("priceChange");
+    if (changeElement) {
+        const change = stock.marketPrice - stock.previousClosePrice;
+        const changePercent = (change / stock.previousClosePrice) * 100;
+
+        changeElement.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent.toFixed(2)}%)`;
+        changeElement.className = change >= 0 ? 'text-green-500' : 'text-red-500';
+    }
+}
+
 //TODO: make this return the timeframe
 function setTimeframe(tf) {
     timeframe = tf;
@@ -142,13 +151,13 @@ function updateBuySellInterface() {
     // Update buy price
     const buyPriceElement = document.getElementById("buy-price");
     if (buyPriceElement) {
-        buyPriceElement.textContent = `$${stock.price.toFixed(2)}`;
+        buyPriceElement.textContent = `$${stock.marketPrice.toFixed(2)}`;
     }
 
     // Update sell price
     const sellPriceElement = document.getElementById("sell-price");
     if (sellPriceElement) {
-        sellPriceElement.textContent = `$${stock.price.toFixed(2)}`;
+        sellPriceElement.textContent = `$${stock.marketPrice.toFixed(2)}`;
     }
 
     // Update totals
@@ -286,7 +295,7 @@ function populateStockDropdown() {
     userStocks.forEach(stock => {
         const option = document.createElement("option");
         option.value = stock.symbol;
-        option.textContent = `${stock.name} (${stock.symbol})`;
+        option.textContent = `${stock.companyName} (${stock.symbol})`;
         stockSelect.appendChild(option);
     });
 
@@ -303,6 +312,16 @@ function getCurrentStock() {
 
 // Initialize everything when the document is ready
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize canvas context
+    canvas = document.getElementById("stockCanvas");
+
+    if (canvas) {
+        ctx = canvas.getContext("2d");
+        window.ctx = ctx;
+    } else {
+        console.error("Canvas element not found");
+    }
+
     // Populate stock dropdown
     populateStockDropdown();
 

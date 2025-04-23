@@ -281,8 +281,7 @@ function updateCurrentStockDisplay() {
     const priceChangeElement = document.getElementById('priceChange');
     if (priceChangeElement) {
         const dayChange = stock.getDayChange();
-        const changeText = `${dayChange.value >= 0 ? '+' : ''}${dayChange.value.toFixed(2)} (${dayChange.percent.toFixed(2)}%)`;
-        priceChangeElement.textContent = changeText;
+        priceChangeElement.textContent = `${dayChange.value >= 0 ? '+' : ''}${dayChange.value.toFixed(2)} (${dayChange.percent.toFixed(2)}%)`;
         priceChangeElement.className = `text-sm font-medium px-2 py-1 rounded ${dayChange.value >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
     }
 

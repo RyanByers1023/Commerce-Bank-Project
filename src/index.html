@@ -48,14 +48,14 @@
                 <!-- Login & Register Buttons -->
                 <div class="flex flex-col sm:flex-row sm:justify-center space-y-3 sm:space-y-0 sm:space-x-4">
                     <a href="login.html" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition duration-200">Login</a>
-                    <a href="register.html" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition duration-200">Quickly make an account</a>
+                    <a href="register.html" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition duration-200">Make an account</a>
                 </div>    
             </div>
 
             <!-- About Box: -->
             <div class="bg-tertiary p-6 rounded-lg shadow-md w-full text-center">
                 <h2 class="text-xl font-semibold mb-2">What does this simulator do?</h2>
-                <p class="text-sm text-gray-200 mb-4">Learn how the simulator functions, and why we made the decisions we made.</p>
+                <p class="text-sm text-gray-200 mb-4">Learn how the simulator functions.</p>
                 <a href="about.html" class="inline-block px-5 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition duration-200">How does it work?</a>
             </div>
 
@@ -64,12 +64,12 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                 <div class="bg-secondary/80 p-4 rounded-lg text-center">
                     <h3 class="font-semibold mb-2">Real-time Simulator</h3>
-                    <p class="text-sm">Company-wide, sector-wide, and even market-wide events occur in real time.</p>
+                    <p class="text-sm">Simulated company-wide, sector-wide, and even market-wide events occur in real time.</p>
                 </div>
                 <div class="bg-secondary/80 p-4 rounded-lg text-center">
                     <h3 class="font-semibold mb-2">Portfolio Tracking</h3>
                     <p class="text-sm">Monitor how much money you are making (or losing) on the stocks you choose to purchase.</p>
-                    <p class="text-sm">With an account with us, your portfolio is saved, and can be returned to at any time!</p>
+                    <p class="text-sm">With an account with us, both your portfolio and the state of your simulated market are saved, and can be easily returned to at any time!</p>
                 </div>
             </div>
 
@@ -83,9 +83,16 @@
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-background/50 text-center py-4 border-t border-gray-700">
-        <p class="text-sm text-gray-400">The InvestEd Stock Market Simulator</p>
-    </footer>
+    <!-- Footer, from footer.html -->
+    <div id="footer-container"></div>
+
+    <script>
+        fetch('footer.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('footer-container').innerHTML = data;
+            });
+    </script>
+
 </body>
 </html>
