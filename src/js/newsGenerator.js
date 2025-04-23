@@ -93,12 +93,12 @@ class NewsGenerator {
 
         //TODO: to reduce redundant code, newsItem can become an object of its own
         const newsItem = {
-            headline: newsTemplate.text.replace('{company}', newsTarget.name),
+            headline: newsTemplate.text.replace('{company}', newsTarget.companyName),
             type: newsType,
             target: {
                 type: 'company',
                 symbol: newsTarget.symbol,
-                name: newsTarget.name
+                name: newsTarget.companyName
             },
             impact: newsTemplate.impact,
             timestamp: new Date()

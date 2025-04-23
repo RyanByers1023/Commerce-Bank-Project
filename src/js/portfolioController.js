@@ -17,7 +17,7 @@ class Portfolio {
         }
 
         // Calculate total cost
-        const totalCost = stock.price * quantity;
+        const totalCost = stock.marketPrice * quantity;
 
         // Check if user has enough cash
         if (totalCost > this.cash) {
@@ -30,15 +30,15 @@ class Portfolio {
         // Update holdings
         if (this.holdings[stock.symbol]) {
             this.holdings[stock.symbol].quantity += quantity;
-            this.holdings[stock.symbol].avgPrice =
+            this.holdings[stock.symbol].avgmarketPrice =
                 (this.holdings[stock.symbol].avgPrice * (this.holdings[stock.symbol].quantity - quantity) +
-                    stock.price * quantity) / this.holdings[stock.symbol].quantity;
+                    stock.marketPrice * quantity) / this.holdings[stock.symbol].quantity;
         } else {
             this.holdings[stock.symbol] = {
                 symbol: stock.symbol,
-                name: stock.name,
+                name: stock.companyName,
                 quantity: quantity,
-                avgPrice: stock.price
+                avgPrice: stock.marketPrice
             };
         }
 
@@ -46,9 +46,9 @@ class Portfolio {
         const transaction = {
             type: "BUY",
             symbol: stock.symbol,
-            name: stock.name,
+            name: stock.companyName,
             quantity: quantity,
-            price: stock.price,
+            price: stock.marketPrice,
             total: totalCost,
             timestamp: new Date()
         };
@@ -98,9 +98,9 @@ class Portfolio {
         const transaction = {
             type: "SELL",
             symbol: stock.symbol,
-            name: stock.name,
+            name: stock.companyName,
             quantity: quantity,
-            price: stock.price,
+            marketPrice: stock.marketPrice,
             total: totalValue,
             timestamp: new Date()
         };
@@ -120,7 +120,7 @@ class Portfolio {
 
         for (const symbol in this.holdings) {
             if (stockMap[symbol]) {
-                total += stockMap[symbol].price * this.holdings[symbol].quantity;
+                total += stockMap[symbol].marketPrice * this.holdings[symbol].quantity;
             }
         }
 
@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const quantity = parseInt(buyQuantityInput.value) || 0;
         const currentStock = getCurrentStock();
         if (currentStock) {
-            const total = currentStock.price * quantity;
+            const total = currentStock.marketPrice * quantity;
             buyTotalSpan.textContent = `$${total.toFixed(2)}`;
         }
     });
@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const quantity = parseInt(sellQuantityInput.value) || 0;
         const currentStock = getCurrentStock();
         if (currentStock) {
-            const total = currentStock.price * quantity;
+            const total = currentStock.marketPrice * quantity;
             sellTotalSpan.textContent = `$${total.toFixed(2)}`;
         }
     });
@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Reset quantity
                 buyQuantityInput.value = 1;
-                buyTotalSpan.textContent = `$${currentStock.price.toFixed(2)}`;
+                buyTotalSpan.textContent = `$${currentStock.marketPrice.toFixed(2)}`;
             } else {
                 // Show error message
                 alert(result.message);
@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Reset quantity
                 sellQuantityInput.value = 1;
-                sellTotalSpan.textContent = `$${currentStock.price.toFixed(2)}`;
+                sellTotalSpan.textContent = `$${currentStock.marketPrice.toFixed(2)}`;
             } else {
                 // Show error message
                 alert(result.message);
@@ -268,15 +268,15 @@ function updatePortfolioUI() {
     // Update buy/sell price displays
     const currentStock = getCurrentStock();
     if (currentStock) {
-        document.getElementById('buy-price').textContent = `$${currentStock.price.toFixed(2)}`;
-        document.getElementById('sell-price').textContent = `$${currentStock.price.toFixed(2)}`;
+        document.getElementById('buy-price').textContent = `$${currentStock.marketPrice.toFixed(2)}`;
+        document.getElementById('sell-price').textContent = `$${currentStock.marketPrice.toFixed(2)}`;
 
         // Update buy/sell totals
         const buyQuantity = parseInt(document.getElementById('buy-quantity').value) || 0;
-        document.getElementById('buy-total').textContent = `$${(currentStock.price * buyQuantity).toFixed(2)}`;
+        document.getElementById('buy-total').textContent = `$${(currentStock.marketPrice * buyQuantity).toFixed(2)}`;
 
         const sellQuantity = parseInt(document.getElementById('sell-quantity').value) || 0;
-        document.getElementById('sell-total').textContent = `$${(currentStock.price * sellQuantity).toFixed(2)}`;
+        document.getElementById('sell-total').textContent = `$${(currentStock.marketPrice * sellQuantity).toFixed(2)}`;
     }
 }
 
@@ -302,7 +302,7 @@ function updateHoldingsTable() {
     }
 
     holdings.forEach(holding => {
-        const currentPrice = stockMap[holding.symbol] ? stockMap[holding.symbol].price : 0;
+        const currentPrice = stockMap[holding.symbol] ? stockMap[holding.symbol].marketPrice : 0;
         const value = currentPrice * holding.quantity;
         const profitLoss = currentPrice - holding.avgPrice;
         const profitLossClass = profitLoss >= 0 ? 'text-green-600' : 'text-red-600';
