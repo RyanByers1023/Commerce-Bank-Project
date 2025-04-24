@@ -43,6 +43,12 @@ class Stock {
         this.getIntialStockValues()
     }
 
+    static async createStock(symbol) {
+        const stock = new Stock(symbol);
+        await stock.getIntialStockValues();
+        return stock;
+    }
+
     // get stock info from Yahoo Finance's API
     async getIntialStockValues() {
         try {

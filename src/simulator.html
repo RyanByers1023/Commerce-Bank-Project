@@ -23,11 +23,11 @@
             <div class="flex justify-between items-center">
                 <div>
                     <h2 class="text-xl font-semibold text-gray-700">Your Portfolio</h2>
-                    <p class="text-gray-600">Available Cash: <span id="available-cash" class="font-bold text-green-600">$10,000.00</span></p>
+                    <p class="text-gray-600">Available Cash: <span id="portfolioAvailableCash" class="font-bold text-green-600">$10,000.00</span></p>
                 </div>
                 <div class="text-right">
-                    <p class="text-gray-600">Portfolio Value: <span id="portfolio-value" class="font-bold">$0.00</span></p>
-                    <p class="text-gray-600">Total Assets: <span id="total-assets" class="font-bold text-blue-600">$10,000.00</span></p>
+                    <p class="text-gray-600">Portfolio Value: <span id="portfolioValue" class="font-bold">$0.00</span></p>
+                    <p class="text-gray-600">Total Assets: <span id="portfolioTotalAssets" class="font-bold text-blue-600">$10,000.00</span></p>
                 </div>
             </div>
         </div>
@@ -40,11 +40,11 @@
                 <!-- Stock Selection and Timeframe -->
                 <div class="flex flex-wrap justify-between items-center mb-4">
                     <div class="flex items-center space-x-2 mb-2 sm:mb-0">
-                        <select id="stockSelect" class="px-3 py-2 border rounded" onchange="changeFocusedStock()">
+                        <select id="selectStock" class="px-3 py-2 border rounded" onchange="changeFocusedStock()">
                             <!-- Options populated dynamically -->
                         </select>
-                        <span id="currentPrice" class="text-xl font-bold">$0.00</span>
-                        <span id="priceChange" class="text-sm font-medium px-2 py-1 rounded"></span>
+                        <span id="stockPrice" class="text-xl font-bold">$0.00</span>
+                        <span id="stockPriceChange" class="text-sm font-medium px-2 py-1 rounded"></span>
                     </div>
 
                     <div class="flex space-x-2">
@@ -64,24 +64,24 @@
                     <div class="bg-gray-100 p-4 rounded">
                         <h3 class="text-lg font-semibold text-gray-700 mb-2">Buy Shares</h3>
                         <div class="flex items-center space-x-2 mb-4">
-                            <input type="number" id="buy-quantity" min="1" value="1" class="w-20 px-2 py-1 border rounded text-right">
-                            <span>shares at <span id="buy-price" class="font-medium">$0.00</span></span>
+                            <input type="number" id="stockBuyQuantity" min="1" value="1" class="w-20 px-2 py-1 border rounded text-right">
+                            <span>shares at <span id="stockBuyPrice" class="font-medium">$0.00</span></span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span>Total: <span id="buy-total" class="font-medium">$0.00</span></span>
-                            <button id="buy-button" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">Buy</button>
+                            <span>Total: <span id="stockBuyPriceTotal" class="font-medium">$0.00</span></span>
+                            <button id="buttonBuy" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">Buy</button>
                         </div>
                     </div>
 
                     <div class="bg-gray-100 p-4 rounded">
                         <h3 class="text-lg font-semibold text-gray-700 mb-2">Sell Shares</h3>
                         <div class="flex items-center space-x-2 mb-4">
-                            <input type="number" id="sell-quantity" min="1" value="1" class="w-20 px-2 py-1 border rounded text-right">
-                            <span>shares at <span id="sell-price" class="font-medium">$0.00</span></span>
+                            <input type="number" id="stockSellQuantity" min="1" value="1" class="w-20 px-2 py-1 border rounded text-right">
+                            <span>shares at <span id="stockSellPrice" class="font-medium">$0.00</span></span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span>Total: <span id="sell-total" class="font-medium">$0.00</span></span>
-                            <button id="sell-button" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">Sell</button>
+                            <span>Total: <span id="stockSellPriceTotal" class="font-medium">$0.00</span></span>
+                            <button id="buttonSell" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">Sell</button>
                         </div>
                     </div>
                 </div>
@@ -138,8 +138,8 @@
 </script>
 
 <!-- Link to controllers -->
-<script src="js/stock.js"></script>
-<script src="js/simulatorGraphController.js"></script>
+<script type ="module" src="js/stock.js"></script>
+<script type="module" src="js/simulatorGraphController.js"></script>
 <script src="js/portfolioController.js"></script>
 <script src="js/newsGenerator.js"></script>
 

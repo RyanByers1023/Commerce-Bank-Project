@@ -1,6 +1,8 @@
 // Updated simulator graph controller
 // This handles the stock chart visualization and interactions
 
+//TODO: rename variables pertaining to simulator.html elements to match variable names within simulator.html (i renamed some of them)
+
 // Canvas graph setup
 import Stock from "./stock";
 
@@ -21,33 +23,31 @@ const TIME_FRAMES = {
     "1M": { interval: 7000, label: "This Month" }
 };
 
-// State variables
+//TODO: remove global variables. Making a class to hold all of the attributes relevant to filling the simulator with data could resolve this issue
 let timeframe = "1D";
 let currentStock = "AAPL";
 let updateInterval = null;
 
-// Initialize more diverse stock list
-const userStocks = [
-    new Stock("AAPL"),
-    new Stock("GOOGL"),
-    new Stock("TSLA"),
-    new Stock("AMZN"),
-    new Stock("MSFT"),
-    new Stock("META"),
-    new Stock("NFLX"),
-    new Stock("NVDA"),
-    new Stock("PFE"),
-    new Stock("DIS")
-];
+let userStocks = [];
+async function initializeStocks() {
+    userStocks = await Promise.all([
+        Stock.createStock("AAPL"),
+        Stock.createStock("GOOGL"),
+        // etc.
+    ]);
+    populateStockDropdown();
+    updateCurrentStockDisplay();
+}
 
+/**
 /**
  * Changes the selected stock
  */
 
 //TODO: make this return stock instead of assigning it
 function changeFocusedStock() {
-    const stockSelect = document.getElementById("stockSelect");
-    currentStock = stockSelect.value;
+    //get the user selected stock from the selectStock select element (drop-down menu)
+    currentStock = document.getElementById("selectStock");
 
     // Reset price history
     const selectedStock = getCurrentStock();
