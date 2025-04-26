@@ -1,65 +1,174 @@
 // Portfolio Controller - Manages user portfolio, cash, and transactions
 
+//*DB* there should be a table called Portfolio within the DB
+//stores information relevant to the state of the User's portfolio, and its history
 class Portfolio {
+    //change the value passed to this constructor to change user starting money
     constructor(initialCash = 10000) {
-        this.cash = initialCash;
-        this.holdings = {};  // Map of stock symbols to quantity owned
-        this.transactions = []; // Record of all transactions
-        this.startingCash = initialCash; // For calculating total profits/losses
+        //user begins with value stored in initialCash
+        this.balance = initialCash;
+
+        //Map of stock symbols to quantity owned
+        //eg. 'AAPL': 2 means a user has two shares of Apple stock
+        //tip for DB: use stock.symbol as Primary Key {PK} to identify any given stock, as there cannot be duplicates
+        this.holdings = {};
+
+         // Record of all transactions *DB*
+        this.transactionHistory = [];
+
+        // For calculating total profits/losses
+        this.startingCash = initialCash; 
     }
 
     // Buy a stock
     buyStock(stock, quantity) {
-        // Convert quantity to number and validate
-        quantity = parseInt(quantity);
+
+        //TODO: sanitize this input (quantity)
         if (isNaN(quantity) || quantity <= 0) {
             return { success: false, message: "Please enter a valid quantity" };
         }
 
-        // Calculate total cost
-        const totalCost = stock.marketPrice * quantity;
+        quantity = parseInt(quantity);
 
         // Check if user has enough cash
-        if (totalCost > this.cash) {
+        if (totalCost > this.balance){
+            //immediately break out of the function if they don't have the cash for the transaction
             return { success: false, message: "Not enough cash available for this purchase" };
         }
 
-        // Update cash
-        this.cash -= totalCost;
+        //negative value provided bc we are subtracting this value from the user's balance
+        this.updateBalance(-totalCost)
 
-        // Update holdings
-        if (this.holdings[stock.symbol]) {
-            this.holdings[stock.symbol].quantity += quantity;
-            this.holdings[stock.symbol].avgmarketPrice =
-                (this.holdings[stock.symbol].avgPrice * (this.holdings[stock.symbol].quantity - quantity) +
-                    stock.marketPrice * quantity) / this.holdings[stock.symbol].quantity;
-        } else {
-            this.holdings[stock.symbol] = {
-                symbol: stock.symbol,
-                name: stock.companyName,
-                quantity: quantity,
-                avgPrice: stock.marketPrice
-            };
-        }
-
-        // Record transaction
+        // create transaction *DB*
         const transaction = {
-            type: "BUY",
-            symbol: stock.symbol,
-            name: stock.companyName,
-            quantity: quantity,
-            price: stock.marketPrice,
-            total: totalCost,
+            //enum: "BUY" or "SELL"
+            transactionType: "BUY",
+
+            stockSymbol: stock.symbol,
+
+            stockCompanyName: stock.companyName,
+
+            //expected int from user input field
+            stockQuantity: quantity,
+
+            //int: obtained from stock Object
+            stockPrice: stock.marketPrice,
+            
+            totalTransactionCost: stock.marketPrice * quantity,
+
+            //Date() formatted as: (YYYY-MM-DD)
             timestamp: new Date()
         };
 
-        this.transactions.push(transaction);
+        //add the stock to user's holdings
+        this.updateHoldings(stock);
+
+        //record this transaction, store in transactionHistory array
+        this.updateTransactionHistory(transaction);
 
         return {
+            //flag returned to the calling code to indicate the transaction process has completed correctly
             success: true,
+
+            //print a message to browser. TODO: this looks kind of like a debug message, best to improve/remove before project end
             message: `Successfully bought ${quantity} shares of ${stock.symbol} for $${totalCost.toFixed(2)}`,
+
+            //the transaction itself is also returned
             transaction: transaction
         };
+    }
+
+    updateTransactionHistory(transaction){
+        this.transactionHistory.push(transaction);
+    }
+
+    // Helper function for buyStock(), modifies this.holdings
+    updateHoldings(stock, quantity) {
+        if(!stockValid(stock) || quantityValid(quantity)){
+            return
+        }
+
+        //get the symbol (just for reading the next bit a little easier)
+        const symbol = stock.symbol;
+
+        if (this.holdings[symbol]) {
+            // Existing holding: update quantity and average market price
+            this.holdings[symbol].quantity += quantity;
+            this.setAverageMarketPrice(stock, quantity);
+        } else {
+            // New holding: create a new entry
+            this.holdings[symbol] = {
+                symbol: symbol,
+                name: stock.companyName,
+                quantity: quantity,
+                pricePayed: stock.marketPrice,
+                avgPricePayed: this.calculateAverageStockPurchasePrice(stock),
+            };
+        }
+    }
+
+    //returns the average price payed for the stock involved in the passed transaction
+    calculateAverageStockPurchasePrice(transaction){
+        const relevantTransactions = this.obtainAllTransactionsForStock(transaction)
+
+        //add up all of the money the user has spent so far on this stock
+        for(i = 0; i < this.relevantTransactions.size(); ++i){
+            
+            if (relevantTransactions.length === 0) {
+                console.log(`No transactions found for ${stockSymbol}`);
+                return -1;
+            }
+        }
+
+        return totalMoneySpend / this.holdings.size();
+
+    }
+
+    //returns all transactions that pertain to the same stock, helpful for avg calculation
+    getAllSimilarTransactions(transaction){
+        return this.transactions.filter(tx => tx.stockSymbol === stockSymbol);
+    }
+
+
+    setAverageMarketPrice(stock, quantity) {
+        if(!stockValid(stock) || !quantityValid(quantity)){
+            return;
+        }
+    
+        //get the stock, store in holding for easy access
+        const holding = this.holdings[stock.symbol];
+    
+        const existingQuantity = holding.quantity - quantity;
+        const existingCost = holding.avgPrice * existingQuantity;
+        const newCost = stock.marketPrice * quantity;
+        const totalQuantity = holding.quantity;
+    
+        holding.avgmarketPrice = (existingCost + newCost) / totalQuantity;
+    }
+
+    //returns a boolean: false if there is a problem with any stock attributes
+    stockValid(stock){
+        if (!stock //stock itself NULL?
+            || !stock.symbol //stock.symbol NULL?
+            || typeof stock.marketPrice !== 'number') { //is stock.marketPrice a number?
+            console.error("Invalid stock object.");
+            return false;
+        }
+
+        return true;
+    }
+
+    quantityValid(quantity){
+        if (typeof quantity !== 'number' || quantity <= 0) {
+            console.error("Quantity must be a positive number.");
+            return true;
+        }
+
+        return false;
+    }
+
+    updateBalance(totalCost){
+        this.balance += totalCost;
     }
 
     // Sell a stock
@@ -94,8 +203,8 @@ class Portfolio {
             delete this.holdings[stock.symbol];
         }
 
-        // Record transaction
-        const transaction = {
+        // Record the transaction
+        transaction = {
             type: "SELL",
             symbol: stock.symbol,
             name: stock.companyName,
