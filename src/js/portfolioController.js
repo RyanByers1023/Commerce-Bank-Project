@@ -166,7 +166,7 @@ class Portfolio {
     //this requires the transaction history list instead of the stock because 
     //the values required for the avg are all historical data with respect to the stock's price
     calculateAverageStockPurchasePrice(transaction){
-        const relevantTransactions = this.obtainAllTransactionsForStock(transaction)
+        const relevantTransactions = this.getAllTransactionsForStock(transaction)
 
         //add up all of the money the user has spent so far on this stock
         for(i = 0; i < this.relevantTransactions.size(); ++i){
@@ -182,11 +182,12 @@ class Portfolio {
     }
 
     //returns all transactions that pertain to the same stock, helpful for avg calculation
-    getAllSimilarTransactions(transaction){
+    getAllTransactionsForStock(transaction){
         return this.transactions.filter(tx => tx.stockSymbol === stockSymbol);
     }
 
 
+    //returns NULL: sets
     setAverageMarketPrice(stock, quantity) {
         if(!stockValid(stock) || !quantityValid(quantity)){
             return;
