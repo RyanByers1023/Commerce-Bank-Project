@@ -67,8 +67,7 @@ class Portfolio {
         //add the stock to user's holdings
         this.updateHoldings(stock);
 
-        //record this transaction, store in transactionHistory array
-        this.updateTransactionHistory(transaction);
+        this.createTransaction(stock, "BUY", quantity)
 
         return {
             //flag returned to the calling code to indicate the transaction process has completed correctly
@@ -109,12 +108,10 @@ class Portfolio {
         // Update holdings
         this.holdings[stock.symbol].quantity -= quantity;
 
-        // Remove stock from holdings if quantity is 0
-        if (this.holdings[stock.symbol].quantity === 0) {
-            delete this.holdings[stock.symbol];
-        }
+        //add the stock to user's holdings
+        this.takeFromHoldings(stock, "SELL");
 
-        this.recordTransaction(transaction, "SELL");
+        this.createTransaction(stock, "SELL", quantity)
 
         return {
             success: true,
@@ -123,39 +120,25 @@ class Portfolio {
         };
     }
 
-    // Record a transaction and store in transactionHistory
-    recordTransaction(transaction, type){
-        transaction = {
-            type: type,
-            symbol: stock.symbol,
-            name: stock.companyName,
-            quantity: quantity,
-            marketPrice: stock.marketPrice,
-            total: totalValue,
-            timestamp: new Date()
-        };
-
-        this.updateTransactionHistory(transaction);
-    }
-
-    createTransaction(type, stock, quantity, pricePerShare) {
-        return {
+    createTransaction(stock, type, quantity) {
+        newTransaction = {
             transactionType: type,
             stockSymbol: stock.symbol,
             stockCompanyName: stock.companyName,
             stockQuantity: quantity,
             stockPrice: pricePerShare,
-            totalTransactionCost: pricePerShare * quantity,
+            totalTransactionCost: stock.marketPrice * quantity,
             timestamp: new Date()
         };
-    }
 
-    updateTransactionHistory(transaction){
-        this.transactionHistory.push(transaction);
+        //store the transaction
+        this.transactionHistory.push(newTransaction);
+
+        return this.newTransaction;
     }
 
     // Helper function for buyStock(), modifies this.holdings
-    updateHoldings(stock, quantity) {
+    addToHoldings(stock, quantity) {
         if(!stockValid(stock) || quantityValid(quantity)){
             return
         }
@@ -180,6 +163,8 @@ class Portfolio {
     }
 
     //returns the average price payed for the stock involved in the passed transaction
+    //this requires the transaction history list instead of the stock because 
+    //the values required for the avg are all historical data with respect to the stock's price
     calculateAverageStockPurchasePrice(transaction){
         const relevantTransactions = this.obtainAllTransactionsForStock(transaction)
 
