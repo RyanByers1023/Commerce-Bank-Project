@@ -78,6 +78,70 @@ class Portfolio {
         };
     }
 
+        // Sell a stock
+        sellStock(stock, quantity) {
+            // Convert quantity to number and validate
+            quantity = parseInt(quantity);
+            if (isNaN(quantity) || quantity <= 0) {
+                return { success: false, message: "Please enter a valid quantity" };
+            }
+    
+            // Check if user owns the stock
+            if (!this.holdings[stock.symbol]) {
+                return { success: false, message: `You don't own any shares of ${stock.symbol}` };
+            }
+    
+            // Check if user owns enough shares
+            if (this.holdings[stock.symbol].quantity < quantity) {
+                return { success: false, message: `You only own ${this.holdings[stock.symbol].quantity} shares of ${stock.symbol}` };
+            }
+    
+            // Calculate total value
+            const totalValue = stock.price * quantity;
+    
+            // Update cash
+            this.cash += totalValue;
+    
+            // Update holdings
+            this.holdings[stock.symbol].quantity -= quantity;
+    
+            // Remove stock from holdings if quantity is 0
+            if (this.holdings[stock.symbol].quantity === 0) {
+                delete this.holdings[stock.symbol];
+            }
+    
+            // Record the transaction
+            transaction = {
+                type: "SELL",
+                symbol: stock.symbol,
+                name: stock.companyName,
+                quantity: quantity,
+                marketPrice: stock.marketPrice,
+                total: totalValue,
+                timestamp: new Date()
+            };
+    
+            this.transactions.push(transaction);
+    
+            return {
+                success: true,
+                message: `Successfully sold ${quantity} shares of ${stock.symbol} for $${totalValue.toFixed(2)}`,
+                transaction: transaction
+            };
+        }
+
+    createTransaction(type, stock, quantity, pricePerShare) {
+        return {
+            transactionType: type,
+            stockSymbol: stock.symbol,
+            stockCompanyName: stock.companyName,
+            stockQuantity: quantity,
+            stockPrice: pricePerShare,
+            totalTransactionCost: pricePerShare * quantity,
+            timestamp: new Date()
+        };
+    }
+
     updateTransactionHistory(transaction){
         this.transactionHistory.push(transaction);
     }
@@ -171,62 +235,13 @@ class Portfolio {
         this.balance += totalCost;
     }
 
-    // Sell a stock
-    sellStock(stock, quantity) {
-        // Convert quantity to number and validate
-        quantity = parseInt(quantity);
-        if (isNaN(quantity) || quantity <= 0) {
-            return { success: false, message: "Please enter a valid quantity" };
-        }
-
-        // Check if user owns the stock
-        if (!this.holdings[stock.symbol]) {
-            return { success: false, message: `You don't own any shares of ${stock.symbol}` };
-        }
-
-        // Check if user owns enough shares
-        if (this.holdings[stock.symbol].quantity < quantity) {
-            return { success: false, message: `You only own ${this.holdings[stock.symbol].quantity} shares of ${stock.symbol}` };
-        }
-
-        // Calculate total value
-        const totalValue = stock.price * quantity;
-
-        // Update cash
-        this.cash += totalValue;
-
-        // Update holdings
-        this.holdings[stock.symbol].quantity -= quantity;
-
-        // Remove stock from holdings if quantity is 0
-        if (this.holdings[stock.symbol].quantity === 0) {
-            delete this.holdings[stock.symbol];
-        }
-
-        // Record the transaction
-        transaction = {
-            type: "SELL",
-            symbol: stock.symbol,
-            name: stock.companyName,
-            quantity: quantity,
-            marketPrice: stock.marketPrice,
-            total: totalValue,
-            timestamp: new Date()
-        };
-
-        this.transactions.push(transaction);
-
-        return {
-            success: true,
-            message: `Successfully sold ${quantity} shares of ${stock.symbol} for $${totalValue.toFixed(2)}`,
-            transaction: transaction
-        };
-    }
-
-    // Calculate total portfolio value
+    // returns float: total portfolio value
     getPortfolioValue(stockMap) {
+        //stores the total portfolio value
         let total = 0;
 
+        //iterate through this.holdings and add together all stocks' values
+        //(with their current values, not the values the stocks were bought at initially)
         for (const symbol in this.holdings) {
             if (stockMap[symbol]) {
                 total += stockMap[symbol].marketPrice * this.holdings[symbol].quantity;
@@ -258,6 +273,14 @@ class Portfolio {
         };
     }
 }
+
+// Helper to get current stock
+function getCurrentStock() {
+    return userStocks.find(stock => stock.symbol === currentStock);
+}
+
+
+//-------------------------------------------Portfolio UI Elements---------------------------------------------//
 
 // Initialize the global portfolio
 let userPortfolio = new Portfolio(10000);
@@ -347,11 +370,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial update
     updatePortfolioUI();
 });
-
-// Helper to get current stock
-function getCurrentStock() {
-    return userStocks.find(stock => stock.symbol === currentStock);
-}
 
 // Update all portfolio-related UI elements
 function updatePortfolioUI() {
