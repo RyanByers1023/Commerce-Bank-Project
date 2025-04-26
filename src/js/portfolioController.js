@@ -26,7 +26,6 @@ class Portfolio {
 
     // Buy a stock
     buyStock(stock, quantity) {
-
         //TODO: sanitize this input (quantity)
         if (isNaN(quantity) || quantity <= 0) {
             return { success: false, message: "Please enter a valid quantity" };
@@ -83,7 +82,7 @@ class Portfolio {
 
     
     sellStock(stock, quantity) {
-        // Convert quantity to number and validate
+        //TODO: sanitize this input
         quantity = parseInt(quantity);
         if (isNaN(quantity) || quantity <= 0) {
             return { success: false, message: "Please enter a valid quantity" };
@@ -102,15 +101,17 @@ class Portfolio {
         // Calculate total value
         const totalValue = stock.price * quantity;
 
-        // Update cash
-        this.cash += totalValue;
+        // Update balance
+        this.balance += totalValue;
 
         // Update holdings
         this.holdings[stock.symbol].quantity -= quantity;
 
         //add the stock to user's holdings
-        this.takeFromHoldings(stock, "SELL");
+        //TODO: implement takeFromHoldings
+        this.takeFromHoldings(stock, quantity);
 
+        //add the transaction to transactionHistory
         this.createTransaction(stock, "SELL", quantity)
 
         return {
@@ -120,6 +121,7 @@ class Portfolio {
         };
     }
 
+    //returns transaction, associated attributes detailed below:
     createTransaction(stock, type, quantity) {
         newTransaction = {
             transactionType: type,
@@ -131,13 +133,13 @@ class Portfolio {
             timestamp: new Date()
         };
 
-        //store the transaction
+        //store the transaction in transactionHistory array
         this.transactionHistory.push(newTransaction);
 
         return this.newTransaction;
     }
 
-    // Helper function for buyStock(), modifies this.holdings
+    //void, Helper function for buyStock(), modifies this.holdings
     addToHoldings(stock, quantity) {
         if(!stockValid(stock) || quantityValid(quantity)){
             return
@@ -162,9 +164,7 @@ class Portfolio {
         }
     }
 
-    //returns the average price payed for the stock involved in the passed transaction
-    //this requires the transaction history list instead of the stock because 
-    //the values required for the avg are all historical data with respect to the stock's price
+    //returns float: the average price payed for the stock involved in the transaction passed via parameter
     calculateAverageStockPurchasePrice(transaction){
         const relevantTransactions = this.getAllTransactionsForStock(transaction)
 
@@ -180,14 +180,15 @@ class Portfolio {
         return totalMoneySpend / this.holdings.size();
 
     }
-
-    //returns all transactions that pertain to the same stock, helpful for avg calculation
+    
+    //TODO: I had ChatGPT make this, and I don't really get what its doing
+    //return list of all transactions that pertain to the same stock, helpful for avg calculation
     getAllTransactionsForStock(transaction){
-        return this.transactions.filter(tx => tx.stockSymbol === stockSymbol);
+        return this.transactionHistory.filter(transaction => transaction.stockSymbol === stockSymbol);
     }
 
 
-    //returns NULL: sets
+    //void
     setAverageMarketPrice(stock, quantity) {
         if(!stockValid(stock) || !quantityValid(quantity)){
             return;
@@ -204,7 +205,7 @@ class Portfolio {
         holding.avgmarketPrice = (existingCost + newCost) / totalQuantity;
     }
 
-    //returns a boolean: false if there is a problem with any stock attributes
+    //returns a boolean: false if there is a problem with any stock attributes, true otherwise
     stockValid(stock){
         if (!stock //stock itself NULL?
             || !stock.symbol //stock.symbol NULL?
@@ -216,6 +217,7 @@ class Portfolio {
         return true;
     }
 
+    //returns a boolean: false if there is a problem with the quantity value, true otherwise
     quantityValid(quantity){
         if (typeof quantity !== 'number' || quantity <= 0) {
             console.error("Quantity must be a positive number.");
@@ -225,6 +227,7 @@ class Portfolio {
         return false;
     }
 
+    //void, updates this.balance
     updateBalance(totalCost){
         this.balance += totalCost;
     }
@@ -245,7 +248,7 @@ class Portfolio {
         return total;
     }
 
-    // Get total assets (cash + portfolio)
+    //returns  Get total assets (cash + portfolio)
     getTotalAssets(stockMap) {
         return this.cash + this.getPortfolioValue(stockMap);
     }
