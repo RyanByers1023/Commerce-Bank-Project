@@ -2,6 +2,10 @@
 
 //*DB* there should be a table called Portfolio within the DB
 //stores information relevant to the state of the User's portfolio, and its history
+
+//TODO: all input validation should be handled using a centralized file
+//so, all output from something like InputValidator.js would be clean, trustable text
+//i think this would be easier to maintain, but im open to other ideas -- ryan
 class Portfolio {
     //change the value passed to this constructor to change user starting money
     constructor(initialCash = 10000) {
@@ -78,57 +82,61 @@ class Portfolio {
         };
     }
 
-        // Sell a stock
-        sellStock(stock, quantity) {
-            // Convert quantity to number and validate
-            quantity = parseInt(quantity);
-            if (isNaN(quantity) || quantity <= 0) {
-                return { success: false, message: "Please enter a valid quantity" };
-            }
     
-            // Check if user owns the stock
-            if (!this.holdings[stock.symbol]) {
-                return { success: false, message: `You don't own any shares of ${stock.symbol}` };
-            }
-    
-            // Check if user owns enough shares
-            if (this.holdings[stock.symbol].quantity < quantity) {
-                return { success: false, message: `You only own ${this.holdings[stock.symbol].quantity} shares of ${stock.symbol}` };
-            }
-    
-            // Calculate total value
-            const totalValue = stock.price * quantity;
-    
-            // Update cash
-            this.cash += totalValue;
-    
-            // Update holdings
-            this.holdings[stock.symbol].quantity -= quantity;
-    
-            // Remove stock from holdings if quantity is 0
-            if (this.holdings[stock.symbol].quantity === 0) {
-                delete this.holdings[stock.symbol];
-            }
-    
-            // Record the transaction
-            transaction = {
-                type: "SELL",
-                symbol: stock.symbol,
-                name: stock.companyName,
-                quantity: quantity,
-                marketPrice: stock.marketPrice,
-                total: totalValue,
-                timestamp: new Date()
-            };
-    
-            this.transactions.push(transaction);
-    
-            return {
-                success: true,
-                message: `Successfully sold ${quantity} shares of ${stock.symbol} for $${totalValue.toFixed(2)}`,
-                transaction: transaction
-            };
+    sellStock(stock, quantity) {
+        // Convert quantity to number and validate
+        quantity = parseInt(quantity);
+        if (isNaN(quantity) || quantity <= 0) {
+            return { success: false, message: "Please enter a valid quantity" };
         }
+
+        // Check if user owns the stock
+        if (!this.holdings[stock.symbol]) {
+            return { success: false, message: `You don't own any shares of ${stock.symbol}` };
+        }
+
+        // Check if user owns enough shares
+        if (this.holdings[stock.symbol].quantity < quantity) {
+            return { success: false, message: `You only own ${this.holdings[stock.symbol].quantity} shares of ${stock.symbol}` };
+        }
+
+        // Calculate total value
+        const totalValue = stock.price * quantity;
+
+        // Update cash
+        this.cash += totalValue;
+
+        // Update holdings
+        this.holdings[stock.symbol].quantity -= quantity;
+
+        // Remove stock from holdings if quantity is 0
+        if (this.holdings[stock.symbol].quantity === 0) {
+            delete this.holdings[stock.symbol];
+        }
+
+        this.recordTransaction(transaction, "SELL");
+
+        return {
+            success: true,
+            message: `Successfully sold ${quantity} shares of ${stock.symbol} for $${totalValue.toFixed(2)}`,
+            transaction: transaction
+        };
+    }
+
+    // Record a transaction and store in transactionHistory
+    recordTransaction(transaction, type){
+        transaction = {
+            type: type,
+            symbol: stock.symbol,
+            name: stock.companyName,
+            quantity: quantity,
+            marketPrice: stock.marketPrice,
+            total: totalValue,
+            timestamp: new Date()
+        };
+
+        this.updateTransactionHistory(transaction);
+    }
 
     createTransaction(type, stock, quantity, pricePerShare) {
         return {
