@@ -444,3 +444,22 @@ function updateHoldingsTable() {
         tableBody.appendChild(row);
     });
 }
+
+//---------------------------------some useful notes for meeting------------------------------//
+/* exerpt from chatGPT regarding es6 (modern javascript) modules (any js file that is a class):
+Modules (import/export) need setup:
+If you're using ES6 modules (import/export), your HTML file must load your JavaScript with the type="module" attribute:
+<script type="module" src="main.js"></script>
+And your files must be served from a local server (not just opened as file://), or some browsers will block them due to security policies.
+
+exerpt regarding moving data from front end (javascript) to back end (java w/ springboot):
+Backend Options in Java:
+Spring Boot (Most Popular & Modern)
+Easy setup for REST APIs
+
+Works great with MySQL
+
+Handles JSON, validation, security, etc.
+
+Ideal for full-stack apps
+*/
