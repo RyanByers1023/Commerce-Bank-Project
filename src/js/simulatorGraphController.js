@@ -292,12 +292,14 @@ function populateStockDropdown() {
 
     stockSelect.innerHTML = ""; // Clear existing options
 
+    /* -- uncomment to add options to dropdown (doesn't look functional though):
     userStocks.forEach(stock => {
         const option = document.createElement("option");
         option.value = stock.symbol;
         option.textContent = `${stock.companyName} (${stock.symbol})`;
         stockSelect.appendChild(option);
     });
+    */
 
     // Set initial selection
     stockSelect.value = currentStock;
