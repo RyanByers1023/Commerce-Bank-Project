@@ -3,7 +3,7 @@
 
 class PortfolioUIController{
     PortfolioUIController(){
-        // Initialize the global portfolio
+        // Initialize a demo portfolio
         let userPortfolio = new Portfolio(10000);
         InitializeUIElements(userPortfolio);
     }
@@ -11,123 +11,156 @@ class PortfolioUIController{
     //Initialize UI elements
     InitializeUIElements(userPortfolio){
         document.addEventListener('DOMContentLoaded', function() {
-            // Buy form handler
-            const buyQuantityInput = document.getElementById('buy-quantity');
-            const buyTotalSpan = document.getElementById('buy-total');
-            const buyButton = document.getElementById('buy-button');
         
-            // Sell form handler
-            const sellQuantityInput = document.getElementById('sell-quantity');
-            const sellTotalSpan = document.getElementById('sell-total');
-            const sellButton = document.getElementById('sell-button');
+            //retrieve the number of stocks the user wants to buy/sell from
+            //the quantity field in the UI
+            getInputBuyQuantity();
+            getInputSellQuantity();
         
-            // Calculate buy total when quantity changes
-            buyQuantityInput.addEventListener('input', function() {
-                const quantity = parseInt(buyQuantityInput.value) || 0;
-                const currentStock = getCurrentStock();
-                if (currentStock) {
-                    const total = currentStock.marketPrice * quantity;
-                    buyTotalSpan.textContent = `$${total.toFixed(2)}`;
-                }
-            });
+            handleBuyButtonClick();
+            handleSellButtonClick();
         
-            // Calculate sell total when quantity changes
-            sellQuantityInput.addEventListener('input', function() {
-                const quantity = parseInt(sellQuantityInput.value) || 0;
-                const currentStock = getCurrentStock();
-                if (currentStock) {
-                    const total = currentStock.marketPrice * quantity;
-                    sellTotalSpan.textContent = `$${total.toFixed(2)}`;
-                }
-            });
-        
-            // Buy button click handler
-            buyButton.addEventListener('click', function() {
-                const quantity = parseInt(buyQuantityInput.value) || 0;
-                const currentStock = getCurrentStock();
-        
-                if (currentStock) {
-                    const result = userPortfolio.buyStock(currentStock, quantity);
-        
-                    if (result.success) {
-                        // Show success message
-                        alert(result.message);
-        
-                        // Update UI
-                        updatePortfolioUI();
-        
-                        // Reset quantity
-                        buyQuantityInput.value = 1;
-                        buyTotalSpan.textContent = `$${currentStock.marketPrice.toFixed(2)}`;
-                    } else {
-                        // Show error message
-                        alert(result.message);
-                    }
-                }
-            });
-        
-            // Sell button click handler
-            sellButton.addEventListener('click', function() {
-                const quantity = parseInt(sellQuantityInput.value) || 0;
-                const currentStock = getCurrentStock();
-        
-                if (currentStock) {
-                    const result = userPortfolio.sellStock(currentStock, quantity);
-        
-                    if (result.success) {
-                        // Show success message
-                        alert(result.message);
-        
-                        // Update UI
-                        updatePortfolioUI();
-        
-                        // Reset quantity
-                        sellQuantityInput.value = 1;
-                        sellTotalSpan.textContent = `$${currentStock.marketPrice.toFixed(2)}`;
-                    } else {
-                        // Show error message
-                        alert(result.message);
-                    }
-                }
-            });
-        
-            // Initial update
-            updatePortfolioUI(userPortfolio);
+            //set up all of the UI elements pertaining to the user portfolio
+            updateAllPortfolioUIElements(userPortfolio);
+        });
+    }
+
+    getInputBuyQuantity(){
+        // Calculate sell total when quantity changes
+        sellQuantityInput.addEventListener('input', function() {
+            const quantity = parseInt(sellQuantityInput.value) || 0;
+
+            //get the stock selected from the drop down menu
+            const currentStock = getCurrentStock();
+            if (currentStock) {
+                const total = currentStock.marketPrice * quantity;
+                sellTotalSpan.textContent = `$${total.toFixed(2)}`;
+            }
         });
     }
 
     // Update all portfolio-related UI elements
-    updateAllUIElements(userPortfolio) {
+    updateAllPortfolioUIElements(userPortfolio) {
         this.updateCashDisplay(userPortfolio);
         this.updatePortfolioDisplay(userPortfolio);
         this.updateAssetsDisplay(userPortfolio);
         this.updateHoldingsTable(userPortfolio);
-        this.updateBuySellDisplay(userPortfolio);
+        this.updateBuySellPriceDisplay(userPortfolio);
     }
 
-    updateBuySellDisplay(){
+    handleBuyButtonClick(userPortfolio){
+        //get information regarding stock purchase from UI:
+        const buyQuantityInput = document.getElementById('buy-quantity');
+        const buyTotalSpan = document.getElementById('buy-total');
+        const buyButton = document.getElementById('buy-button');
+
+        // Buy button click handler
+        buyButton.addEventListener('click', function() {
+            const quantity = parseInt(buyQuantityInput.value) || 0;
+            const currentStock = getCurrentStock();
+    
+            if (currentStock) {
+                const result = userPortfolio.buyStock(currentStock, quantity);
+    
+                if (result.success) {
+                    // Show success message
+                    alert(result.message);
+    
+                    // Update UI
+                    updatePortfolioUI();
+    
+                    // Reset quantity
+                    buyQuantityInput.value = 1;
+                    buyTotalSpan.textContent = `$${currentStock.marketPrice.toFixed(2)}`;
+                } else {
+                    // Show error message
+                    alert(result.message);
+                }
+            }
+        });
+    }
+
+    //add listener to Sell button on UI, handle click
+    handleSellButtonClick(userPortfolio){
+        // Sell form handler
+        const sellQuantityInput = document.getElementById('sell-quantity');
+        const sellTotalSpan = document.getElementById('sell-total');
+        const sellButton = document.getElementById('sell-button');
+
+        // Sell button click handler
+        sellButton.addEventListener('click', function() {
+            //TODO: sanitize input
+            const quantity = parseInt(sellQuantityInput.value) || 0;
+
+            //get the stock selected from the drop down menu
+            const currentStock = getCurrentStock();
+    
+            if (currentStock) {
+                //perform the sell and update userPortfolio
+                const result = userPortfolio.sellStock(currentStock, quantity);
+    
+                //attempt to sell was successful
+                if (result.success) {
+                    // Show success message
+                    alert(result.message);
+    
+                    // Update the UI
+                    updateAllPortfolioUIElements();
+    
+                    // Reset quantity
+                    sellQuantityInput.value = 1;
+                    sellTotalSpan.textContent = `$${currentStock.marketPrice.toFixed(2)}`;
+
+                //attempt to sell was unsuccessful
+                } else {
+                    // Show error message
+                    alert(result.message);
+                }
+            }
+        });
+    }
+
+    //get the number of stocks the user wants to buy
+    getInputBuyQuantity(){
+        buyQuantityInput.addEventListener('input', function() {
+            //TODO: sanitize input:
+            const buyQuantity = parseInt(document.getElementById('buy-quantity').value) || 0;
+
+            const quantity = parseInt(buyQuantityInput.value) || 0;
+            const currentStock = getCurrentStock();
+            if (currentStock) {
+                const total = currentStock.marketPrice * quantity;
+                buyTotalSpan.textContent = `$${total.toFixed(2)}`;
+            }
+        });
+    }
+
+    updateBuyTotalDisplay(quantity){
+        document.getElementById('buy-total').textContent = `$${(currentStock.marketPrice * quantity).toFixed(2)}`;
+    }
+
+    updateSellTotalDisplay(quantity){
+        document.getElementById('sell-total').textContent = `$${(currentStock.marketPrice * quantity).toFixed(2)}`;
+    }
+
+    updateBuySellPriceDisplay(){
         // Update buy/sell price displays
         const currentStock = getCurrentStock();
         if (currentStock) {
-            document.getElementById('buy-price').textContent = `$${currentStock.marketPrice.toFixed(2)}`;
-            document.getElementById('sell-price').textContent = `$${currentStock.marketPrice.toFixed(2)}`;
-
-            // Update buy/sell totals
-            const buyQuantity = parseInt(document.getElementById('buy-quantity').value) || 0;
-            document.getElementById('buy-total').textContent = `$${(currentStock.marketPrice * buyQuantity).toFixed(2)}`;
-
+            updateBuySellPriceDisplay(currentStock.marketPrice);
             const sellQuantity = parseInt(document.getElementById('sell-quantity').value) || 0;
             document.getElementById('sell-total').textContent = `$${(currentStock.marketPrice * sellQuantity).toFixed(2)}`;
         }
     }
+    
 
-    updateAssetsDisplay(){
+    updateAssetsDisplay(userPortfolio){
         // Update total assets
         const totalAssetsDisplay = document.getElementById('total-assets');
         totalAssetsDisplay.textContent = `$${(userPortfolio.cash + portfolioValue).toFixed(2)}`;
     }
 
-    updatePortfolioDisplay(){
+    updatePortfolioDisplay(userPortfolio){
         // Update portfolio value
         const portfolioValueDisplay = document.getElementById('portfolio-value');
         const portfolioValue = userPortfolio.getPortfolioValue(userStocks.reduce((map, stock) => {
