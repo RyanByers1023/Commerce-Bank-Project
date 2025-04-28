@@ -4,7 +4,7 @@
 //TODO: rename variables pertaining to simulator.html elements to match variable names within simulator.html (i renamed some of them)
 
 // Canvas graph setup
-import Stock from "./stock";
+import Stock from "./Stock";
 
 let canvas;
 let ctx;

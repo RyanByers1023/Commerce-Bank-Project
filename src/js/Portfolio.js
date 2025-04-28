@@ -1,14 +1,35 @@
-// Portfolio Controller - Manages user portfolio, cash, and transactions
+//DB Schema: (WIP, make changes as you please)
 
-//*DB* there should be a table called Portfolio within the DB
-//stores information relevant to the state of the User's portfolio, and its history
+//USER:
+//userID: primary key, uniquely identifies users
+//username: the user's chosen username
+//password: make sure to hash this before storing it
+//email: the user's email address
+//dateCreated: the date and time the account was created (optional)
+//portfolioID: foreign key, links to PORTFOLIO
 
-//TODO: all input validation should be handled using a centralized file
-//so, all output from something like InputValidator.js would be clean, trustable text
-//i think this would be easier to maintain, but im open to other ideas -- ryan
+//PORTFOLIO:
+//portfolioID: primary key, uniquely identifies a portfolio
+//balance: amount of cash the user has that is not in the market
+//initialBalance: the cash the user started with
+//holdings: list of stocks the user owns
+//transactionHistory: list of transactionIDs, foreign keys, that link to TRANSACTION
+
+//TRANSACTION:
+//transactionID: primary key, uniquely identifies a transaction
+//status: complete, incomplete, failed
+//(see createTransaction() for additional attributes to include)
+
+//STOCK
+//stockSymbol: primary key, uniquely identifies a stock
+//(see Stock.js for additional attributes to include)
+
+
+
+//to create another user, instantiate another object of this class:
 class Portfolio {
     //change the value passed to this constructor to change user starting money
-    constructor(initialCash = 10000) {
+    constructor(initialCash = 500) {
         //user begins with value stored in initialCash
         this.balance = initialCash;
 
@@ -23,6 +44,24 @@ class Portfolio {
 
         // For calculating total profits/losses, this is not the user's balance
         this.startingCash = initialCash; 
+    }
+
+    //returns transaction, associated attributes detailed below:
+    createTransaction(stock, type, quantity) {
+        newTransaction = {
+            transactionType: type,
+            stockSymbol: stock.symbol,
+            stockCompanyName: stock.companyName,
+            stockQuantity: quantity,
+            stockPrice: pricePerShare,
+            totalTransactionCost: stock.marketPrice * quantity,
+            timestamp: new Date()
+        };
+
+        //store the transaction in transactionHistory array
+        this.transactionHistory.push(newTransaction);
+
+        return this.newTransaction;
     }
 
     // Buy a stock
@@ -43,26 +82,6 @@ class Portfolio {
         //negative value provided bc we are subtracting this value from the user's balance
         this.updateBalance(-totalCost)
 
-        // create transaction *DB*
-        const transaction = {
-            transactionType: "BUY",
-
-            stockSymbol: stock.symbol,
-
-            stockCompanyName: stock.companyName,
-
-            //expected int from user input field
-            stockQuantity: quantity,
-
-            //int: obtained from stock Object
-            stockPrice: stock.marketPrice,
-            
-            totalTransactionCost: stock.marketPrice * quantity,
-
-            //Date() formatted as: (YYYY-MM-DD)
-            timestamp: new Date()
-        };
-
         //add the stock to user's holdings
         this.updateHoldings(stock);
 
@@ -73,7 +92,7 @@ class Portfolio {
             success: true,
 
             //print a message to browser. TODO: this looks kind of like a debug message, best to improve/remove before project end
-            message: `Successfully bought ${quantity} shares of ${stock.symbol} for $${totalCost.toFixed(2)}`,
+            message: `You bought ${quantity} shares of ${stock.symbol} for $${totalCost.toFixed(2)}`,
 
             //the transaction itself is also returned
             transaction: transaction
@@ -121,41 +140,20 @@ class Portfolio {
         };
     }
 
-    //returns transaction, associated attributes detailed below:
-    createTransaction(stock, type, quantity) {
-        newTransaction = {
-            transactionType: type,
-            stockSymbol: stock.symbol,
-            stockCompanyName: stock.companyName,
-            stockQuantity: quantity,
-            stockPrice: pricePerShare,
-            totalTransactionCost: stock.marketPrice * quantity,
-            timestamp: new Date()
-        };
-
-        //store the transaction in transactionHistory array
-        this.transactionHistory.push(newTransaction);
-
-        return this.newTransaction;
-    }
-
     //void, Helper function for buyStock(), modifies this.holdings
     addToHoldings(stock, quantity) {
         if(!stockValid(stock) || quantityValid(quantity)){
             return
         }
 
-        //get the symbol (just for reading the next bit a little easier)
-        const symbol = stock.symbol;
-
-        if (this.holdings[symbol]) {
+        if (this.holdings[stock.symbol]) {
             // Existing holding: update quantity and average market price
-            this.holdings[symbol].quantity += quantity;
+            this.holdings[stock.symbol].quantity += quantity;
             this.setAverageMarketPrice(stock, quantity);
         } else {
             // New holding: create a new entry
-            this.holdings[symbol] = {
-                symbol: symbol,
+            this.holdings[stock.symbol] = {
+                symbol: stock.symbol,
                 name: stock.companyName,
                 quantity: quantity,
                 pricePayed: stock.marketPrice,
@@ -169,8 +167,7 @@ class Portfolio {
         const relevantTransactions = this.getAllTransactionsForStock(transaction)
 
         //add up all of the money the user has spent so far on this stock
-        for(i = 0; i < this.relevantTransactions.size(); ++i){
-            
+        for(i = 0; i < this.relevantTransactions.size(); ++i){      
             if (relevantTransactions.length === 0) {
                 console.log(`No transactions found for ${stockSymbol}`);
                 return -1;
@@ -194,7 +191,7 @@ class Portfolio {
         }
     
         //get the stock, store in holding for easy access
-        const holding = this.holdings[stock.symbol];
+        const selectedStock = this.holdings[stock.symbol];
     
         const existingQuantity = holding.quantity - quantity;
         const existingCost = holding.avgPrice * existingQuantity;
@@ -248,13 +245,13 @@ class Portfolio {
     }
 
     //returns float, this.cash
-    getTotalAssets(stockMap) {
+    getTotalAssetsValue(stockMap) {
         return this.cash + this.getPortfolioValue(stockMap);
     }
 
     // Get profit/loss
     getProfitLoss(stockMap) {
-        return this.getTotalAssets(stockMap) - this.startingCash;
+        return this.getTotalAssetsValue(stockMap) - this.startingCash;
     }
 
     // Get portfolio summary
@@ -267,10 +264,5 @@ class Portfolio {
             holdings: this.holdings,
             numTransactions: this.transactions.length
         };
-    }
-
-    // Helper to get current stock
-    getCurrentStock() {
-        return userStocks.find(stock => stock.symbol === currentStock);
     }
 }
