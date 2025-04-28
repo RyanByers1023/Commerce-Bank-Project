@@ -18,11 +18,18 @@
 //TRANSACTION:
 //transactionID: primary key, uniquely identifies a transaction
 //status: complete, incomplete, failed
-//(see createTransaction() for additional attributes to include)
+//type: (either "SELL" or "BUY")
 
-//STOCK
+
+//STOCK (stock prices are generated on the fly after being obtained via API, so these will be unique for each user)
 //stockSymbol: primary key, uniquely identifies a stock
-//(see Stock.js for additional attributes to include)
+//companyName: the name of the company associated with the stock
+//sector: the industry this stock is in
+//previousClosePrice: the price of the stock at the end of the last trading day
+//openPrice: price stock is at the beginning of the trading day
+//volume: how many shares have been traded during the current market day
+//sentimentValue: influenced by news, ranges from -1 (very negative) to 1 (very positive)
+//priceHistory: an array, stores the previous prices of the stock as float values, make sure to cap the size of the array
 
 
 

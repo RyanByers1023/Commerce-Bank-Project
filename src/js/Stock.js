@@ -25,12 +25,6 @@ class Stock {
         // price stock is at the beginning of the trading day
         this.openPrice = null;
 
-        // used in calculation of volatility attribute below, obtained via API
-        this.beta = null;
-
-        // how much the stock price fluctuates
-        this.volatility = null;
-
         //how many shares have been traded during the current market day
         this.volume = null;
 
