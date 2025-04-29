@@ -31,6 +31,8 @@
 //sentimentValue: influenced by news, ranges from -1 (very negative) to 1 (very positive)
 //priceHistory: an array, stores the previous prices of the stock as float values, make sure to cap the size of the array
 
+import Stock from "./Stock";
+
 class Portfolio {
     //change the value passed to this constructor to change user starting money
     constructor(initialCash = 500.0) {
@@ -237,3 +239,5 @@ class Portfolio {
         this.earnings = this.getEarnings();
     }
 }
+
+export default Portfolio;

@@ -1,14 +1,19 @@
 // News Generator - Creates simulated news items that affect stock prices
 
 class NewsGenerator {
-    constructor(stockList) {
-        this.stocks = stockList;
-
-        this.sectors = [...new Set(stockList.map(stock => stock.sector))]; // Get unique sectors
-
+    //retrieve holdingsMap via User.Portfolio.holdingsMap
+    constructor(holdingsMap) {
+        //maintain a history of previous stories, initialize with empty array:
         this.newsHistory = [];
 
-        this.newsTypes = {
+        //stores Stock objects, maintain a list of all stocks the user is invested in
+        this.stockList = [];
+
+        this.newsTypes = this.initializeNewsTypes();
+    }
+
+    initializeNewsTypes(){
+        return {
             positive: [
                 { text: "{company} Reports Strong Quarterly Earnings", impact: 0.08 },
                 { text: "{company} Announces New Product Line", impact: 0.06 },
@@ -50,14 +55,14 @@ class NewsGenerator {
         };
     }
 
-    //TODO: provide parameter(s) for generateNewsItem to influence the type of new story based on current market status
+    //returns void, call to updates the list of stocks the stories are made from
+    updateStockList(userPortfolio){
+        this.stockList = Array.from(userPortfolio.holdingsMap.values());
+    }
+
     generateNewsItem() {
         // Decide news type
         const newsTypeRoll = Math.random();
-
-        //TODO: company randomly chosen within generateCompanyNews()
-        //may be better to choose company in a seperate function
-        //then pass the company via parameter to generateCompanyNews
 
         // generate company-specific news (40% chance)
         if (newsTypeRoll < 0.4) {
@@ -74,48 +79,34 @@ class NewsGenerator {
         }
     }
 
-    // Company-specific news (40% chance)
+    // returns newsItem (see createNewsItem()), generate company-specific news (40% chance)
     generateCompanyNews(){
-        let newsType, newsTarget, newsTemplate;
-
         //type of news (positive or negative)
         //50/50 chance of positive or negative news
-        newsType = Math.random() < 0.5 ? 'positive' : 'negative';
+        let newsType = Math.random() < 0.5 ? 'POSITIVE' : 'NEGATIVE';
 
-        //choose random stock to write article about, store in newsTarget
-        newsTarget = this.stocks[Math.floor(Math.random() * this.stocks.length)];
+        //choose random Stock from stockList to write newsItem about, store in newsTarget
+        let newsTarget = this.getRandomStoryTarget();
 
-        //newsTemplate grabs a random story from either the positive or negative lists
-        newsTemplate = this.newsTypes[newsType][Math.floor(Math.random() * this.newsTypes[newsType].length)];
+        //newsTemplate grabs a random story from either the positive or negative newsType map
+        let newsTemplate = this.getNewsTemplate(newsType);
 
-        //newsItem is a compilation of all information to be displayed to the user
-        //for any given story in the news side panel in simulator.html
+        let newsItem = this.createNewsItem(newsType, newsTarget, newsTemplate);
 
-        //TODO: to reduce redundant code, newsItem can become an object of its own
-        const newsItem = {
-            headline: newsTemplate.text.replace('{company}', newsTarget.companyName),
-            type: newsType,
-            target: {
-                type: 'company',
-                symbol: newsTarget.symbol,
-                name: newsTarget.companyName
-            },
-            impact: newsTemplate.impact,
-            timestamp: new Date()
-        };
-
-        // Apply impact to stock's sentiment
-        newsTarget.applySentimentChange(newsTemplate.impact);
+        // Apply impact to stock's current market sentiment with the impact value of this story
+        newsTarget.updateCurrentSentiment(newsTemplate.impact);
 
         return newsItem;
     }
 
     // Sector-wide news (30% chance)
     generateSectorNews(){
-        let newsType, newsTemplate;
-        newsType = Math.random() < 0.5 ? 'sectorPositive' : 'sectorNegative';
-        const selectedSector = this.sectors[Math.floor(Math.random() * this.sectors.length)];
-        newsTemplate = this.newsTypes[newsType][Math.floor(Math.random() * this.newsTypes[newsType].length)];
+        //type of news (positive or negative)
+        //50/50 chance of positive or negative news
+        const newsType = Math.random() < 0.5 ? 'POSITIVE' : 'NEGATIVE';
+
+        const sectorTarget = this.getTargetSector();
+        const newsTemplate = this.getNewsTemplate(newsType);
 
         // Create news item
         const newsItem = {
@@ -123,7 +114,7 @@ class NewsGenerator {
             type: newsType,
             target: {
                 type: 'sector',
-                name: selectedSector
+                name: sectorTarget
             },
             impact: newsTemplate.impact,
             timestamp: new Date()
@@ -137,6 +128,37 @@ class NewsGenerator {
         });
 
         return newsItem;
+    }
+
+    //returns string, get random sector from current holdings
+    getTargetSector(){
+        return this.stockList[Math.floor(Math.random() * this.stockList.length)].sector;
+    }
+
+
+    createNewsItem(newsType, newsTarget, newsTemplate) {
+        return {
+            headline: newsTemplate.text.replace('{company}', newsTarget.companyName),
+            type: newsType,
+            target: {
+                type: 'company',
+                symbol: newsTarget.symbol,
+                name: newsTarget.companyName
+            },
+            impact: newsTemplate.impact,
+            timestamp: new Date()
+        };
+    }
+
+
+
+    // return Stock object, returns a random stock object contained within stockList
+    getRandomStoryTarget(){
+        return this.stockList[Math.floor(Math.random() * this.stockList.length)];
+    }
+
+    getNewsTemplate(newsType){
+        return this.newsTypes[newsType][Math.floor(Math.random() * this.newsTypes[newsType].length)];
     }
 
     // Market-wide news (30% chance)
@@ -162,7 +184,6 @@ class NewsGenerator {
         });
 
         return newsItem;
-    }
 
     // Generate multiple news items
     generateNews(count = 1) {
