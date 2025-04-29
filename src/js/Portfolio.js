@@ -31,245 +31,209 @@
 //sentimentValue: influenced by news, ranges from -1 (very negative) to 1 (very positive)
 //priceHistory: an array, stores the previous prices of the stock as float values, make sure to cap the size of the array
 
-
-
-//to create another user, instantiate another object of this class:
 class Portfolio {
     //change the value passed to this constructor to change user starting money
-    constructor(initialCash = 500) {
+    constructor(initialCash = 500.0) {
         //user begins with value stored in initialCash
         this.balance = initialCash;
 
         //Map of stock symbols to quantity owned
-        //eg. 'AAPL': 2 means a user has two shares of Apple stock
-        //tip for DB: use stock.symbol as Primary Key {PK} to identify any given stock, as there cannot be duplicates
-        //because this is how it is identified within the stock market
-        this.holdings = {};
+        //e.g. 'AAPL': 2 means a user has two shares of Apple stock
+        this.holdingsMap = {};
 
-         // Record of all transactions *DB*
+        //int, number of stocks the user owns
+        this.totalStocksOwned = 0;
+
+        // Record of all transactions, see createTransaction() for info regarding what a transaction is
         this.transactionHistory = [];
 
         // For calculating total profits/losses, this is not the user's balance
-        this.startingCash = initialCash; 
+        this.startingCash = initialCash;
+
+
+        this.earnings = 0.0;
     }
 
     //returns transaction, associated attributes detailed below:
     createTransaction(stock, type, quantity) {
-        newTransaction = {
+        return {
             transactionType: type,
             stockSymbol: stock.symbol,
             stockCompanyName: stock.companyName,
             stockQuantity: quantity,
-            stockPrice: pricePerShare,
+            stockPrice: stock.marketPrice,
             totalTransactionCost: stock.marketPrice * quantity,
             timestamp: new Date()
         };
-
-        //store the transaction in transactionHistory array
-        this.transactionHistory.push(newTransaction);
-
-        return this.newTransaction;
     }
 
-    // Buy a stock
+    //function assumes stock is initialized correctly
+    //returns a bool, true if purchase was successful, false otherwise
     buyStock(stock, quantity) {
-        //TODO: sanitize this input (quantity)
+        //quantity must a number greater than 0:
         if (isNaN(quantity) || quantity <= 0) {
-            return { success: false, message: "Please enter a valid quantity" };
+            return false;
         }
 
+        //quantity will initially be a string e.g: "6", not 6, so this needs to be converted to an int:
         quantity = parseInt(quantity);
 
-        // Check if user has enough cash
+        //calculate and store the total cost of this transaction:
+        let totalCost = quantity * stock.marketPrice;
+
+        // Check if user has enough cash:
         if (totalCost > this.balance){
-            //immediately break out of the function if they don't have the cash for the transaction
-            return { success: false, message: "Not enough cash available for this purchase" };
+            //immediately break out of this function if they don't have the cash for the transaction:
+            return false;
         }
 
         //negative value provided bc we are subtracting this value from the user's balance
         this.updateBalance(-totalCost)
 
         //add the stock to user's holdings
-        this.updateHoldings(stock);
+        this.addToHoldings(stock);
 
-        this.createTransaction(stock, "BUY", quantity)
+        //initialize a transaction object based on this transaction
+        let newTransaction = this.createTransaction(stock, "BUY", quantity)
 
-        return {
-            //flag returned to the calling code to indicate the transaction process has completed correctly
-            success: true,
-
-            //print a message to browser. TODO: this looks kind of like a debug message, best to improve/remove before project end
-            message: `You bought ${quantity} shares of ${stock.symbol} for $${totalCost.toFixed(2)}`,
-
-            //the transaction itself is also returned
-            transaction: transaction
-        };
-    }
-
-    
-    sellStock(stock, quantity) {
-        //TODO: sanitize this input
-        quantity = parseInt(quantity);
-        if (isNaN(quantity) || quantity <= 0) {
-            return { success: false, message: "Please enter a valid quantity" };
-        }
-
-        // Check if user owns the stock
-        if (!this.holdings[stock.symbol]) {
-            return { success: false, message: `You don't own any shares of ${stock.symbol}` };
-        }
-
-        // Check if user owns enough shares
-        if (this.holdings[stock.symbol].quantity < quantity) {
-            return { success: false, message: `You only own ${this.holdings[stock.symbol].quantity} shares of ${stock.symbol}` };
-        }
-
-        // Calculate total value
-        const totalValue = stock.price * quantity;
-
-        // Update balance
-        this.balance += totalValue;
-
-        // Update holdings
-        this.holdings[stock.symbol].quantity -= quantity;
-
-        //add the stock to user's holdings
-        //TODO: implement takeFromHoldings
-        this.takeFromHoldings(stock, quantity);
-
-        //add the transaction to transactionHistory
-        this.createTransaction(stock, "SELL", quantity)
-
-        return {
-            success: true,
-            message: `Successfully sold ${quantity} shares of ${stock.symbol} for $${totalValue.toFixed(2)}`,
-            transaction: transaction
-        };
-    }
-
-    //void, Helper function for buyStock(), modifies this.holdings
-    addToHoldings(stock, quantity) {
-        if(!stockValid(stock) || quantityValid(quantity)){
-            return
-        }
-
-        if (this.holdings[stock.symbol]) {
-            // Existing holding: update quantity and average market price
-            this.holdings[stock.symbol].quantity += quantity;
-            this.setAverageMarketPrice(stock, quantity);
-        } else {
-            // New holding: create a new entry
-            this.holdings[stock.symbol] = {
-                symbol: stock.symbol,
-                name: stock.companyName,
-                quantity: quantity,
-                pricePayed: stock.marketPrice,
-                avgPricePayed: this.calculateAverageStockPurchasePrice(stock),
-            };
-        }
-    }
-
-    //returns float: the average price payed for the stock involved in the transaction passed via parameter
-    calculateAverageStockPurchasePrice(transaction){
-        const relevantTransactions = this.getAllTransactionsForStock(transaction)
-
-        //add up all of the money the user has spent so far on this stock
-        for(i = 0; i < this.relevantTransactions.size(); ++i){      
-            if (relevantTransactions.length === 0) {
-                console.log(`No transactions found for ${stockSymbol}`);
-                return -1;
-            }
-        }
-
-        return totalMoneySpend / this.holdings.size();
-
-    }
-    
-    //TODO: verify this function works,
-    getAllTransactionsForStock(transaction){
-        return this.transactionHistory.filter(transaction => transaction.stockSymbol === stockSymbol);
-    }
-
-
-    //void
-    setAverageMarketPrice(stock, quantity) {
-        if(!stockValid(stock) || !quantityValid(quantity)){
-            return;
-        }
-    
-        //get the stock, store in holding for easy access
-        const selectedStock = this.holdings[stock.symbol];
-    
-        const existingQuantity = holding.quantity - quantity;
-        const existingCost = holding.avgPrice * existingQuantity;
-        const newCost = stock.marketPrice * quantity;
-        const totalQuantity = holding.quantity;
-    
-        holding.avgmarketPrice = (existingCost + newCost) / totalQuantity;
-    }
-
-    //returns a boolean: false if there is a problem with any stock attributes, true otherwise
-    stockValid(stock){
-        if (!stock //stock itself NULL?
-            || !stock.symbol //stock.symbol NULL?
-            || typeof stock.marketPrice !== 'number') { //is stock.marketPrice a number?
-            console.error("Invalid stock object.");
-            return false;
-        }
+        //store the transaction in transactionHistory array
+        this.transactionHistory.push(newTransaction);
 
         return true;
     }
 
-    //returns a boolean: false if there is a problem with the quantity value, true otherwise
-    quantityValid(quantity){
-        if (typeof quantity !== 'number' || quantity <= 0) {
-            console.error("Quantity must be a positive number.");
-            return true;
+    //function assumes stock is initialized correctly
+    //returns a bool, true if sell was successful, false otherwise
+    performTransaction(stock, quantity, type) {
+        //quantity must be a number greater than 0:
+        if (isNaN(quantity) || quantity <= 0) {
+            return false;
         }
 
-        return false;
+        if(type !== "SELL" || type !== "BUY"){
+            return false;
+        }
+
+        quantity = parseInt(quantity);
+
+        if (!this.holdingsMap[stock.symbol] // Check if user owns the stock (is it in holdingsMap?)
+            || this.holdingsMap[stock.symbol].quantity < quantity) { // Check if user owns enough shares
+            return false;
+        }
+
+        // Calculate total value
+        const totalValue = stock.marketPrice * quantity;
+
+        //handle adding/removing this holding from the user
+        //and handle updating the user's balance
+        if(type === "BUY"){
+            this.addToHoldings(stock, quantity);
+            this.updateBalance(totalValue);
+        }
+        else if (type === "SELL"){
+            this.takeFromHoldings(stock, quantity);
+            this.updateBalance(-totalValue);
+        }
+
+        //initialize a transaction object based on this transaction
+        let newTransaction = this.createTransaction(stock, "SELL", quantity)
+
+        //add the transaction to transactionHistory
+        this.transactionHistory.push(newTransaction);
+
+        return true;
     }
 
-    //void, updates this.balance
-    updateBalance(totalCost){
-        this.balance += totalCost;
+    //void, creates a holding object to be contained within this.holdingsMap
+    addToHoldings(stock, quantity) {
+        if (this.holdingsMap[stock.symbol]) { //does the user already own one of these stocks?
+            this.updateHolding(stock, quantity);
+        } else { //the user does not have a stock from this company, so a new holding needs to be created:
+            this.createHolding(stock, quantity);
+        }
+    }
+
+    //void, helper function for addToHoldings(), updates an existing (function assumes this was checked) holding within this.holdingMap
+    updateHolding(stock, quantity){
+        // Existing holding: update quantity and average market price
+        this.holdingsMap[stock.symbol].quantity += quantity;
+
+        //recalculate the average price the user has paid for this stock:
+        this.holdingsMap[stock.symbol].avgPricePaid = this.calculateAverageStockPurchasePrice(stock)
+    }
+
+    createHolding(stock, quantity){
+        // New holding: create a new entry
+        this.holdingsMap[stock.symbol] = {
+            symbol: stock.symbol,
+            companyName: stock.companyName,
+            quantity: quantity,
+            pricePaid: stock.marketPrice,
+            avgPricePaid: this.calculateAverageStockPurchasePrice(stock),
+        };
+    }
+
+    takeFromHoldings(stock, quantity){
+        // Update holdings
+        this.holdingsMap[stock.symbol].quantity -= quantity;
+    }
+
+    //returns float if stock has been purchased before and null if there exists no transactions for provided stock
+    calculateAverageStockPurchasePrice(stock){
+        let relevantTransactions = this.getAllTransactionsForStock(stock)
+
+        if (relevantTransactions.length === 0) {
+            console.log(`No transactions found for ${stock.symbol}`);
+            return null;
+        }
+
+        let totalMoneySpent = 0;
+
+        //add up the money the user has spent so far on this stock
+        for(let i = 0; i < relevantTransactions.size(); ++i){
+            totalMoneySpent += relevantTransactions[i].pricePaid;
+        }
+
+        return totalMoneySpent / this.holdingsMap
+    }
+
+    //returns float, returns all transactions relevant to the provided stock (stock was involved in transaction)
+    getAllTransactionsForStock(stock){
+        return this.transactionHistory.filter(transaction => transaction.stockSymbol === stock.symbol);
+    }
+
+    //returns void, updates this.balance (is okay to provide a negative value to subtract from the user's balance)
+    updateBalance(value){
+        this.balance += value;
     }
 
     // returns float: total portfolio value
-    getPortfolioValue(stockMap) {
+    getPortfolioValue() {
         //stores the total portfolio value
         let total = 0;
 
         //iterate through this.holdings and add together all stocks' values
         //(with their current values, not the values the stocks were bought at initially)
-        for (const symbol in this.holdings) {
-            if (stockMap[symbol]) {
-                total += stockMap[symbol].marketPrice * this.holdings[symbol].quantity;
+        for (const symbol in this.holdingsMap) {
+            if (this.holdingsMap[symbol]) {
+                total += this.holdingsMap[symbol].pricePaid * this.holdingsMap[symbol].quantity;
             }
         }
 
         return total;
     }
 
-    //returns float, this.cash
+    //returns float, returns the value of the user's available money + the value of their investments
     getTotalAssetsValue(stockMap) {
-        return this.cash + this.getPortfolioValue(stockMap);
+        return this.balance + this.getPortfolioValue(stockMap);
     }
 
-    // Get profit/loss
-    getProfitLoss(stockMap) {
-        return this.getTotalAssetsValue(stockMap) - this.startingCash;
+    // returns float, returns the earnings/losings the user
+    getEarnings() {
+        return this.getTotalAssetsValue() - this.startingCash;
     }
 
-    // Get portfolio summary
-    getSummary(stockMap) {
-        return {
-            cash: this.cash,
-            portfolioValue: this.getPortfolioValue(stockMap),
-            totalAssets: this.getTotalAssets(stockMap),
-            profitLoss: this.getProfitLoss(stockMap),
-            holdings: this.holdings,
-            numTransactions: this.transactions.length
-        };
+    setEarnings(){
+        this.earnings = this.getEarnings();
     }
 }
