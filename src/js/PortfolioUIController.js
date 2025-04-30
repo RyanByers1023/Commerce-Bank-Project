@@ -1,60 +1,27 @@
 
-//-------------------------------------------Portfolio UI Elements---------------------------------------------//
-
 class PortfolioUIController{
-    PortfolioUIController(userPortfolio){
-        //get the user's portfolio
-        let userPortfolio = userPortfolio;
-        //initialize all ui elements pertaining to the user's portfolio
-        InitializeUIElements(userPortfolio);
+    constructor(userProfile){
+        //references the value stored in 'stockBuyQuantity' (simulator.html)
+        this.stockBuyQuantity = 0;
+
+        //references the value stored in 'stockSellQuantity' (simulator.html)
+        this.stockSellQuantity = 0;
+
+        this.initializeUIListeners();
     }
 
-    //Initialize UI elements
-    InitializeUIElements(userPortfolio){
+    initializeUIListeners(){
         document.addEventListener('DOMContentLoaded', function() {
+
+            this.setStockBuyQuantityListener();
+            this.setStockSellQuantityListener();
         
-            //retrieve the number of stocks the user wants to buy/sell from
-            //the quantity field in the UI
-            getInputBuyQuantity();
-            getInputSellQuantity();
-        
-            handleBuyButtonClick();
-            handleSellButtonClick();
+            this.handleStockBuyButtonClick();
+            this.handleStockSellButtonClick();
         
             //set up all of the UI elements pertaining to the user portfolio
-            updateAllPortfolioUIElements(userPortfolio);
+            this.updateAllPortfolioUIElements(userProfile);
         });
-    }
-
-    getSelectedStock(){
-        
-    }
-
-    getInputBuyQuantity(){
-        const quantity;
-
-        sellQuantityInput.addEventListener('input', function() {
-            quantity = parseInt(sellQuantityInput.value) || 0;
-        });
-
-        return quantity
-    }
-
-    setTotalCostField(){
-        //get the stock selected from the drop down menu
-        const selectedStock = getSelectedStock();
-        totalCost = getTotalCost(selectedStock, quantity);
-        sellTotalSpan.textContent = `$${totalCost.toFixed(2)}`;
-    }
-
-    getTotalCost(selectedStock, quantity){
-        const total;
-
-        if (selectedStock) {
-            total = selectedStock.marketPrice * quantity;   
-        }
-
-        return total;
     }
 
     // Update all portfolio-related UI elements
@@ -64,6 +31,57 @@ class PortfolioUIController{
         this.updateAssetsDisplay(userPortfolio);
         this.updateHoldingsTable(userPortfolio);
         this.updateBuySellPriceDisplay(userPortfolio);
+    }
+
+    setStockBuyQuantityListener(){
+        //get the field from the html document:
+        const stockBuyQuantity = document.getElementById('stockBuyQuantity');
+
+        //add a listener of type input to the field referenced within stockBuyQuantity
+        //when input is detected in the 'stockBuyQuantity' field, it gets parsed as in int and stored in this.stockBuyQuantity
+        stockBuyQuantity.addEventListener('input', function() {
+            this.stockBuyQuantity = parseInt(stockBuyQuantity.value) || 0; //if the input is invalid, quantity = 0
+        });
+    }
+
+    setStockSellQuantityListener(){
+        //get the field from the html document:
+        const stockSellQuantity = document.getElementById('stockSellQuantity');
+
+        //add a listener of type input to the field referenced within sellQuantityInput
+        //when input is detected in the 'stockSellQuantity' field, it gets stored in this.stockSellQuantity
+        stockSellQuantity.addEventListener('input', function() {
+            this.stockSellQuantity = parseInt(stockSellQuantity.value) || 0; //if the input is invalid, quantity = 0
+        });
+    }
+
+    setBuyTotalSpan(selectedStock){
+        //calculate the total cost of the transaction (#stocks * their market price)
+        let totalValue = this.getTotalValue(selectedStock, quantity);
+
+        //set the field with the id: 'buyTotalSpan' to totalValue (cut down to only 2 decimal places)
+        document.getElementById('buyTotalSpan').textContent = `$${totalValue.toFixed(2)}`;
+    }
+
+    setSellTotalSpan(){
+        //get the stock selected from the drop down menu
+        const selectedStock = this.getSelectedStock();
+
+        //calculate the total cost of the transaction (#stocks * their market price)
+        let totalValue = this.getTotalValue(selectedStock, quantity);
+
+        //set the field with the id: 'buyTotalSpan' to totalValue (cut down to only 2 decimal places)
+        document.getElementById('buyTotalSpan').textContent = `$${totalValue.toFixed(2)}`;
+    }
+
+    getTotalValue(selectedStock, quantity){
+        let totalValue;
+
+        if (selectedStock) {
+            totalValue = selectedStock.marketPrice * quantity;
+        }
+
+        return totalValue;
     }
 
     handleBuyButtonClick(userPortfolio){
@@ -249,3 +267,5 @@ class PortfolioUIController{
     Ideal for full-stack apps
     */
 }
+
+export default PortfolioUIController;

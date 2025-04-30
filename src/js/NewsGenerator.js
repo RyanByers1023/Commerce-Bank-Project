@@ -1,14 +1,10 @@
 // News Generator - Creates simulated news items that affect stock prices
 
 class NewsGenerator {
-    //retrieve holdingsMap via User.Portfolio.holdingsMap
-    constructor(holdingsMap) {
+    //requires instantiated User object to begin creating stories
+    constructor() {
         //maintain a history of previous stories, initialize with empty array:
         this.newsHistory = [];
-
-        //stores Stock objects, maintain a list of all stocks the user is invested in
-        this.stockList = [];
-
         this.newsTypes = this.initializeNewsTypes();
     }
 
@@ -55,42 +51,39 @@ class NewsGenerator {
         };
     }
 
-    //returns void, call to updates the list of stocks the stories are made from
-    updateStockList(userPortfolio){
-        this.stockList = Array.from(userPortfolio.holdingsMap.values());
-    }
-
-    generateNewsItem() {
+    //returns null, takes in User object and generates random story based on their current portfolio
+    generateNewsItem(userProfile) {
         // Decide news type
         const newsTypeRoll = Math.random();
 
         // generate company-specific news (40% chance)
         if (newsTypeRoll < 0.4) {
-            return this.generateCompanyNews();
+            return this.generateCompanyNews(userProfile);
         }
         // generate sector-wide news (30% chance)
         else if (newsTypeRoll < 0.7) {
             //sector randomly chosen within generateSectorNews()
-            return this.generateSectorNews();
+            return this.generateSectorNews(userProfile);
         }
         // generate market-wide news (30% chance)
         else {
-            return this.generateMarketNews()
+            return this.generateMarketNews(userProfile)
         }
     }
 
     // returns newsItem (see createNewsItem()), generate company-specific news (40% chance)
-    generateCompanyNews(){
+    generateCompanyNews(userProfile){
         //type of news (positive or negative)
         //50/50 chance of positive or negative news
         let newsType = Math.random() < 0.5 ? 'POSITIVE' : 'NEGATIVE';
 
-        //choose random Stock from stockList to write newsItem about, store in newsTarget
-        let newsTarget = this.getRandomStoryTarget();
+        //choose random Stock from holdingsMap to write newsItem about, store in newsTarget
+        let newsTarget = this.getRandomStoryTarget(userProfile.holdingsMap);
 
         //newsTemplate grabs a random story from either the positive or negative newsType map
         let newsTemplate = this.getNewsTemplate(newsType);
 
+        //TODO: rework newsItem
         let newsItem = this.createNewsItem(newsType, newsTarget, newsTemplate);
 
         // Apply impact to stock's current market sentiment with the impact value of this story
@@ -109,39 +102,36 @@ class NewsGenerator {
         const newsTemplate = this.getNewsTemplate(newsType);
 
         // Create news item
-        const newsItem = {
-            headline: newsTemplate.text.replace('{sector}', selectedSector),
-            type: newsType,
-            target: {
-                type: 'sector',
-                name: sectorTarget
-            },
-            impact: newsTemplate.impact,
-            timestamp: new Date()
-        };
+        //TODO: rework newsItem
+        const newsItem = this.createNewsItem(newsType, sectorTarget, newsTemplate);
 
-        // Apply impact to all stocks in this sector
-        this.stocks.forEach(stock => {
-            if (stock.sector === selectedSector) {
-                stock.applySentimentChange(newsTemplate.impact);
-            }
-        });
+        this.applySentimentToSector();
 
         return newsItem;
     }
+
+    // Apply impact to all stocks in this sector
+    applySentimentToSector(sectorTarget, impact){
+        this.stockList.forEach(stock => {
+            if (stock.sector === sectorTarget) {
+                stock.updateCurrentSentiment(newsTemplate.impact);
+            }
+        });
+    }
+}
 
     //returns string, get random sector from current holdings
     getTargetSector(){
         return this.stockList[Math.floor(Math.random() * this.stockList.length)].sector;
     }
 
-
+    //TODO: rework newsItem
     createNewsItem(newsType, newsTarget, newsTemplate) {
         return {
             headline: newsTemplate.text.replace('{company}', newsTarget.companyName),
             type: newsType,
             target: {
-                type: 'company',
+                type: newsType,
                 symbol: newsTarget.symbol,
                 name: newsTarget.companyName
             },
@@ -149,8 +139,6 @@ class NewsGenerator {
             timestamp: new Date()
         };
     }
-
-
 
     // return Stock object, returns a random stock object contained within stockList
     getRandomStoryTarget(){
@@ -167,16 +155,8 @@ class NewsGenerator {
         let newsTemplate = this.newsTypes.marketWide[marketTemplateIndex];
 
         // Create news item
-        const newsItem = {
-            headline: newsTemplate.text,
-            type: 'marketWide',
-            target: {
-                type: 'market',
-                name: 'All Stocks'
-            },
-            impact: newsTemplate.impact,
-            timestamp: new Date()
-        };
+        //TODO: rework newsItem
+        const newsItem = this.createNewsItem(newsType);
 
         // Apply impact to all stocks
         this.stocks.forEach(stock => {

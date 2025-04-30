@@ -25,6 +25,8 @@ class Stock {
         //Healthcare, Technology, etc.
         this.sector = null;
 
+        this.symbol = null;
+
         this.companyName = null;
 
         // the price the stock was at end of the last trading day
