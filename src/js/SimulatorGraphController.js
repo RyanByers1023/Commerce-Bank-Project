@@ -12,7 +12,7 @@ class SimulatorGraphController{
         this.canvas = null;
         this.ctx = null;
 
-        this.instantiateCanvas(canvas, ctx);
+        this.instantiateCanvas();
 
         // Graph constants
         this.CANVAS_WIDTH = canvas.width;
@@ -40,6 +40,10 @@ class SimulatorGraphController{
 
         populateStockDropdown(userProfile);
         updateCurrentStockDisplay(userProfile);
+    }
+
+    instantiateCanvas(){
+
     }
 
     setFocusedStock(userProfile) {
@@ -130,14 +134,8 @@ class SimulatorGraphController{
     }
 
     function setTimeframe(tf) {
-        timeframe = tf;
+        this.timeframe = tf;
     }
-
-//TODO: have this function return the price
-
-    /**
-     * Updates the buy/sell interface with current stock price
-     */
 
 
     function updateBuySellInterface() {

@@ -2,11 +2,32 @@
 
 class NewsGenerator {
     //requires instantiated User object to begin creating stories
-    constructor() {
+    constructor(userProfile) {
         //maintain a history of previous stories, initialize with empty array:
         this.newsHistory = [];
         this.newsTypes = this.initializeNewsTypes();
     }
+
+    beginGeneratingNews(userProfile){
+        document.addEventListener('DOMContentLoaded', function() {
+            // Generate initial news (5 stories)
+            this.generateNews(5);
+            this.updateNewsDisplay();
+
+            // Set up interval to generate news periodically (every 30 seconds)
+            setInterval(() => {
+                const news = this.generateNews(1);
+                newsGenerator.updateNewsDisplay();
+
+                // Update stock prices after news
+                updateAllStockPrices();
+
+                // Update portfolio UI
+                updatePortfolioUI();
+            }, 30000);
+        });
+    }
+
 
     initializeNewsTypes(){
         return {
@@ -56,23 +77,23 @@ class NewsGenerator {
         // Decide news type
         const newsTypeRoll = Math.random();
 
-        // generate company-specific news (40% chance)
-        if (newsTypeRoll < 0.4) {
-            return this.generateCompanyNews(userProfile);
+        // generate company-specific news (60% chance)
+        if (newsTypeRoll < 0.6) {
+            return this.getCompanyNewsItem(userProfile);
         }
         // generate sector-wide news (30% chance)
-        else if (newsTypeRoll < 0.7) {
+        else if (newsTypeRoll < 0.9) {
             //sector randomly chosen within generateSectorNews()
-            return this.generateSectorNews(userProfile);
+            return this.getSectorNewsItem(userProfile);
         }
-        // generate market-wide news (30% chance)
+        // generate market-wide news (10% chance)
         else {
-            return this.generateMarketNews(userProfile)
+            return this.getMarketNewsItem(userProfile)
         }
     }
 
-    // returns newsItem (see createNewsItem()), generate company-specific news (40% chance)
-    generateCompanyNews(userProfile){
+    // returns newsItem (see createNewsItem()), generate company-specific news (60% chance)
+    getCompanyNewsItem(stocksAddedToSim){
         //type of news (positive or negative)
         //50/50 chance of positive or negative news
         let newsType = Math.random() < 0.5 ? 'POSITIVE' : 'NEGATIVE';
@@ -83,8 +104,7 @@ class NewsGenerator {
         //newsTemplate grabs a random story from either the positive or negative newsType map
         let newsTemplate = this.getNewsTemplate(newsType);
 
-        //TODO: rework newsItem
-        let newsItem = this.createNewsItem(newsType, newsTarget, newsTemplate);
+        let newsItem = this.createCompanyNewsItem(newsType, newsTarget, newsTemplate);
 
         // Apply impact to stock's current market sentiment with the impact value of this story
         newsTarget.updateCurrentSentiment(newsTemplate.impact);
@@ -93,7 +113,7 @@ class NewsGenerator {
     }
 
     // Sector-wide news (30% chance)
-    generateSectorNews(){
+    getSectorNewsItem(stocksAddedToSim){
         //type of news (positive or negative)
         //50/50 chance of positive or negative news
         const newsType = Math.random() < 0.5 ? 'POSITIVE' : 'NEGATIVE';
@@ -102,31 +122,43 @@ class NewsGenerator {
         const newsTemplate = this.getNewsTemplate(newsType);
 
         // Create news item
-        //TODO: rework newsItem
-        const newsItem = this.createNewsItem(newsType, sectorTarget, newsTemplate);
+        const newsItem = this.createSectorNewsItem(newsType, sectorTarget, newsTemplate);
 
         this.applySentimentToSector();
 
         return newsItem;
     }
 
+    // Market-wide news (10% chance)
+    getMarketNewsItem(stocksAddedToSim) {
+        const marketTemplateIndex = Math.floor(Math.random() * this.newsTypes.marketWide.length);
+        let newsTemplate = this.newsTypes.marketWide[marketTemplateIndex];
+
+        const newsItem = this.createMarketNewsItem(newsType);
+
+        // Apply impact to all stocks
+        stocksAddedToSim.forEach(stock => {
+            stock.updateCurrentSentiment(newsTemplate.impact * 0.7); // Reduced impact as it's spread across all stocks
+        });
+
+        return newsItem;
+    }
+
     // Apply impact to all stocks in this sector
-    applySentimentToSector(sectorTarget, impact){
-        this.stockList.forEach(stock => {
+    applySentimentToSector(stocksAddedToSim, sectorTarget, impact){
+        stocksAddedToSim.forEach(stock => {
             if (stock.sector === sectorTarget) {
-                stock.updateCurrentSentiment(newsTemplate.impact);
+                stock.updateCurrentSentiment(impact);
             }
         });
     }
-}
 
     //returns string, get random sector from current holdings
-    getTargetSector(){
-        return this.stockList[Math.floor(Math.random() * this.stockList.length)].sector;
+    getTargetSector(stocksAddedToSim){
+        return stocksAddedToSim[Math.floor(Math.random() * stocksAddedToSim.length)].sector;
     }
 
-    //TODO: rework newsItem
-    createNewsItem(newsType, newsTarget, newsTemplate) {
+    createCompanyNewsItem(newsType, newsTarget, newsTemplate) {
         return {
             headline: newsTemplate.text.replace('{company}', newsTarget.companyName),
             type: newsType,
@@ -140,30 +172,42 @@ class NewsGenerator {
         };
     }
 
+    createSectorNewsItem(newsType, sectorTarget, newsTemplate) {
+        return {
+            headline: newsTemplate.text.replace('{sector}', sector),
+            type: newsType,
+            target: {
+                type: newsType,
+                symbol: "",
+                name: "",
+            },
+            impact: newsTemplate.impact,
+            timestamp: new Date()
+        };
+    }
+
+    createMarketNewsItem(newsType, newsTemplate) {
+        return {
+            headline: newsTemplate.text.replace("Market-Wide"),
+            type: newsType,
+            target: {
+                type: newsType,
+                symbol: "",
+                name: "All stocks"
+            },
+            impact: newsTemplate.impact,
+            timestamp: new Date()
+        };
+    }
+
     // return Stock object, returns a random stock object contained within stockList
-    getRandomStoryTarget(){
-        return this.stockList[Math.floor(Math.random() * this.stockList.length)];
+    getRandomStoryTarget(stocksAddedToSim){
+        return stocksAddedToSim[Math.floor(Math.random() * stocksAddedToSim.length)];
     }
 
     getNewsTemplate(newsType){
         return this.newsTypes[newsType][Math.floor(Math.random() * this.newsTypes[newsType].length)];
     }
-
-    // Market-wide news (30% chance)
-    generateMarketNews(){
-        const marketTemplateIndex = Math.floor(Math.random() * this.newsTypes.marketWide.length);
-        let newsTemplate = this.newsTypes.marketWide[marketTemplateIndex];
-
-        // Create news item
-        //TODO: rework newsItem
-        const newsItem = this.createNewsItem(newsType);
-
-        // Apply impact to all stocks
-        this.stocks.forEach(stock => {
-            stock.applySentimentChange(newsTemplate.impact * 0.7); // Reduced impact as it's spread across all stocks
-        });
-
-        return newsItem;
 
     // Generate multiple news items
     generateNews(count = 1) {
@@ -230,26 +274,7 @@ class NewsGenerator {
 
 // Initialize news generator when document is ready
 let newsGenerator;
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize with stock list
-    newsGenerator = new NewsGenerator(userStocks);
 
-    // Generate initial news (5 stories)
-    newsGenerator.generateNews(5);
-    newsGenerator.updateNewsDisplay();
-
-    // Set up interval to generate news periodically (every 30 seconds)
-    setInterval(() => {
-        const news = newsGenerator.generateNews(1);
-        newsGenerator.updateNewsDisplay();
-
-        // Update stock prices after news
-        updateAllStockPrices();
-
-        // Update portfolio UI
-        updatePortfolioUI();
-    }, 30000);
-});
 
 // Function to update all stock prices (called after news generation)
 function updateAllStockPrices() {

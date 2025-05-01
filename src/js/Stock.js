@@ -1,38 +1,22 @@
 import fetch from 'node-fetch';
 
-class Stock {
-    constructor(arg) {
-        this.apiKey = '43c4bdb7a0mshac6db6fb0a5241ep1a044bjsn071e9eadf8a3';
+export default class Stock {
+    constructor(apiKey, apiHost, stock) {
+        //symbol associated w/stock e.g: 'AAPL'
+        this.symbol = null;
 
-        this.apiHost = 'yh-finance.p.rapidapi.com';
-
-        if (typeof arg === 'string') {
-            // Case: passed a stock symbol
-            this.symbol = arg;
-            this.initializeNewStock();
-        } else if (arg instanceof Stock) { //has a stock object been passed?
-            // Case: passed another Stock-like object
-            this.copyStock(arg);
-        } else {
-            throw new Error('Invalid constructor argument for Stock');
-        }
-    }
-
-    initializeNewStock() {
         // the current price of the stock
         this.marketPrice = null;
 
         //Healthcare, Technology, etc.
         this.sector = null;
 
-        this.symbol = null;
-
         this.companyName = null;
 
         // the price the stock was at end of the last trading day
         this.previousClosePrice = null;
 
-        // float, the price the stock is at at the end of the current trading day
+        // float, the price the stock is at the end of the current trading day
         this.closePrice = null;
 
         // float, price stock is at the beginning of the trading day
@@ -49,10 +33,35 @@ class Stock {
 
         this.currentSentiment = 0;
 
-        this.initializeStock();
+        // Case: passed a stock symbol
+        if (typeof stock === 'string' && stock.length < 6) {
+            this.symbol = stock.symbol;
+            this.initializeStock(apiKey, apiHost);
+        }
+        // Case: passed another Stock-like object
+        else if (stock instanceof Stock) {
+            this.copyStock(stock);
+        }
+        //something unexpected was passed, discard input
+        else {
+            throw new Error('Invalid constructor argument for Stock');
+        }
     }
 
-    //initialize a stock with a pre-initialized stock: (would be obtained via Portfolio->holdingsMap[symbol])
+    // get stock info from Yahoo Finance's API
+    async initializeStock(apiKey, apiHost) {
+        try {
+            await this.setStockInfoViaAPI(apiKey, apiHost);
+        }
+        catch (error) { //stock info could not be obtained from the provided API
+            console.error(`API error for ${this.symbol}:`, error, `\n\nCreating randomized attributes for ${this.symbol}...`);
+
+            //continue the simulation, but with fake initial prices
+            this.simulateStockInitialization();
+        }
+    }
+
+    //initialize a stock with a pre-initialized stock:
     copyStock(stock) {
         this.symbol = stock.symbol;
         this.marketPrice = stock.marketPrice;
@@ -61,22 +70,10 @@ class Stock {
         this.previousClosePrice = stock.previousClosePrice;
         this.closePrice = stock.closePrice;
         this.openPrice = stock.openPrice;
-        this.volume = null;
+        this.highestPrice = stock.highestPrice;
+        this.volume = stock.volume;
         this.priceHistory = stock.priceHistory;
         this.currentSentiment = stock.currentSentiment;
-    }
-
-    // get stock info from Yahoo Finance's API
-    async initializeStock() {
-        try {
-            await this.setStockInfoViaAPI();
-        }
-        catch (error) { //stock info could not be obtained from the provided API
-            console.error(`API error for ${this.symbol}:`, error, `\n\nCreating randomized attributes for ${this.symbol}...`);
-
-            //continue the simulation, but with fake initial prices
-            this.simulateStockInitialization();
-        }
     }
 
     //in the off chance the API goes down, key stops working, etc.,
@@ -100,14 +97,14 @@ class Stock {
         console.log(`\n\nCreated some random attributes for ${this.symbol}`);
     }
 
-    async setStockInfoViaAPI() {
-        const url = `https://${this.apiHost}/stock/v2/get-summary?symbol=${this.symbol}`;
+    async setStockInfoViaAPI(apiKey, apiHost) {
+        const url = `https://${apiHost}/stock/v2/get-summary?symbol=${this.symbol}`;
 
         const APIParameters = {
             method: 'GET',
             headers: {
-                'X-RapidAPI-Key': this.apiKey,
-                'X-RapidAPI-Host': this.apiHost
+                'X-RapidAPI-Key': apiKey,
+                'X-RapidAPI-Host': apiHost
             }
         };
 
@@ -180,7 +177,7 @@ class Stock {
         let randomFactor = (Math.random() - 0.5) * this.volatility;
 
         //float, dampens the impact marketTrend has on marketFactor
-        const MARKET_FACTOR_DAMPENER = 0.15;
+        let MARKET_FACTOR_DAMPENER = 0.15;
 
         // Influence from market trend (overall market direction)
         let marketFactor = marketTrend * MARKET_FACTOR_DAMPENER;
@@ -237,5 +234,3 @@ class Stock {
         return `$${this.marketPrice.toFixed(2)}`;
     }
 }
-
-export default Stock;

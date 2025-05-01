@@ -42,7 +42,6 @@ class Portfolio {
         //stores the amount of cash the user has
         this.balance = initialBalance;
 
-
         //Map of Stock objects to quantity owned
         this.holdingsMap = new Map();
 

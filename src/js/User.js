@@ -1,10 +1,13 @@
 import Stock from "./Stock";
 import Portfolio from "./Portfolio";
 
-class User {
+export default class User {
     constructor(user = null) {
         //TODO: figure out how this works:
         this.bcrypt = require('bcrypt');
+
+        //list of stocks populating drop-down menu, more can be added by the user
+        let stocksAddedToSim = [];
 
         //new user, make a new account:
         if(!user) {
@@ -13,7 +16,7 @@ class User {
 
             //the drop down menu will pull from this list to determine which stocks to display:
             //give the user a list of popular stocks to initially choose from:
-            let stocksAddedToSim = [
+            stocksAddedToSim = [
                 new Stock('AAPL'),
                 new Stock('AMD'),
                 new Stock('PFE'),
@@ -39,7 +42,27 @@ class User {
         this.stocksAddedToSim.push(stock);
     }
 
-    //TODO: rework these functions:
+    //run this when a user purchases a stock:
+    addStockToPortfolio(stock, quantity){
+        for(let i = 0; i < quantity; i++){
+            if(stock.symbol === this.stocksAddedToSim[i].symbol){
+                this.portfolio.addStockToPortfolio(this.stocksAddedToSim[i], quantity);
+                return;
+            }
+        }
+    }
+
+    //run this when a user sells a stock:
+    removeStockFromPortfolio(stock, quantity){
+        for(let i = 0; i < quantity; i++){
+            if(stock.symbol === this.stocksAddedToSim[i].symbol){
+                this.portfolio.removeStockFromPortfolio(this.stocksAddedToSim[i], quantity);
+                return;
+            }
+        }
+    }
+
+    /*
     hashPassword(password) {
         const saltRounds = 10;
         return this.bcrypt.hashSync(password, saltRounds);
@@ -48,6 +71,5 @@ class User {
     validatePassword(password) {
         return this.bcrypt.compareSync(password, this.passwordHash);
     }
+    */
 }
-
-export default User;
