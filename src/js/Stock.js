@@ -1,46 +1,53 @@
 import fetch from 'node-fetch';
 
 export default class Stock {
-    constructor(apiKey, apiHost, stock) {
+    //TODO: this is a potential vulnerability apparently (Passing apikey/host via constructor)
+    constructor(stockSymbol, apiKey, apiHost) {
         //symbol associated w/stock e.g: 'AAPL'
-        this.symbol = null;
+        this.symbol = stockSymbol;
 
         // the current price of the stock
-        this.marketPrice = null;
+        this.marketPrice = 0.00;
+
+        this.priceChange = 0;
+
+        this.highestPrice = this.marketPrice;
+        this.lowestPrice  = this.marketPrice;
 
         //Healthcare, Technology, etc.
-        this.sector = null;
+        this.sector = "";
 
-        this.companyName = null;
+        this.companyName = "";
+
+        this.volatility = 0.0;
 
         // the price the stock was at end of the last trading day
-        this.previousClosePrice = null;
+        this.previousClosePrice = 0.00;
 
         // float, the price the stock is at the end of the current trading day
-        this.closePrice = null;
+        this.closePrice = 0.00;
 
         // float, price stock is at the beginning of the trading day
-        this.openPrice = null;
+        this.openPrice = 0.00;
+
+        this.fiftyTwoWeekLow = 0.0;
+
+        this.fiftyTwoWeekHigh = 0.0;
 
         //int, how many shares have been traded during the current market day
-        this.volume = null;
+        this.volume = 0;
 
         // int, influenced by news, ranges from -1 (very negative) to 1 (very positive)
         this.sentimentFactor = 0;
 
         // array[float] that tracks the price of the stock over time, max:
-        this.priceHistory = [null];
+        this.priceHistory = [];
 
         this.currentSentiment = 0;
 
         // Case: passed a stock symbol
-        if (typeof stock === 'string' && stock.length < 6) {
-            this.symbol = stock.symbol;
-            this.initializeStock(apiKey, apiHost);
-        }
-        // Case: passed another Stock-like object
-        else if (stock instanceof Stock) {
-            this.copyStock(stock);
+        if (typeof stockSymbol === 'string' && stockSymbol.length < 6) {
+            this.initializeStock(apiKey, apiHost)
         }
         //something unexpected was passed, discard input
         else {
@@ -59,6 +66,116 @@ export default class Stock {
             //continue the simulation, but with fake initial prices
             this.simulateStockInitialization();
         }
+
+        // Calculate volatility based on the updated price history
+        this.setVolatility();
+        this.setPriceChange();
+    }
+
+    async setStockInfoViaAPI(apiKey, apiHost) {
+        const url = `https://${apiHost}/api/v1/markets/quote?ticker=${this.symbol}&type=STOCKS`;
+        const options = {
+            method: 'GET',
+            headers: {
+                'X-RapidAPI-Key': apiKey,
+                'X-RapidAPI-Host': apiHost
+            }
+        };
+
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} fetching quote for ${this.symbol}`);
+        }
+
+        const data = await response.json();
+        // --- Defensive checks start here ---
+        if (typeof data !== 'object' || data === null) {
+            throw new Error(`Invalid JSON response for ${this.symbol}`);
+        }
+        if (!data.body || typeof data.body !== 'object') {
+            throw new Error(`Missing .body in API response for ${this.symbol}`);
+        }
+        const pd = data.body.primaryData;
+        if (!pd || typeof pd !== 'object') {
+            throw new Error(`Missing .primaryData in response for ${this.symbol}`);
+        }
+        if (typeof pd.lastSalePrice !== 'string') {
+            throw new Error(`Expected lastSalePrice string for ${this.symbol}, got ${typeof pd.lastSalePrice}`);
+        }
+        // --- Defensive checks end here ---
+
+        // Clean helper
+        const clean = val => parseFloat(val.replace(/[$,]/g, '')) || 0;
+
+        // Safe to parse now
+        this.companyName = data.body.companyName || 'Unknown Company';
+        this.marketPrice = clean(pd.lastSalePrice);
+
+        // Day range → openPrice
+        const dr = data.body.keyStats?.dayrange?.value;
+        if (typeof dr === 'string') {
+            const m = dr.match(/(\d+\.\d+)\s*-\s*(\d+\.\d+)/);
+            if (m) this.openPrice = parseFloat(m[1]);
+        }
+        this.openPrice ||= this.marketPrice;
+
+        // 52-week range
+        const yr = data.body.keyStats?.fiftyTwoWeekHighLow?.value;
+        if (typeof yr === 'string') {
+            const m = yr.match(/(\d+\.\d+)\s*-\s*(\d+\.\d+)/);
+            if (m) {
+                this.fiftyTwoWeekLow  = parseFloat(m[1]);
+                this.fiftyTwoWeekHigh = parseFloat(m[2]);
+            }
+        }
+
+        // Net change → previousClosePrice
+        const nc = pd.netChange;
+        if (typeof nc === 'string') {
+            const delta = clean(nc);
+            this.previousClosePrice = this.marketPrice - delta;
+        }
+        this.priceChange ||= this.marketPrice;
+
+        // Volume
+        const vol = pd.volume;
+        if (typeof vol === 'string') {
+            this.volume = clean(vol);
+        }
+
+        //TODO: figure out a soln here:
+        this.sector   = 'Unknown'; // no sector in this API
+        this.setRandomSector();
+
+        console.log(`Fetched data for ${this.symbol}: $${this.marketPrice.toFixed(2)}`);
+    }
+
+    //uses this.priceHistory to calculate an average volatility value:
+    setVolatility() {
+        // We need sufficient price history to calculate volatility
+        if (this.priceHistory.length < 2) {
+            console.log("Insufficient price history to calculate volatility");
+            return 0;
+        }
+
+        // Calculate daily returns (percentage change)
+        const returns = [];
+        for (let i = 1; i < this.priceHistory.length; i++) {
+            let ret = (this.priceHistory[i] - this.priceHistory[i-1]) / this.priceHistory[i-1];
+            returns.push(ret);
+        }
+
+        // Calculate standard deviation of returns
+        const avgReturn = returns.reduce((sum, value) => sum + value, 0) / returns.length;
+        const squaredDiffs = returns.map(value => Math.pow(value - avgReturn, 2));
+        const variance = squaredDiffs.reduce((sum, value) => sum + value, 0) / returns.length;
+
+        // Volatility is the standard deviation of returns
+        this.volatility = Math.sqrt(variance);
+
+        // Annualize the volatility (standard practice: multiply by sqrt of trading days in year)
+        // Assuming 252 trading days in a year
+        this.volatility = this.volatility * Math.sqrt(252);
     }
 
     //initialize a stock with a pre-initialized stock:
@@ -78,58 +195,47 @@ export default class Stock {
 
     //in the off chance the API goes down, key stops working, etc.,
     //this function will allow for the sim to work offline
-    simulateStockInitialization(marketPrice = 100) {
-        this.marketPrice = marketPrice;
+    simulateStockInitialization() {
+        // Generate reasonable default values for a stock
+        this.companyName = `*Simulated* ${this.symbol}`;
 
-        this.previousClosePrice = this.marketPrice;
-        this.openPrice = this.marketPrice;
-        this.priceHistory = [this.openPrice];
-        this.volatility = Math.random() * 0.05 + 0.01;
+        // Generate a base price between $10 and $500
+        const basePrice = 10 + Math.random() * 490;
+        this.marketPrice = parseFloat(basePrice.toFixed(2));
 
-        //this might make some goofy stock->sector relationships
-        //TODO: maybe a pre-initialized stock list would be good instead
-        this.assignRandomSector();
+        // Generate price history using the new simulation method
+        this.setSimulatedPriceHistory(30, this.marketPrice);
 
-        // simulate a previous close price:
-        this.previousClosePrice = this.marketPrice * (1 - (Math.random() * 0.04 - 0.02));
+        // Use the new sector assignment method
+        this.setRandomSector();
 
-        //debug message, indicate success:
-        console.log(`\n\nCreated some random attributes for ${this.symbol}`);
+
+        // Previous close slightly different from current price
+        const prevCloseDiff = (Math.random() * 0.06) - 0.03; // Between -3% and +3%
+        this.previousClosePrice = parseFloat((this.marketPrice * (1 + prevCloseDiff)).toFixed(2));
+
+        // Open price between previous close and current price
+        const openWeight = Math.random(); // Weighting factor between 0 and 1
+        this.openPrice = parseFloat((this.previousClosePrice + (this.marketPrice - this.previousClosePrice) * openWeight).toFixed(2));
+
+        // Volume between 100,000 and 10,000,000
+        this.volume = Math.floor(100000 + Math.random() * 9900000);
+
+        // Sentiment between -0.8 and 0.8
+        this.currentSentiment = parseFloat((Math.random() * 1.6 - 0.8).toFixed(2));
+
+        //TODO: implement this:
+        /*
+        // Select volatility based on sector
+        // Different sectors typically have different volatility levels
+        const sectorVolatility = this.setSectorVolatility(this.sector);
+         */
+
+        console.log(`Initialized simulated data for ${this.symbol} (${this.sector}: ${this.industry}) at $${this.marketPrice}`);
     }
 
-    async setStockInfoViaAPI(apiKey, apiHost) {
-        const url = `https://${apiHost}/stock/v2/get-summary?symbol=${this.symbol}`;
 
-        const APIParameters = {
-            method: 'GET',
-            headers: {
-                'X-RapidAPI-Key': apiKey,
-                'X-RapidAPI-Host': apiHost
-            }
-        };
-
-        const response = await fetch(url, APIParameters);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error. status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        //use contents of data to assign real initial attributes for this stock.
-        this.previousClosePrice = data.summaryDetail?.previousClose?.raw ?? null;
-        this.marketPrice = data.price?.regularMarketPrice?.raw ?? null;
-        this.openPrice = data.summaryDetail?.open?.raw ?? null;
-        this.priceHistory = [this.openPrice];
-        this.sector = data.summaryProfile?.sector ?? 'Unknown';
-        this.companyName = data.price?.longName ?? data.price?.shortName ?? 'Unknown';
-        this.volume = data.price?.regularMarketVolume?.raw ?? null;
-
-        //debug message, indicate success:
-        console.log(`\n\nFetched up to date attributes from API for ${this.symbol}`);
-    }
-
-    // Update the stock price based on market conditions and sentiment
+    // Update the stock pribased on market conditions and sentiment
     updatePrice() {
         // Calculate a market price based on volatility and sentiment
         const change = this.marketPrice * this.volatility * (Math.random() * 2 - 1 + this.sentimentFactor);
@@ -151,6 +257,37 @@ export default class Stock {
         }
     }
 
+    setSimulatedPriceHistory(days = 30, startPrice = null, dailyVolatility = 0.015) {
+        // Use provided start price or current market price
+        let marketPrice = startPrice || this.marketPrice || 100;
+
+        // If we still don't have a price, use a reasonable default
+        if (!marketPrice || marketPrice <= 0) {
+            console.warn(`Invalid initial price for ${this.symbol}, using default of 100`);
+            marketPrice = 100;
+        }
+
+        // Create a trend bias (slight upward or downward trend)
+        // This creates more realistic price movements than pure random walk
+        const trendBias = (Math.random() * 0.006) - 0.003; // Between -0.3% and +0.3% daily bias
+
+        // Simulate each previous day
+        for (let i = 1; i < days; i++) {
+            // Random daily percentage change based on volatility
+            // Normally distributed around the trend bias
+            const change = trendBias + (dailyVolatility * (Math.random() + Math.random() + Math.random() - 1.5));
+
+            // Calculate new price (moving backward in time)
+            // When simulating backward, we divide by (1+change) instead of multiply
+            marketPrice = marketPrice / (1 + change);
+
+            // Keep prices reasonable (no negative prices)
+            marketPrice = Math.max(marketPrice, 0.01);
+
+            // Add to the beginning of the array (oldest first)
+            this.priceHistory.unshift(marketPrice);
+        }
+    }
 
     //for debugging purposes,
     printAllAttributesToConsole() {
@@ -172,7 +309,7 @@ export default class Stock {
         }
     }
 
-    calculatePriceChange(marketTrend = 0){
+    setPriceChange(marketTrend = 0){
         // Base random movement
         let randomFactor = (Math.random() - 0.5) * this.volatility;
 
@@ -183,40 +320,17 @@ export default class Stock {
         let marketFactor = marketTrend * MARKET_FACTOR_DAMPENER;
 
         // Calculate percentage change
-        return randomFactor + marketFactor;
-    }
-
-    //void, retrieve impact (float) from newsItem.impact
-    updateCurrentSentiment(impact){
-        this.currentSentiment += impact
-    }
-
-    updatePriceMetadata(){
-        // Update tracking values
-        if (this.marketPrice > this.highestPrice) {
-            this.highestPrice = this.marketPrice;
-        }
-        if (this.marketPrice < this.lowestPrice || this.lowestPrice === 0) {
-            this.lowestPrice = this.marketPrice;
-        }
-
-        // Limit history size to 1000 float values to prevent memory issues
-        if (this.priceHistory.length > 1000) {
-            this.priceHistory.shift();
-        }
-
-        // track price history:
-        this.priceHistory.push(this.marketPrice);
+        this.priceChange = randomFactor + marketFactor;
     }
 
     // Assign a random sector to the stock
-    assignRandomSector() {
+    setRandomSector() {
         const sectors = [
             "Technology", "Healthcare", "Financial Services",
             "Consumer Goods", "Energy", "Telecommunications",
             "Real Estate", "Utilities", "Materials", "Industrials"
         ];
-        return sectors[Math.floor(Math.random() * sectors.length)];
+        this.sector = sectors[Math.floor(Math.random() * sectors.length)];
     }
 
     //getters:

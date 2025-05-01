@@ -3,11 +3,11 @@ import Portfolio from "./Portfolio";
 
 export default class User {
     constructor(user = null) {
-        //TODO: figure out how this works:
-        this.bcrypt = require('bcrypt');
+        //holds the actual stock objects
+        this.stocksAddedToSim = [];
 
-        //list of stocks populating drop-down menu, more can be added by the user
-        let stocksAddedToSim = [];
+        this.password = "";
+        this.username = "";
 
         //new user, make a new account:
         if(!user) {
@@ -16,26 +16,18 @@ export default class User {
 
             //the drop down menu will pull from this list to determine which stocks to display:
             //give the user a list of popular stocks to initially choose from:
-            stocksAddedToSim = [
-                new Stock('AAPL'),
-                new Stock('AMD'),
-                new Stock('PFE'),
-                new Stock('SMCI'),
-                new Stock('NVDA'),
-                new Stock('F'),
-                new Stock('AMZN')
-            ];
+
+            //get a username and password from the user:
+            //NOT IMPLEMENTED
+            //TODO: make sure this is handled securely
         }
-        //previous user, let them login:
+        //previous user, initialize their market session:
         else{
             this.portfolio = user.portfolio;
             this.stocksAddedToSim = user.stocksAddedToSim;
+            this.username = user.username;
+            this.password = user.password;
         }
-
-        //TODO: make sure this is handled securely
-        let password = "";
-        let username = "";
-
     }
 
     addStockToSim(stock){
@@ -43,33 +35,22 @@ export default class User {
     }
 
     //run this when a user purchases a stock:
-    addStockToPortfolio(stock, quantity){
+    addStockToPortfolio(stockSymbol, quantity){
         for(let i = 0; i < quantity; i++){
-            if(stock.symbol === this.stocksAddedToSim[i].symbol){
-                this.portfolio.addStockToPortfolio(this.stocksAddedToSim[i], quantity);
+            if(stockSymbol === this.stocksAddedToSim[i].symbol){ //this stock is in the sim
+                this.portfolio.addStockToPortfolio(stockSymbol, quantity);
                 return;
             }
         }
     }
 
     //run this when a user sells a stock:
-    removeStockFromPortfolio(stock, quantity){
+    removeStockFromPortfolio(stockSymbol, quantity){
         for(let i = 0; i < quantity; i++){
-            if(stock.symbol === this.stocksAddedToSim[i].symbol){
+            if(stockSymbol === this.stocksAddedToSim[i].symbol){ //this stock is in the sim
                 this.portfolio.removeStockFromPortfolio(this.stocksAddedToSim[i], quantity);
                 return;
             }
         }
     }
-
-    /*
-    hashPassword(password) {
-        const saltRounds = 10;
-        return this.bcrypt.hashSync(password, saltRounds);
-    }
-
-    validatePassword(password) {
-        return this.bcrypt.compareSync(password, this.passwordHash);
-    }
-    */
 }
