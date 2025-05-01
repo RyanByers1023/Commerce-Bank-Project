@@ -151,7 +151,7 @@ class Portfolio {
         }
     }
 
-    calculateAverageMoneySpentOnStock(stock){
+    getAverageMoneySpentOnStock(stock){
         let totalMoneySpent = this.calculateTotalMoneySpentOnStock(stock);
         return totalMoneySpent / this.holdingsMap.getQuantity(stock);
     }
@@ -210,10 +210,6 @@ class Portfolio {
     // returns float, returns the earnings/losings the user
     setEarnings() {
         this.earnings = this.totalAssetsValue - this.startingCash;
-    }
-
-    setEarnings(){
-        this.earnings = this.getEarnings();
     }
 }
 

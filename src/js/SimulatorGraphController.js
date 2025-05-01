@@ -12,7 +12,7 @@ class SimulatorGraphController{
         this.canvas = null;
         this.ctx = null;
 
-        this.instantiateCanvas();
+        this.instantiateCanvas(userProfile);
 
         // Graph constants
         this.CANVAS_WIDTH = canvas.width;
@@ -35,15 +35,41 @@ class SimulatorGraphController{
         this.focusedStock = userProfile.stocksAddedToSim[0];
         this.updateInterval = null;
 
-        this.resetUpdateInterval();
-
-
-        populateStockDropdown(userProfile);
         updateCurrentStockDisplay(userProfile);
     }
 
-    instantiateCanvas(){
+    instantiateCanvas(userProfile){
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize canvas context
+            this.canvas = document.getElementById("stockCanvas");
 
+            if (canvas) {
+                ctx = canvas.getContext("2d");
+                window.ctx = ctx;
+            } else {
+                console.error("Canvas element not found");
+            }
+
+            // Populate stock dropdown
+            this.populateStockDropdown(userProfile.stocksAddedToSim);
+
+            // Set up initial display
+            this.updateCurrentStockDisplay();
+
+            // Start price updates
+            this.resetUpdateInterval();
+
+            // Set up buy/sell quantity change handlers
+            const buyQuantityInput = document.getElementById('buy-quantity');
+            if (buyQuantityInput) {
+                buyQuantityInput.addEventListener('change', updateBuySellInterface);
+            }
+
+            const sellQuantityInput = document.getElementById('sell-quantity');
+            if (sellQuantityInput) {
+                sellQuantityInput.addEventListener('change', updateBuySellInterface);
+            }
+        })
     }
 
     setFocusedStock(userProfile) {
@@ -53,9 +79,7 @@ class SimulatorGraphController{
         this.selectedStock = getStock(selectedStockSymbol, userProfile);
 
         // Update buy/sell interface
-        updateBuySellInterface();
-
-
+        this.updateBuySellInterface();
 
         // Update current stock display
         updateCurrentStockDisplay();
@@ -63,10 +87,6 @@ class SimulatorGraphController{
 
     getStock(selectedStockSymbol, userProfile) {
         return userProfile.stocksAddedToSim.find(stock => stock.symbol === selectedStockSymbol);
-    }
-
-    startSimulator(){
-
     }
 
     resetUpdateInterval(){
@@ -81,7 +101,7 @@ class SimulatorGraphController{
         }, this.TIME_FRAMES[timeframe].interval);
 
         // Trigger immediate update
-        updateStockPrice();
+        this.updateStockPrice();
     }
 
     updateStockPrice() {
@@ -96,17 +116,8 @@ class SimulatorGraphController{
         // Redraw graph
         drawGraph();
     }
-}
 
-//TODO: make this return stock instead of assigning it
-
-
-
-    /**
-     * Sets the stock timeframe
-     */
-
-    function updateCurrentStockDisplay() {
+    updateCurrentStockDisplay() {
         const stock = getCurrentStock();
         if (!stock) return;
 
@@ -133,12 +144,12 @@ class SimulatorGraphController{
         }
     }
 
-    function setTimeframe(tf) {
+    setTimeframe(tf) {
         this.timeframe = tf;
     }
 
 
-    function updateBuySellInterface() {
+    updateBuySellInterface() {
         const stock = getCurrentStock();
         if (!stock) return;
 
@@ -168,10 +179,7 @@ class SimulatorGraphController{
         }
     }
 
-    /**
-     * Draws the stock graph
-     */
-    function drawGraph() {
+    drawGraph() {
         const stock = getCurrentStock();
         if (!stock || !ctx) return;
 
@@ -200,10 +208,7 @@ class SimulatorGraphController{
         drawTimeframeLabel();
     }
 
-    /**
-     * Draws the grid lines and labels
-     */
-    function drawGrid(minPrice, maxPrice) {
+    drawGrid(minPrice, maxPrice) {
         ctx.strokeStyle = "#E5E7EB"; // Gray-200
         ctx.lineWidth = 1;
 
@@ -238,7 +243,7 @@ class SimulatorGraphController{
         }
     }
 
-    function drawPriceLine(priceHistory, minPrice, maxPrice) {
+    drawPriceLine(priceHistory, minPrice, maxPrice) {
         if (priceHistory.length < 2) return;
 
         // Calculate starting point for graph
@@ -267,73 +272,30 @@ class SimulatorGraphController{
         ctx.stroke();
     }
 
-    /**
-     * Draws the timeframe label
-     */
-    function drawTimeframeLabel() {
+    drawTimeframeLabel() {
         ctx.fillStyle = "#6B7280"; // Gray-500
         ctx.font = "14px Arial";
         ctx.textAlign = "left";
         ctx.fillText(TIME_FRAMES[timeframe].label, GRAPH_PADDING, GRAPH_PADDING - 15);
     }
 
-    /**
-     * Populates the stock select dropdown
-     */
-    function populateStockDropdown() {
+
+    populateStockDropdown(stockList) {
+        //get the selected stock from the simulator.html:
         const stockSelect = document.getElementById("stockSelect");
-        if (!stockSelect) return;
+
+        if (!stockSelect){
+            return;
+        }
 
         stockSelect.innerHTML = ""; // Clear existing options
 
-        /* -- uncomment to add options to dropdown (doesn't look functional though):
-        userStocks.forEach(stock => {
+        //populate the drop down menu:
+        stockList.forEach(stock => {
             const option = document.createElement("option");
             option.value = stock.symbol;
             option.textContent = `${stock.companyName} (${stock.symbol})`;
             stockSelect.appendChild(option);
         });
-        */
-
-        // Set initial selection
-        stockSelect.value = currentStock;
-    }
-
-    /**
-     * Helper function to get current stock object
-     */
-
-
-// Initialize everything when the document is ready
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize canvas context
-        canvas = document.getElementById("stockCanvas");
-
-        if (canvas) {
-            ctx = canvas.getContext("2d");
-            window.ctx = ctx;
-        } else {
-            console.error("Canvas element not found");
-        }
-
-        // Populate stock dropdown
-        populateStockDropdown();
-
-        // Set up initial display
-        updateCurrentStockDisplay();
-
-        // Start price updates
-        resetUpdateInterval();
-
-        // Set up buy/sell quantity change handlers
-        const buyQuantityInput = document.getElementById('buy-quantity');
-        if (buyQuantityInput) {
-            buyQuantityInput.addEventListener('change', updateBuySellInterface);
-        }
-
-        const sellQuantityInput = document.getElementById('sell-quantity');
-        if (sellQuantityInput) {
-            sellQuantityInput.addEventListener('change', updateBuySellInterface);
-        }
     }
 }

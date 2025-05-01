@@ -1,6 +1,6 @@
 
-class PortfolioUIController{
-    constructor(userProfile){
+export default class PortfolioUIController{
+    constructor(userPortfolio){
         //references the value stored in 'stockBuyQuantity' (simulator.html)
         this.stockBuyQuantity = 0;
 
@@ -10,7 +10,7 @@ class PortfolioUIController{
         this.initializeUIListeners();
     }
 
-    initializeUIListeners(){
+    initializeUIListeners(userPortfolio){
         document.addEventListener('DOMContentLoaded', function() {
 
             this.setStockBuyQuantityListener();
@@ -20,17 +20,12 @@ class PortfolioUIController{
             this.handleStockSellButtonClick();
         
             //set up all of the UI elements pertaining to the user portfolio
-            this.updateAllPortfolioUIElements(userProfile);
+            this.updateCashDisplay(userPortfolio);
+            this.updatePortfolioDisplay(userPortfolio);
+            this.updateAssetsDisplay(userPortfolio);
+            this.updateHoldingsTable(userPortfolio);
+            this.updateBuySellPriceDisplay(userPortfolio);
         });
-    }
-
-    // Update all portfolio-related UI elements
-    updateAllPortfolioUIElements(userPortfolio) {
-        this.updateCashDisplay(userPortfolio);
-        this.updatePortfolioDisplay(userPortfolio);
-        this.updateAssetsDisplay(userPortfolio);
-        this.updateHoldingsTable(userPortfolio);
-        this.updateBuySellPriceDisplay(userPortfolio);
     }
 
     setStockBuyQuantityListener(){
@@ -168,12 +163,12 @@ class PortfolioUIController{
     updateBuySellPriceDisplay(){
         const selectedStock = getSelectedStock();
 
-        sellQuantity = getInputSellQuantity(selectedStock);
+        let sellQuantity = getInputSellQuantity(selectedStock);
         document.getElementById('sell-total').textContent = `$${(selectedStock.marketPrice * sellQuantity).toFixed(2)}`;
     }
 
     getInputSellQuantity(selectedStock){
-        const sellQuantity;
+        let sellQuantity;
 
         if(selectedStock){
             sellQuantity = parseInt(document.getElementById('sell-quantity').value) || 0;
@@ -192,58 +187,50 @@ class PortfolioUIController{
     updatePortfolioDisplay(userPortfolio){
         // Update portfolio value
         const portfolioValueDisplay = document.getElementById('portfolio-value');
-        const portfolioValue = userPortfolio.getPortfolioValue(userStocks.reduce((map, stock) => {
-            map[stock.symbol] = stock;
-            return map;
-        }, {}));
-        portfolioValueDisplay.textContent = `$${portfolioValue.toFixed(2)}`;
+        portfolioValueDisplay.textContent = `$${userPortfolio.totalAssetsValue.toFixed(2)}`;
     }
 
-    updateCashDisplay(){
+    updateCashDisplay(userPortfolio){
         // Update cash display
         const cashDisplay = document.getElementById('available-cash');
-        cashDisplay.textContent = `$${userPortfolio.cash.toFixed(2)}`;
+        cashDisplay.textContent = `$${userPortfolio.balance.toFixed(2)}`;
     }
 
     // Update holdings table
-    updateHoldingsTable() {
-        const tableBody = document.getElementById('holdings-table-body');
+    updateHoldingsTable(userPortfolio) {
+        const tableBody = document.getElementById('tableHoldings');
         tableBody.innerHTML = '';
 
-        const stockMap = userStocks.reduce((map, stock) => {
-            map[stock.symbol] = stock;
-            return map;
-        }, {});
-
-        const holdings = Object.values(userPortfolio.holdings);
 
         if (holdings.length === 0) {
             const row = document.createElement('tr');
             row.innerHTML =
-                '<td colspan="3" class="py-4 text-center text-gray-500">No stocks in portfolio</td>`;
+                '<td colspan="3" class="py-4 text-center text-gray-500">No stocks in portfolio</td>';
             tableBody.appendChild(row);
             return;
         }
 
-        holdings.forEach(holding => {
-            const currentPrice = stockMap[holding.symbol] ? stockMap[holding.symbol].marketPrice : 0;
+        //TODO: work on this bit:
+        Object.values(userPortfolio.holdingsMap).forEach(holding => {
+            const currentPrice = holding.stock.marketPrice;
             const value = currentPrice * holding.quantity;
-            const profitLoss = currentPrice - holding.avgPrice;
+            const profit = currentPrice - holding.purchasePrice;
             const profitLossClass = profitLoss >= 0 ? 'text-green-600' : 'text-red-600';
 
             const row = document.createElement('tr');
             row.className = 'border-b border-gray-200 hover:bg-gray-50';
             row.innerHTML = `
-                <td class="py-2">
-                    <div>${holding.symbol}</div>
-                    <div class="text-xs text-gray-500">${holding.quantity} shares @ $${holding.avgPrice.toFixed(2)}</div>
-                </td>
-                <td class="py-2 text-right">${holding.quantity}</td>
-                <td class="py-2 text-right">
-                    <div>$${value.toFixed(2)}</div>
-                    <div class="text-xs ${profitLossClass}">${profitLoss >= 0 ? '+' : ''}${(profitLoss * 100 / holding.avgPrice).toFixed(2)}%</div>
-                </td>
-            `;
+            <td class="py-2">
+                <div>${holding.stock.symbol}</div>
+                <div class="text-xs text-gray-500">${holding.quantity} shares @ $${holding.avgPrice.toFixed(2)}</div>
+            </td>
+            <td class="py-2 text-right">${holding.quantity}</td>
+            <td class="py-2 text-right">
+                <div>$${value.toFixed(2)}</div>
+                <div class="text-xs ${profitLossClass}">
+                    ${profitLoss >= 0 ? '+' : ''}${(profitLoss * 100 / holding.avgPrice).toFixed(2)}%
+                </div>
+            </td>`;
             tableBody.appendChild(row);
         });
     }
@@ -267,5 +254,3 @@ class PortfolioUIController{
     Ideal for full-stack apps
     */
 }
-
-export default PortfolioUIController;
