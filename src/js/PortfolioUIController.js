@@ -1,43 +1,61 @@
-
-export default class PortfolioUIController{
-    constructor(userProfile){
-        this.initializeUI(userProfile);
+export default class PortfolioUIController {
+    constructor(userProfile) {
+        this.userProfile = userProfile; // Store user profile reference
+        this.initializeUI();
     }
 
-    initializeUI(userProfile){
+    initializeUI() {
+        // Wait for DOM to be fully loaded before initializing
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.setupUIAfterLoad());
+        } else {
+            this.setupUIAfterLoad();
+        }
+    }
+
+    setupUIAfterLoad() {
+        this.initializeUIElements();
         this.initializeUIListeners();
-        this.initializeUIElements(userProfile);
     }
 
     initializeUIListeners() {
-        document.addEventListener('DOMContentLoaded', () => {
-            this.setStockDropdownListeners();
-            this.setStockSellQuantityInputListener();
-            this.setStockBuyQuantityInputListener();
-        });
+        this.setStockDropdownListeners();
+        this.setStockSellQuantityInputListener();
+        this.setStockBuyQuantityInputListener();
+        this.setBuyButtonListener();
+        this.setSellButtonListener();
     }
 
-    initializeUIElements(userProfile){
-        this.populateDropdown(userProfile);
-        this.setGreetingMessage(userProfile);
-        this.updateCashDisplay(userProfile);
-        this.updatePortfolioDisplay(userProfile);
+    initializeUIElements() {
+        this.populateDropdown();
+        this.setGreetingMessage();
+        this.updateCashDisplay();
+        this.updatePortfolioDisplay();
+        this.updateHoldingsTable();
 
-        this.updateHoldingsTable(userProfile);
-
-
-
-        this.updateStockPriceTickers(stockPrice);
-    }
-
-    populateDropdown(userProfile){
+        // Get selected stock's price from dropdown
         const selectElement = document.getElementById("selectStock");
+        if (selectElement && selectElement.value) {
+            const selectedStock = this.getSelectedStock(selectElement.value);
+            if (selectedStock) {
+                this.updateStockPriceTickers(selectedStock.marketPrice);
+            }
+        }
+    }
+
+    getSelectedStock(symbol) {
+        return this.userProfile.stocksAddedToSim.find(stock => stock.symbol === symbol);
+    }
+
+    populateDropdown() {
+        const selectElement = document.getElementById("selectStock");
+        if (!selectElement) return;
 
         // Clear any existing options
         selectElement.innerHTML = "";
 
         // Add an option for each stock
-        userProfile.stocksAddedToSim.forEach(stock => {
+        this.userProfile.stocksAddedToSim.forEach(stock => {
             const option = document.createElement("option");
             option.value = stock.symbol;
             option.textContent = `${stock.symbol} - ${stock.companyName}`;
@@ -45,8 +63,11 @@ export default class PortfolioUIController{
         });
     }
 
-    setGreetingMessage(userProfile) {
-        const userName = userProfile?.username || "Investor";
+    setGreetingMessage() {
+        const greetingElement = document.getElementById("spanWelcomeMessage");
+        if (!greetingElement) return;
+
+        const userName = this.userProfile?.username || "Investor";
         const hour = new Date().getHours();
 
         let timeGreeting = "";
@@ -58,41 +79,45 @@ export default class PortfolioUIController{
             timeGreeting = "Good evening";
         }
 
-        let greetingMessages = [
+        const greetingMessages = [
             `${timeGreeting}, ${userName}! Ready to trade?`,
-            `Welcome back, ${userName}. Let’s grow that portfolio.`,
-            `Hello, ${userName}. What’s the move today?`,
-            `Hey ${userName}, any stocks you’ve got your eye on?`,
-            `Market’s open! Time to make some decisions, ${userName}.`
+            `Welcome back, ${userName}. Let's grow that portfolio.`,
+            `Hello, ${userName}. What's the move today?`,
+            `Hey ${userName}, any stocks you've got your eye on?`,
+            `Market's open! Time to make some decisions, ${userName}.`
         ];
 
-        const randomIndex = Math.floor(Math.random() * greetingMessage.length);
-        document.getElementById("spanWelcomeMessage").textContent = greetingMessages[randomIndex];
+        const randomIndex = Math.floor(Math.random() * greetingMessages.length);
+        greetingElement.textContent = greetingMessages[randomIndex];
     }
 
-    updateCashDisplay(userProfile){
-        const spanStockPrice = document.getElementById("spanStockPrice");
-        if (spanStockPrice) {
-            spanStockPrice.textContent = `$${userProfile.portfolio.balance.toFixed(2)}`;
+    updateCashDisplay() {
+        const cashElement = document.getElementById("spanPortfolioAvailableCash");
+        if (cashElement && this.userProfile && this.userProfile.portfolio) {
+            cashElement.textContent = `$${this.userProfile.portfolio.balance.toFixed(2)}`;
         }
     }
 
-    setStockDropdownListeners(){
+    setStockDropdownListeners() {
         const dropdown = document.getElementById('selectStock');
-
-        // Check if the dropdown exists before adding the listener
-        if (dropdown) {
-            dropdown.addEventListener('change', () => {
-                this.handleDropdownMenuSelection(dropdown.value);
-            });
-        } else {
+        if (!dropdown) {
             console.error('Stock dropdown element not found.');
+            return;
         }
+
+        dropdown.addEventListener('change', () => {
+            const selectedStock = this.getSelectedStock(dropdown.value);
+            if (selectedStock) {
+                this.handleDropdownMenuSelection(selectedStock.marketPrice);
+            }
+        });
     }
 
-    handleDropdownMenuSelection(stockPrice){
+    handleDropdownMenuSelection(stockPrice) {
         this.updateStockPriceTickers(stockPrice);
-        this.updateStockPriceTickers(stockPrice);
+        // Update buy/sell forms with the selected stock
+        this.updateBuyForm(stockPrice);
+        this.updateSellForm(stockPrice);
     }
 
     updateStockPriceTickers(stockPrice) {
@@ -104,200 +129,195 @@ export default class PortfolioUIController{
             mainPriceSpan.textContent = `$${stockPrice.toFixed(2)}`;
         }
 
-        if(buyBoxPriceSpan){
+        if (buyBoxPriceSpan) {
             buyBoxPriceSpan.textContent = `$${stockPrice.toFixed(2)}`;
         }
 
-        if(sellBoxPriceSpan){
+        if (sellBoxPriceSpan) {
             sellBoxPriceSpan.textContent = `$${stockPrice.toFixed(2)}`;
         }
-
     }
 
-    setStockSellQuantityInputListener(stockPrice){
-        //get the quantity from the html document:
-        let quantity = parseInt(document.getElementById('spanStockSellQuantity').value);
+    setStockSellQuantityInputListener() {
+        const quantityInput = document.getElementById('inputStockSellQuantity');
+        if (!quantityInput) return;
 
-        //when input is detected in the 'stockBuyQuantity' field (up/down arrow press), it gets parsed as in int and stored in this.stockBuyQuantity
-        quantity.addEventListener('input', () => {
-            this.updateStockSellTotalSpan(stockPrice, quantity);
+        quantityInput.addEventListener('input', () => {
+            const quantity = parseInt(quantityInput.value) || 0;
+            const selectElement = document.getElementById("selectStock");
+            if (selectElement && selectElement.value) {
+                const selectedStock = this.getSelectedStock(selectElement.value);
+                if (selectedStock) {
+                    this.updateStockSellTotalSpan(selectedStock.marketPrice, quantity);
+                }
+            }
         });
     }
 
-    setStockBuyQuantityInputListener(stockPrice){
-        //get the quantity from the html document:
-        const quantity = parseInt(document.getElementById('spanStockBuyQuantity').value);
+    setStockBuyQuantityInputListener() {
+        const quantityInput = document.getElementById('spanStockBuyQuantity');
+        if (!quantityInput) return;
 
-        //when input is detected in the 'stockBuyQuantity' field (up/down arrow press), it gets parsed as in int and stored in this.stockBuyQuantity
-        quantity.addEventListener('input', () => {
+        quantityInput.addEventListener('input', () => {
+            const quantity = parseInt(quantityInput.value) || 0;
+            const selectElement = document.getElementById("selectStock");
+            if (selectElement && selectElement.value) {
+                const selectedStock = this.getSelectedStock(selectElement.value);
+                if (selectedStock) {
+                    this.updateStockBuyTotalSpan(selectedStock.marketPrice, quantity);
+                }
+            }
+        });
+    }
+
+    updateStockBuyTotalSpan(stockPrice, quantity) {
+        const totalSpan = document.getElementById('spanStockBuyPriceTotal');
+        if (totalSpan) {
+            totalSpan.textContent = `$${(stockPrice * quantity).toFixed(2)}`;
+        }
+    }
+
+    updateStockSellTotalSpan(stockPrice, quantity) {
+        const totalSpan = document.getElementById('spanStockSellPriceTotal');
+        if (totalSpan) {
+            totalSpan.textContent = `$${(stockPrice * quantity).toFixed(2)}`;
+        }
+    }
+
+    updateBuyForm(stockPrice) {
+        const quantityInput = document.getElementById('spanStockBuyQuantity');
+        if (quantityInput) {
+            const quantity = parseInt(quantityInput.value) || 1;
             this.updateStockBuyTotalSpan(stockPrice, quantity);
-        });
+        }
     }
 
-    updateStockBuyTotalSpan(stockPrice, quantity){
-        document.getElementById('spanStockBuyPrice').textContent = `$${(stockPrice * quantity).toFixed(2)}`;
+    updateSellForm(stockPrice) {
+        const quantityInput = document.getElementById('spanStockSellQuantity');
+        if (quantityInput) {
+            const quantity = parseInt(quantityInput.value) || 1;
+            this.updateStockSellTotalSpan(stockPrice, quantity);
+        }
     }
 
-    updateStockSellTotalSpan(stockPrice, quantity){
-        document.getElementById('spanStockSellPrice').textContent = `$${(stockPrice * quantity).toFixed(2)}`;
-    }
+    setBuyButtonListener() {
+        const buyButton = document.getElementById('buttonBuy');
+        if (!buyButton) return;
 
-    handleBuyButtonClick(userPortfolio){
-        //get information regarding stock purchase from UI:
-        const buyQuantityInput = document.getElementById('buy-quantity');
-        const buyTotalSpan = document.getElementById('buy-total');
-        const buyButton = document.getElementById('buy-button');
+        buyButton.addEventListener('click', () => {
+            const quantityInput = document.getElementById('spanStockBuyQuantity');
+            const selectElement = document.getElementById("selectStock");
 
-        // Buy button click handler
-        buyButton.addEventListener('click', function() {
-            const quantity = parseInt(buyQuantityInput.value) || 0;
-            const selectedStock = getSelectedStock();
-    
-            if (selectedStock) {
-                const result = userPortfolio.buyStock(selectedStock, quantity);
-    
+            if (!quantityInput || !selectElement) return;
+
+            const quantity = parseInt(quantityInput.value) || 0;
+            const selectedStock = this.getSelectedStock(selectElement.value);
+
+            if (selectedStock && quantity > 0) {
+                const result = this.userProfile.buyStock(selectedStock, quantity);
+
                 if (result.success) {
-                    // Show success message
                     alert(result.message);
-    
-                    // Update UI
-                    updatePortfolioUI();
-    
-                    // Reset quantity
-                    buyQuantityInput.value = 1;
-                    buyTotalSpan.textContent = `$${selectedStock.marketPrice.toFixed(2)}`;
+                    this.updateUIAfterTrade();
+                    quantityInput.value = 1;
+                    this.updateStockBuyTotalSpan(selectedStock.marketPrice, 1);
                 } else {
-                    // Show error message
                     alert(result.message);
                 }
             }
         });
     }
 
-    //add listener to Sell button on UI, handle click
-    handleSellButtonClick(userPortfolio){
-        // Sell form handler
-        const sellQuantityInput = document.getElementById('sell-quantity');
-        const sellTotalSpan = document.getElementById('sell-total');
-        const sellButton = document.getElementById('sell-button');
+    setSellButtonListener() {
+        const sellButton = document.getElementById('buttonSell');
+        if (!sellButton) return;
 
-        // Sell button click handler
-        sellButton.addEventListener('click', function() {
-            //TODO: sanitize input
-            const quantity = parseInt(sellQuantityInput.value) || 0;
+        sellButton.addEventListener('click', () => {
+            const quantityInput = document.getElementById('inputStockSellQuantity');
+            const selectElement = document.getElementById("selectStock");
 
-            //get the stock selected from the drop down menu
-            const selectedStock = getSelectedStock();
-    
-            if (selectedStock) {
-                //perform the sell and update userPortfolio
-                const result = userPortfolio.sellStock(selectedStock, quantity);
-    
-                //attempt to sell was successful
+            if (!quantityInput || !selectElement) return;
+
+            const quantity = parseInt(quantityInput.value) || 0;
+            const selectedStock = this.getSelectedStock(selectElement.value);
+
+            if (selectedStock && quantity > 0) {
+                const result = this.userProfile.sellStock(selectedStock, quantity);
+
                 if (result.success) {
-                    // Show success message
                     alert(result.message);
-    
-                    // Update the UI
-                    updateAllPortfolioUIElements();
-    
-                    // Reset quantity
-                    sellQuantityInput.value = 1;
-                    sellTotalSpan.textContent = `$${selectedStock.marketPrice.toFixed(2)}`;
-
-                //attempt to sell was unsuccessful
+                    this.updateUIAfterTrade();
+                    quantityInput.value = 1;
+                    this.updateStockSellTotalSpan(selectedStock.marketPrice, 1);
                 } else {
-                    // Show error message
                     alert(result.message);
                 }
             }
         });
     }
 
+    updateUIAfterTrade() {
+        //update portfolio
+        this.userProfile.portfolio.setPortfolioValue()
+        this.userProfile.portfolio.setTotalAssetsValue()
 
-    //TODO: finish working on this function
-    populateHoldingsTable(userProfile) {
-        const tableBody = document.getElementById("holdings-table-body");
-        tableBody.innerHTML = ""; // Clear existing rows
+        this.updateCashDisplay();
+        this.updatePortfolioDisplay();
+        this.updateHoldingsTable();
+    }
 
-        const holdingsMap = user.portfolio.holdingsMap;
+    updatePortfolioDisplay() {
+        const portfolioValueDisplay = document.getElementById('spanPortfolioValue');
+        const totalAssetsDisplay = document.getElementById('spanPortfolioTotalAssets');
 
-        if (!holdingsMap || holdingsMap.size === 0) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-            <td colspan="3" class="py-4 text-center text-gray-500">
-                No stocks in portfolio
-            </td>`;
-            tableBody.appendChild(row);
-            return;
+        const portfolioValue = this.userProfile.portfolio.portfolioValue;
+        const totalAssetsValue = this.userProfile.totalAssetsValue;
+
+        if (portfolioValueDisplay && this.userProfile) {
+            portfolioValueDisplay.textContent = `${portfolioValue.toFixed(2)}`;
         }
 
-        holdingsMap.forEach((holding, symbol) => {
-            const currentPrice = holding.marketPrice;
-            const value = currentPrice * holding.quantity;
-            const profitLoss = currentPrice - holding.avgPrice;
-            const profitLossClass = profitLoss >= 0 ? 'text-green-600' : 'text-red-600';
-
-            const row = document.createElement('tr');
-            row.className = 'border-b border-gray-200 hover:bg-gray-50';
-            row.innerHTML = `
-            <td class="py-2">
-                <div>${symbol}</div>
-                <div class="text-xs text-gray-500">${holding.quantity} shares @ $${holding.marketPrice.toFixed(2)}</div>
-            </td>
-            <td class="py-2 text-right">${holding.quantity}</td>
-            <td class="py-2 text-right">
-                <div>$${value.toFixed(2)}</div>
-                <div class="text-xs ${profitLossClass}">${profitLoss >= 0 ? '+' : ''}${((profitLoss / holding.avgPrice) * 100).toFixed(2)}%</div>
-            </td>
-        `;
-            tableBody.appendChild(row);
-        });
+        if (totalAssetsDisplay && this.userProfile) {
+            totalAssetsDisplay.textContent = `${totalAssetsValue.toFixed(2)}`;
+        }
     }
 
-    updatePortfolioDisplay(userPortfolio){
-        // Update portfolio value
-        const portfolioValueDisplay = document.getElementById('portfolio-value');
-        portfolioValueDisplay.textContent = `$${userPortfolio.totalAssetsValue.toFixed(2)}`;
-    }
-
-
-
-    // Update holdings table
-    updateHoldingsTable(userPortfolio) {
+    updateHoldingsTable(){
         const tableBody = document.getElementById('tableHoldings');
+        if (!tableBody) return;
+
         tableBody.innerHTML = '';
 
+        const holdings = this.userProfile?.portfolio?.holdingsMap;
 
-        if (holdings.length === 0) {
+        if (!holdings || Object.keys(holdings).length === 0) {
             const row = document.createElement('tr');
-            row.innerHTML =
-                '<td colspan="3" class="py-4 text-center text-gray-500">No stocks in portfolio</td>';
+            row.innerHTML = '<td colspan="3" class="py-4 text-center text-gray-500">No stocks in portfolio</td>';
             tableBody.appendChild(row);
             return;
         }
 
-        //TODO: work on this bit:
-        Object.values(userPortfolio.holdingsMap).forEach(holding => {
-            const currentPrice = holding.marketPrice;
+        Object.values(holdings).forEach(holding => {
+            const currentPrice = holding.stock.marketPrice;
             const value = currentPrice * holding.quantity;
-            const profit = currentPrice - holding.purchasePrice;
+            const profitLoss = currentPrice - holding.marketPrice;
             const profitLossClass = profitLoss >= 0 ? 'text-green-600' : 'text-red-600';
+            const percentChange = (profitLoss / holding.marketPrice) * 100;
 
             const row = document.createElement('tr');
             row.className = 'border-b border-gray-200 hover:bg-gray-50';
             row.innerHTML = `
-            <td class="py-2">
-                <div>${holding.stock.symbol}</div>
-                <div class="text-xs text-gray-500">${holding.quantity} shares @ $${holding.avgPrice.toFixed(2)}</div>
-            </td>
-            <td class="py-2 text-right">${holding.quantity}</td>
-            <td class="py-2 text-right">
-                <div>$${value.toFixed(2)}</div>
-                <div class="text-xs ${profitLossClass}">
-                    ${profitLoss >= 0 ? '+' : ''}${(profitLoss * 100 / holding.avgPrice).toFixed(2)}%
-                </div>
-            </td>`;
+                    <td class="py-2">
+                        <div>${holding.stock.symbol}</div>
+                        <div class="text-xs text-gray-500">${holding.quantity} shares @ $${holding.avgPrice.toFixed(2)}</div>
+                    </td>
+                    <td class="py-2 text-right">${holding.quantity}</td>
+                    <td class="py-2 text-right">
+                        <div>$${value.toFixed(2)}</div>
+                        <div class="text-xs ${profitLossClass}">
+                            ${profitLoss >= 0 ? '+' : ''}${percentChange.toFixed(2)}%
+                        </div>
+                    </td>`;
             tableBody.appendChild(row);
         });
     }

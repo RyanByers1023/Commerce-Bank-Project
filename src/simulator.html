@@ -106,7 +106,7 @@
 
                         <div class="flex items-center space-x-2 mb-4">
                             <!--Buy quantity user input field-->
-                            <input type="number" id="spanStockBuyQuantity" min="1" max="10" value="1" class="w-20 px-2 py-1 border rounded text-right">
+                            <input type="number" id="inputStockBuyQuantity" min="1" max="10" value="1" class="w-20 px-2 py-1 border rounded text-right">
 
                             <!--spanStockBuyPrice = stock.marketPrice-->
                             <span>shares at <span id="spanStockBuyPrice" class="font-medium">$0.00</span></span>
@@ -133,7 +133,7 @@
 
                         <!--Sell quantity user input field-->
                         <div class="flex items-center space-x-2 mb-4">
-                            <input type="number" id="stockSellQuantity" min="1" value="1" class="w-20 px-2 py-1 border rounded text-right">
+                            <input type="number" id="inputStockSellQuantity" min="1" value="1" class="w-20 px-2 py-1 border rounded text-right">
 
                             <!--spanStockSellPrice = stock.marketPrice-->
                             <span>shares at <span id="spanStockSellPrice" class="font-medium">$0.00</span></span>
@@ -141,7 +141,7 @@
 
                         <!--stockSellPriceTotal = stock.marketPrice * quantity-->
                         <div class="flex justify-between items-center">
-                            <span>Total: <span id="stockSellPriceTotal" class="font-medium">$0.00</span></span>
+                            <span>Total: <span id="spanStockSellPriceTotal" class="font-medium">$0.00</span></span>
 
                             <!--Sell button-->
                             <button id="buttonSell" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">

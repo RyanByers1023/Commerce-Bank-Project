@@ -1,16 +1,9 @@
-// Updated simulator graph controller
-// This handles the stock chart visualization and interactions
-
-//TODO: rename variables pertaining to simulator.html elements to match variable names within simulator.html (i renamed some of them)
 
 export default class SimulatorGraphController{
-    SimulatorGraphController(userProfile){
-        this.canvas = null;
-        this.ctx = null;
-
+    constructor(userProfile) {
         // Graph constants
-        this.CANVAS_WIDTH = this.canvas?.width || 800;
-        this.CANVAS_HEIGHT = this.canvas?.height || 600;
+        this.CANVAS_WIDTH = 800;
+        this.CANVAS_HEIGHT = 600;
         this.GRAPH_PADDING = 60;
         this.GRID_LINES = 5;
         this.NUM_POINTS = 50;
@@ -22,101 +15,149 @@ export default class SimulatorGraphController{
             "1M": { interval: 7000, label: "This Month" }
         };
 
-        //preset timeframe to 1 day:
+        //preset timeframe to 1 day
         this.timeframe = "1D";
+        this.userProfile = userProfile;
+        this.canvas = null;
+        this.ctx = null;
+        this.updateInterval = null;
 
         //get the first stock in the stocksAddedToSim list and display this stock on the graph
         this.focusedStock = userProfile.stocksAddedToSim[0];
-        this.updateInterval = null;
 
-        updateCurrentStockDisplay(userProfile);
-
-        this.instantiateCanvas(userProfile);
+        // Initialize after DOM is loaded
+        this.initWhenReady();
     }
 
-    instantiateCanvas(userProfile){
-        document.addEventListener('DOMContentLoaded', () => {
-            this.canvas = document.getElementById("stockCanvas");
+    initWhenReady() {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.instantiateCanvas());
+        } else {
+            // DOM already loaded, initialize immediately
+            this.instantiateCanvas();
+        }
+    }
 
-            if (this.canvas) {
-                this.ctx = this.canvas.getContext("2d");
-                window.ctx = this.ctx;
-            } else {
-                console.error("Canvas element not found");
-            }
+    instantiateCanvas() {
+        this.canvas = document.getElementById("stockCanvas");
 
-            this.populateStockDropdown(userProfile.stocksAddedToSim);
+        if (this.canvas) {
+            this.ctx = this.canvas.getContext("2d");
+            // Set actual dimensions from the DOM element
+            this.CANVAS_WIDTH = this.canvas.width;
+            this.CANVAS_HEIGHT = this.canvas.height;
+
+            // Set up real-time updates
+            this.populateStockDropdown(this.userProfile.stocksAddedToSim);
             this.updateCurrentStockDisplay();
+            this.setupEventListeners();
             this.resetUpdateInterval();
 
-            const buyQuantityInput = document.getElementById('buy-quantity');
-
-            this.updateBuySellInterface(buyQuantityInput);
-            this.setFocusedStock(userProfile);
-        });
+            // Draw initial graph
+            this.drawGraph();
+        } else {
+            console.error("Canvas element not found");
+        }
     }
 
-    setFocusedStock(userProfile) {
-        //get the user selected stock from the selectStock select element (drop-down menu)
-        let selectedStock = document.getElementById("selectStock");
+    setupEventListeners() {
+        // Set up stock selection change listener
+        const stockSelect = document.getElementById("selectStock");
+        if (stockSelect) {
+            stockSelect.addEventListener('change', (e) => {
+                this.setFocusedStock(e.target.value);
+            });
+        }
 
-        // Update current stock display
-        updateCurrentStockDisplay(selectedStock);
+        // Set up timeframe buttons
+        const timeframeButtons = document.querySelectorAll('[data-timeframe]');
+        timeframeButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const tf = e.target.dataset.timeframe;
+                this.setTimeframe(tf);
+            });
+        });
+
+        // Set up quantity input listeners for buy/sell
+        const buyQuantityInput = document.getElementById('buy-quantity');
+        if (buyQuantityInput) {
+            buyQuantityInput.addEventListener('input', () => this.updateBuySellInterface());
+        }
+
+        const sellQuantityInput = document.getElementById('sell-quantity');
+        if (sellQuantityInput) {
+            sellQuantityInput.addEventListener('input', () => this.updateBuySellInterface());
+        }
+    }
+
+    setFocusedStock(stockSymbol) {
+        // Find the stock in the user's portfolio
+        const stock = this.getStock(stockSymbol, this.userProfile);
+        if (stock) {
+            this.focusedStock = stock;
+            this.updateCurrentStockDisplay();
+            this.resetUpdateInterval(); // Reset timer when stock changes
+        }
     }
 
     getStock(selectedStockSymbol, userProfile) {
-        return userProfile.stocksAddedToSim.find(stock => stock.symbol === selectedStockSymbol);
+        return this.userProfile.stocksAddedToSim.find(stock => stock.symbol === selectedStockSymbol);
     }
 
-    resetUpdateInterval(){
+    resetUpdateInterval() {
         // Clear existing interval
         if (this.updateInterval) {
-            clearInterval(updateInterval);
+            clearInterval(this.updateInterval);
         }
 
-        // Set new interval
+        // Set new interval based on selected timeframe
         this.updateInterval = setInterval(() => {
-            updateStockPrice();
-        }, this.TIME_FRAMES[timeframe].interval);
+            this.updateStockPrices();
+        }, this.TIME_FRAMES[this.timeframe].interval);
 
         // Trigger immediate update
-        this.updateStockPrice();
+        this.updateAllStockPrices();
     }
 
-    updateStockPrice() {
-        if (!this.selectedStock) return;
+    // New method to update all stocks at once
+    updateAllStockPrices() {
+        if (!this.userProfile || !this.userProfile.stocksAddedToSim) return;
 
-        // Update price
-        stock.updatePrice();
+        // Update prices for all stocks in the simulation
+        this.userProfile.stocksAddedToSim.forEach(stock => {
+            stock.updatePrice();
+        });
 
-        // Update UI
-        updateCurrentStockDisplay();
+        // Update displays only if a stock is currently focused
+        if (this.focusedStock) {
+            this.updateCurrentStockDisplay();
+            this.updateBuySellInterface();
+            this.drawGraph();
+        }
 
-        // Redraw graph
-        drawGraph();
+        // Update portfolio value and other global displays
+        this.updatePortfolioValue();
+        this.updateWatchlistDisplay();
     }
 
     updateCurrentStockDisplay() {
-        const stock = getCurrentStock();
-        if (!stock) return;
-
         // Update stock price display
         const priceElement = document.getElementById("stockPrice");
         if (priceElement) {
-            priceElement.textContent = `$${stock.marketPrice.toFixed(2)}`;
+            priceElement.textContent = `$${this.focusedStock.marketPrice.toFixed(2)}`;
         }
 
         // Update stock name/symbol display
         const nameElement = document.getElementById("stockName");
         if (nameElement) {
-            nameElement.textContent = `${stock.companyName} (${stock.symbol})`;
+            nameElement.textContent = `${this.focusedStock.companyName} (${this.focusedStock.symbol})`;
         }
 
         // Update price change
         const changeElement = document.getElementById("priceChange");
         if (changeElement) {
-            const change = stock.marketPrice - stock.previousClosePrice;
-            const changePercent = (change / stock.previousClosePrice) * 100;
+            const change = this.focusedStock.marketPrice - this.focusedStock.previousClosePrice;
+            const changePercent = (change / this.focusedStock.previousClosePrice) * 100;
 
             changeElement.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent.toFixed(2)}%)`;
             changeElement.className = change >= 0 ? 'text-green-500' : 'text-red-500';
@@ -124,49 +165,47 @@ export default class SimulatorGraphController{
     }
 
     setTimeframe(tf) {
-        this.timeframe = tf;
+        if (this.TIME_FRAMES[tf]) {
+            this.timeframe = tf;
+            this.resetUpdateInterval(); // Reset update interval when timeframe changes
+        }
     }
 
-
     updateBuySellInterface() {
-        const stock = getCurrentStock();
-        if (!stock) return;
-
         // Update buy price
         const buyPriceElement = document.getElementById("buy-price");
         if (buyPriceElement) {
-            buyPriceElement.textContent = `$${stock.marketPrice.toFixed(2)}`;
+            buyPriceElement.textContent = `$${this.focusedStock.marketPrice.toFixed(2)}`;
         }
 
         // Update sell price
         const sellPriceElement = document.getElementById("sell-price");
         if (sellPriceElement) {
-            sellPriceElement.textContent = `$${stock.marketPrice.toFixed(2)}`;
+            sellPriceElement.textContent = `$${this.focusedStock.marketPrice.toFixed(2)}`;
         }
 
         // Update totals
         const buyQuantity = parseInt(document.getElementById("buy-quantity").value) || 0;
         const buyTotalElement = document.getElementById("buy-total");
         if (buyTotalElement) {
-            buyTotalElement.textContent = `$${(stock.marketPrice * buyQuantity).toFixed(2)}`;
+            buyTotalElement.textContent = `$${(this.focusedStock.marketPrice * buyQuantity).toFixed(2)}`;
         }
 
         const sellQuantity = parseInt(document.getElementById("sell-quantity").value) || 0;
         const sellTotalElement = document.getElementById("sell-total");
         if (sellTotalElement) {
-            sellTotalElement.textContent = `$${(stock.marketPrice * sellQuantity).toFixed(2)}`;
+            sellTotalElement.textContent = `$${(this.focusedStock.marketPrice * sellQuantity).toFixed(2)}`;
         }
     }
 
     drawGraph() {
-        const stock = getCurrentStock();
-        if (!stock || !ctx) return;
-
+        if (!this.ctx || !this.focusedStock) return;
         // Clear canvas
-        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        this.ctx.clearRect(0, 0, this.CANVAS_WIDTH, this.CANVAS_HEIGHT);
 
         // Get price history
-        const priceHistory = stock.priceHistory;
+        const priceHistory = this.focusedStock.priceHistory;
+        if (!priceHistory || priceHistory.length === 0) return;
 
         // Determine price range for y-axis
         let minPrice = Math.min(...priceHistory);
@@ -178,47 +217,47 @@ export default class SimulatorGraphController{
         maxPrice = maxPrice + pricePadding;
 
         // Draw grid lines and labels
-        drawGrid(minPrice, maxPrice);
+        this.drawGrid(minPrice, maxPrice);
 
         // Draw stock price line
-        drawPriceLine(priceHistory, minPrice, maxPrice);
+        this.drawPriceLine(priceHistory, minPrice, maxPrice);
 
         // Draw time frame label
-        drawTimeframeLabel();
+        this.drawTimeframeLabel();
     }
 
     drawGrid(minPrice, maxPrice) {
-        ctx.strokeStyle = "#E5E7EB"; // Gray-200
-        ctx.lineWidth = 1;
+        this.ctx.strokeStyle = "#E5E7EB"; // Gray-200
+        this.ctx.lineWidth = 1;
 
         // Draw horizontal grid lines
-        for (let i = 0; i <= GRID_LINES; i++) {
-            const y = GRAPH_PADDING + (i * (CANVAS_HEIGHT - 2 * GRAPH_PADDING) / GRID_LINES);
+        for (let i = 0; i <= this.GRID_LINES; i++) {
+            const y = this.GRAPH_PADDING + (i * (this.CANVAS_HEIGHT - 2 * this.GRAPH_PADDING) / this.GRID_LINES);
 
             // Draw grid line
-            ctx.beginPath();
-            ctx.moveTo(GRAPH_PADDING, y);
-            ctx.lineTo(CANVAS_WIDTH - GRAPH_PADDING, y);
-            ctx.stroke();
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.GRAPH_PADDING, y);
+            this.ctx.lineTo(this.CANVAS_WIDTH - this.GRAPH_PADDING, y);
+            this.ctx.stroke();
 
             // Draw price label
-            const marketPrice = maxPrice - ((maxPrice - minPrice) * i / GRID_LINES);
-            ctx.fillStyle = "#6B7280"; // Gray-500
-            ctx.font = "12px Arial";
-            ctx.textAlign = "right";
-            ctx.fillText(`$${marketPrice.toFixed(2)}`, GRAPH_PADDING - 8, y + 4);
+            const marketPrice = maxPrice - ((maxPrice - minPrice) * i / this.GRID_LINES);
+            this.ctx.fillStyle = "#6B7280"; // Gray-500
+            this.ctx.font = "12px Arial";
+            this.ctx.textAlign = "right";
+            this.ctx.fillText(`$${marketPrice.toFixed(2)}`, this.GRAPH_PADDING - 8, y + 4);
         }
 
         // Draw vertical grid lines (time)
         const numVerticalLines = 4; // Including start and end
         for (let i = 0; i <= numVerticalLines; i++) {
-            const x = GRAPH_PADDING + (i * (CANVAS_WIDTH - 2 * GRAPH_PADDING) / numVerticalLines);
+            const x = this.GRAPH_PADDING + (i * (this.CANVAS_WIDTH - 2 * this.GRAPH_PADDING) / numVerticalLines);
 
             // Draw grid line
-            ctx.beginPath();
-            ctx.moveTo(x, GRAPH_PADDING);
-            ctx.lineTo(x, CANVAS_HEIGHT - GRAPH_PADDING);
-            ctx.stroke();
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, this.GRAPH_PADDING);
+            this.ctx.lineTo(x, this.CANVAS_HEIGHT - this.GRAPH_PADDING);
+            this.ctx.stroke();
         }
     }
 
@@ -227,35 +266,46 @@ export default class SimulatorGraphController{
 
         // Calculate starting point for graph
         const dataLength = priceHistory.length;
-        const startIndex = Math.max(0, dataLength - NUM_POINTS);
+        const startIndex = Math.max(0, dataLength - this.NUM_POINTS);
         const visiblePrices = priceHistory.slice(startIndex);
 
         // Draw price line
-        ctx.strokeStyle = "#2563EB"; // Blue-600
-        ctx.lineWidth = 3;
-        ctx.beginPath();
+        this.ctx.strokeStyle = "#2563EB"; // Blue-600
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
 
         for (let i = 0; i < visiblePrices.length; i++) {
             const pointsToUse = Math.max(1, visiblePrices.length - 1);
-            const x = GRAPH_PADDING + (i * (CANVAS_WIDTH - 2 * GRAPH_PADDING) / pointsToUse);
-            const y = CANVAS_HEIGHT - GRAPH_PADDING -
+            const x = this.GRAPH_PADDING + (i * (this.CANVAS_WIDTH - 2 * this.GRAPH_PADDING) / pointsToUse);
+            const y = this.CANVAS_HEIGHT - this.GRAPH_PADDING -
                 ((visiblePrices[i] - minPrice) / (maxPrice - minPrice) *
-                    (CANVAS_HEIGHT - 2 * GRAPH_PADDING));
+                    (this.CANVAS_HEIGHT - 2 * this.GRAPH_PADDING));
 
             if (i === 0) {
-                ctx.moveTo(x, y);
+                this.ctx.moveTo(x, y);
             } else {
-                ctx.lineTo(x, y);
+                this.ctx.lineTo(x, y);
             }
         }
-        ctx.stroke();
+        this.ctx.stroke();
+
+        // gradient fill underneath the line:
+        const gradient = this.ctx.createLinearGradient(0, this.GRAPH_PADDING, 0, this.CANVAS_HEIGHT - this.GRAPH_PADDING);
+        gradient.addColorStop(0, "rgba(37, 99, 235, 0.2)");  // Blue-600 with transparency
+        gradient.addColorStop(1, "rgba(37, 99, 235, 0)");    // Transparent at bottom
+
+        this.ctx.fillStyle = gradient;
+        this.ctx.lineTo(this.CANVAS_WIDTH - this.GRAPH_PADDING, this.CANVAS_HEIGHT - this.GRAPH_PADDING);
+        this.ctx.lineTo(this.GRAPH_PADDING, this.CANVAS_HEIGHT - this.GRAPH_PADDING);
+        this.ctx.closePath();
+        this.ctx.fill();
     }
 
     drawTimeframeLabel() {
-        ctx.fillStyle = "#6B7280"; // Gray-500
-        ctx.font = "14px Arial";
-        ctx.textAlign = "left";
-        ctx.fillText(TIME_FRAMES[timeframe].label, GRAPH_PADDING, GRAPH_PADDING - 15);
+        this.ctx.fillStyle = "#6B7280"; // Gray-500
+        this.ctx.font = "14px Arial";
+        this.ctx.textAlign = "left";
+        this.ctx.fillText(this.TIME_FRAMES[this.timeframe].label, this.GRAPH_PADDING, this.GRAPH_PADDING - 15);
     }
 
 
@@ -276,5 +326,14 @@ export default class SimulatorGraphController{
             option.textContent = `${stock.companyName} (${stock.symbol})`;
             stockSelect.appendChild(option);
         });
+    }
+
+    // Call this method to stop updates when the component is no longer needed
+    // (for example, when navigating away from the page)
+    cleanup() {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+        }
     }
 }

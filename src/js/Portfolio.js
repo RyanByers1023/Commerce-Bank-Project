@@ -45,6 +45,10 @@ class Portfolio {
         //int, number of stocks the user owns
         this.totalStocksOwned = 0;
 
+        this.portfolioValue = 0.00;
+
+        this.totalAssetsValue = 0.00;
+
         // Record of all transactions, see createTransaction() for info regarding what a transaction is
         this.transactionHistory = [];
 
@@ -208,7 +212,6 @@ class Portfolio {
         this.balance += value;
     }
 
-    //returns void
     setPortfolioValue() {
         //reset portfolioValue:
         this.portfolioValue = 0;
