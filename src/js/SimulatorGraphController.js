@@ -3,20 +3,14 @@
 
 //TODO: rename variables pertaining to simulator.html elements to match variable names within simulator.html (i renamed some of them)
 
-// Canvas graph setup
-import Stock from "./Stock";
-import User from "./User";
-
-class SimulatorGraphController{
+export default class SimulatorGraphController{
     SimulatorGraphController(userProfile){
         this.canvas = null;
         this.ctx = null;
 
-        this.instantiateCanvas(userProfile);
-
         // Graph constants
-        this.CANVAS_WIDTH = canvas.width;
-        this.CANVAS_HEIGHT = canvas.height;
+        this.CANVAS_WIDTH = this.canvas?.width || 800;
+        this.CANVAS_HEIGHT = this.canvas?.height || 600;
         this.GRAPH_PADDING = 60;
         this.GRID_LINES = 5;
         this.NUM_POINTS = 50;
@@ -36,53 +30,38 @@ class SimulatorGraphController{
         this.updateInterval = null;
 
         updateCurrentStockDisplay(userProfile);
+
+        this.instantiateCanvas(userProfile);
     }
 
     instantiateCanvas(userProfile){
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize canvas context
+        document.addEventListener('DOMContentLoaded', () => {
             this.canvas = document.getElementById("stockCanvas");
 
-            if (canvas) {
-                ctx = canvas.getContext("2d");
-                window.ctx = ctx;
+            if (this.canvas) {
+                this.ctx = this.canvas.getContext("2d");
+                window.ctx = this.ctx;
             } else {
                 console.error("Canvas element not found");
             }
 
-            // Populate stock dropdown
             this.populateStockDropdown(userProfile.stocksAddedToSim);
-
-            // Set up initial display
             this.updateCurrentStockDisplay();
-
-            // Start price updates
             this.resetUpdateInterval();
 
-            // Set up buy/sell quantity change handlers
             const buyQuantityInput = document.getElementById('buy-quantity');
-            if (buyQuantityInput) {
-                buyQuantityInput.addEventListener('change', updateBuySellInterface);
-            }
 
-            const sellQuantityInput = document.getElementById('sell-quantity');
-            if (sellQuantityInput) {
-                sellQuantityInput.addEventListener('change', updateBuySellInterface);
-            }
-        })
+            this.updateBuySellInterface(buyQuantityInput);
+            this.setFocusedStock(userProfile);
+        });
     }
 
     setFocusedStock(userProfile) {
         //get the user selected stock from the selectStock select element (drop-down menu)
-        this.selectedStockSymbol = document.getElementById("selectStock");
-
-        this.selectedStock = getStock(selectedStockSymbol, userProfile);
-
-        // Update buy/sell interface
-        this.updateBuySellInterface();
+        let selectedStock = document.getElementById("selectStock");
 
         // Update current stock display
-        updateCurrentStockDisplay();
+        updateCurrentStockDisplay(selectedStock);
     }
 
     getStock(selectedStockSymbol, userProfile) {

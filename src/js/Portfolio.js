@@ -31,8 +31,6 @@
 //sentimentValue: influenced by news, ranges from -1 (very negative) to 1 (very positive)
 //priceHistory: an array, stores the previous prices of the stock as float values, make sure to cap the size of the array
 
-import Stock from "./Stock";
-
 class Portfolio {
     //change the value passed to this constructor to change user starting money
     constructor(initialBalance = 500.0) {
@@ -42,8 +40,7 @@ class Portfolio {
         //stores the amount of cash the user has
         this.balance = initialBalance;
 
-        //Map of Stock objects to quantity owned
-        this.holdingsMap = new Map();
+        this.holdingsMap = {}; // stock.symbol => quantity owned
 
         //int, number of stocks the user owns
         this.totalStocksOwned = 0;
@@ -57,6 +54,8 @@ class Portfolio {
     //returns transaction, associated attributes detailed below:
     createTransaction(stock, type, quantity) {
         return {
+            //This gives something like: txn-1714526102005-g8kzq -- a unique transaction ID -- can be used as primary key in DB
+            transactionID: `txn-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
             transactionType: type, //string, "BUY" or "SELL"
             symbol: stock.symbol, //string
             companyName: stock.companyName, //string
@@ -89,12 +88,12 @@ class Portfolio {
         }
 
         //negative value provided bc we are subtracting this value from the user's balance
-        this.updateBalance(-totalCost)
-
-        this.addStockToPortfolio(stock, quantity);
+        this.addToBalance(-totalCost)
 
         //initialize a transaction object based on this transaction
         let newTransaction = this.createTransaction(stock, "BUY", quantity)
+
+        this.addStockToPortfolio(stock.symbol, quantity);
 
         //store the transaction in transactionHistory array
         this.transactionHistory.push(newTransaction);
@@ -105,11 +104,10 @@ class Portfolio {
 
     //returns a bool, true if purchase was successful, false otherwise
     sellStock(stock, quantity) {
-        //quantity must be a number between 0 and the amount of this stock the user owns + stock must be initialized:
+        //quantity must be a number between 0 and the amount of this stock the user owns
         if (isNaN(quantity)
             || quantity <= 0
-            || quantity > this.holdingsMap[stock]
-            || !stock)
+            || quantity > this.holdingsMap[stock.symbol].quantity)
         {
             //sell unsuccessful
             return false;
@@ -119,9 +117,9 @@ class Portfolio {
         let totalValue = quantity * stock.marketPrice;
 
         //negative value provided bc we are subtracting this value from the user's balance
-        this.updateBalance(-totalValue)
+        this.addToBalance(-totalValue)
 
-        this.addStockToPortfolio(stock, quantity);
+        this.addStockToPortfolio(stock.symbol, quantity);
 
         //initialize a transaction object based on this transaction
         let newTransaction = this.createTransaction(stock, "BUY", quantity)
@@ -135,30 +133,42 @@ class Portfolio {
 
     //void, removes 'quantity' 'stock's from this.holdingsMap
     addStockToPortfolio(stock, quantity) {
-        const currentQty = this.holdingsMap.get(stock) || 0;
-        this.holdingsMap.set(stock, currentQty + quantity);
+        //reference to the user's holding
+        const holding = this.holdingsMap[stock.symbol];
+
+        //user has at least one of these stocks already:
+        if (holding) {
+            holding.quantity += quantity;
+        } else {
+            this.holdingsMap[stock.symbol] = {
+                stock: stock, //the Stock object itself
+                quantity: quantity,
+            };
+        }
     }
 
     //void, removes 'quantity' stocks from this.holdingsMap
     removeStockFromPortfolio(stock, quantity) {
-        if (this.holdingsMap.has(stock)) {
-            const currentQty = this.holdingsMap.get(stock) - quantity;
-            if (currentQty <= 0) {
-                this.holdingsMap.delete(stock);
-            } else {
-                this.holdingsMap.set(stock, currentQty);
+        //reference to the user's holding
+        const holding = this.holdingsMap[stock.symbol];
+
+        //user has at least one of these stocks already:
+        if (holding) {
+            holding.quantity -= quantity;
+            if (holding.quantity <= 0) {
+                delete this.holdingsMap[stock.symbol];
             }
         }
     }
 
-    getAverageMoneySpentOnStock(stock){
-        let totalMoneySpent = this.calculateTotalMoneySpentOnStock(stock);
-        return totalMoneySpent / this.holdingsMap.getQuantity(stock);
+    getAverageMoneySpentOnStock(stockSymbol){
+        let totalMoneySpent = this.calculateTotalMoneySpentOnStock(stockSymbol);
+        return totalMoneySpent / this.holdingsMap[stockSymbol].quantity;
     }
 
     //returns float, helper function for getAverageStockPurchasePrice()
-    calculateTotalMoneySpentOnStock(stock){
-        let relevantTransactions = this.getAllBuyTransactionsForStock(stock)
+    calculateTotalMoneySpentOnStock(stockSymbol){
+        let relevantTransactions = this.getAllBuyTransactionsForStock(stockSymbol)
         let totalMoneySpent = 0.0;
 
         if (relevantTransactions.length === 0) {
@@ -172,23 +182,33 @@ class Portfolio {
         return totalMoneySpent;
     }
 
-    //returns float, helper function for calculateTotalMoneySpent()
-    getAllBuyTransactionsForStock(stock){
+    //returns a list of buy transactions for a particular stock, identified uniquely by its symbol
+    getAllBuyTransactionsForStock(stockSymbol){
         return this.transactionHistory.filter(transaction =>
-            transaction.symbol === stock.symbol
+            transaction.symbol === stockSymbol
             && transaction.type === "BUY"
         );
     }
 
-    getAllSellTransactionsForStock(stock){
-        return this.transactionHistory.filter(transaction => transaction.stockSymbol === stockSymbol);
+    //returns a list of sell transactions for a particular stock, identified uniquely by its symbol
+    getAllSellTransactionsForStock(stockSymbol){
+        return this.transactionHistory.filter(transaction =>
+            transaction.symbol === stockSymbol
+            && transaction.type === "SELL");
+    }
+
+    //returns a list of ALL transactions for a particular stock, identified uniquely by its symbol
+    getAllTransactionsForStock(stockSymbol){
+        return this.transactionHistory.filter(transaction =>
+            transaction.symbol === stockSymbol);
     }
 
     //returns void, updates this.balance (is okay to provide a negative value to subtract from the user's balance)
-    updateBalance(value){
+    addToBalance(value){
         this.balance += value;
     }
 
+    //returns void
     setPortfolioValue() {
         //reset portfolioValue:
         this.portfolioValue = 0;

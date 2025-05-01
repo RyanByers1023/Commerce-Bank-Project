@@ -1,82 +1,145 @@
 
 export default class PortfolioUIController{
-    constructor(userPortfolio){
-        //references the value stored in 'stockBuyQuantity' (simulator.html)
-        this.stockBuyQuantity = 0;
+    constructor(userProfile){
+        this.initializeUI(userProfile);
+    }
 
-        //references the value stored in 'stockSellQuantity' (simulator.html)
-        this.stockSellQuantity = 0;
-
+    initializeUI(userProfile){
         this.initializeUIListeners();
+        this.initializeUIElements(userProfile);
     }
 
-    initializeUIListeners(userPortfolio){
-        document.addEventListener('DOMContentLoaded', function() {
-
-            this.setStockBuyQuantityListener();
-            this.setStockSellQuantityListener();
-        
-            this.handleStockBuyButtonClick();
-            this.handleStockSellButtonClick();
-        
-            //set up all of the UI elements pertaining to the user portfolio
-            this.updateCashDisplay(userPortfolio);
-            this.updatePortfolioDisplay(userPortfolio);
-            this.updateAssetsDisplay(userPortfolio);
-            this.updateHoldingsTable(userPortfolio);
-            this.updateBuySellPriceDisplay(userPortfolio);
+    initializeUIListeners() {
+        document.addEventListener('DOMContentLoaded', () => {
+            this.setStockDropdownListeners();
+            this.setStockSellQuantityInputListener();
+            this.setStockBuyQuantityInputListener();
         });
     }
 
-    setStockBuyQuantityListener(){
-        //get the field from the html document:
-        const stockBuyQuantity = document.getElementById('stockBuyQuantity');
+    initializeUIElements(userProfile){
+        this.populateDropdown(userProfile);
+        this.setGreetingMessage(userProfile);
+        this.updateCashDisplay(userProfile);
+        this.updatePortfolioDisplay(userProfile);
 
-        //add a listener of type input to the field referenced within stockBuyQuantity
-        //when input is detected in the 'stockBuyQuantity' field, it gets parsed as in int and stored in this.stockBuyQuantity
-        stockBuyQuantity.addEventListener('input', function() {
-            this.stockBuyQuantity = parseInt(stockBuyQuantity.value) || 0; //if the input is invalid, quantity = 0
+        this.updateHoldingsTable(userProfile);
+
+
+
+        this.updateStockPriceTickers(stockPrice);
+    }
+
+    populateDropdown(userProfile){
+        const selectElement = document.getElementById("selectStock");
+
+        // Clear any existing options
+        selectElement.innerHTML = "";
+
+        // Add an option for each stock
+        userProfile.stocksAddedToSim.forEach(stock => {
+            const option = document.createElement("option");
+            option.value = stock.symbol;
+            option.textContent = `${stock.symbol} - ${stock.companyName}`;
+            selectElement.appendChild(option);
         });
     }
 
-    setStockSellQuantityListener(){
-        //get the field from the html document:
-        const stockSellQuantity = document.getElementById('stockSellQuantity');
+    setGreetingMessage(userProfile) {
+        const userName = userProfile?.username || "Investor";
+        const hour = new Date().getHours();
 
-        //add a listener of type input to the field referenced within sellQuantityInput
-        //when input is detected in the 'stockSellQuantity' field, it gets stored in this.stockSellQuantity
-        stockSellQuantity.addEventListener('input', function() {
-            this.stockSellQuantity = parseInt(stockSellQuantity.value) || 0; //if the input is invalid, quantity = 0
-        });
-    }
-
-    setBuyTotalSpan(selectedStock){
-        //calculate the total cost of the transaction (#stocks * their market price)
-        let totalValue = this.getTotalValue(selectedStock, quantity);
-
-        //set the field with the id: 'buyTotalSpan' to totalValue (cut down to only 2 decimal places)
-        document.getElementById('buyTotalSpan').textContent = `$${totalValue.toFixed(2)}`;
-    }
-
-    setSellTotalSpan(){
-        //get the stock selected from the drop down menu
-        const selectedStock = this.getSelectedStock();
-
-        //calculate the total cost of the transaction (#stocks * their market price)
-        let totalValue = this.getTotalValue(selectedStock, quantity);
-
-        //set the field with the id: 'buyTotalSpan' to totalValue (cut down to only 2 decimal places)
-        document.getElementById('buyTotalSpan').textContent = `$${totalValue.toFixed(2)}`;
-    }
-
-    getTotalValue(selectedStock, quantity){
-        let totalValue;
-
-        if (selectedStock) {
-            totalValue = selectedStock.marketPrice * quantity;
+        let timeGreeting = "";
+        if (hour < 12) {
+            timeGreeting = "Good morning";
+        } else if (hour < 18) {
+            timeGreeting = "Good afternoon";
+        } else {
+            timeGreeting = "Good evening";
         }
 
-        return totalValue;
+        let greetingMessages = [
+            `${timeGreeting}, ${userName}! Ready to trade?`,
+            `Welcome back, ${userName}. Let’s grow that portfolio.`,
+            `Hello, ${userName}. What’s the move today?`,
+            `Hey ${userName}, any stocks you’ve got your eye on?`,
+            `Market’s open! Time to make some decisions, ${userName}.`
+        ];
+
+        const randomIndex = Math.floor(Math.random() * greetingMessage.length);
+        document.getElementById("spanWelcomeMessage").textContent = greetingMessages[randomIndex];
+    }
+
+    updateCashDisplay(userProfile){
+        const spanStockPrice = document.getElementById("spanStockPrice");
+        if (spanStockPrice) {
+            spanStockPrice.textContent = `$${userProfile.portfolio.balance.toFixed(2)}`;
+        }
+    }
+
+    setStockDropdownListeners(){
+        const dropdown = document.getElementById('selectStock');
+
+        // Check if the dropdown exists before adding the listener
+        if (dropdown) {
+            dropdown.addEventListener('change', () => {
+                this.handleDropdownMenuSelection(dropdown.value);
+            });
+        } else {
+            console.error('Stock dropdown element not found.');
+        }
+    }
+
+    handleDropdownMenuSelection(stockPrice){
+        this.updateStockPriceTickers(stockPrice);
+        this.updateStockPriceTickers(stockPrice);
+    }
+
+    updateStockPriceTickers(stockPrice) {
+        const mainPriceSpan = document.getElementById("spanStockPrice");
+        const buyBoxPriceSpan = document.getElementById("spanStockBuyPrice");
+        const sellBoxPriceSpan = document.getElementById("spanStockSellPrice");
+
+        if (mainPriceSpan) {
+            mainPriceSpan.textContent = `$${stockPrice.toFixed(2)}`;
+        }
+
+        if(buyBoxPriceSpan){
+            buyBoxPriceSpan.textContent = `$${stockPrice.toFixed(2)}`;
+        }
+
+        if(sellBoxPriceSpan){
+            sellBoxPriceSpan.textContent = `$${stockPrice.toFixed(2)}`;
+        }
+
+    }
+
+    setStockSellQuantityInputListener(stockPrice){
+        //get the quantity from the html document:
+        let quantity = parseInt(document.getElementById('spanStockSellQuantity').value);
+
+        //when input is detected in the 'stockBuyQuantity' field (up/down arrow press), it gets parsed as in int and stored in this.stockBuyQuantity
+        quantity.addEventListener('input', () => {
+            this.updateStockSellTotalSpan(stockPrice, quantity);
+        });
+    }
+
+    setStockBuyQuantityInputListener(stockPrice){
+        //get the quantity from the html document:
+        const quantity = parseInt(document.getElementById('spanStockBuyQuantity').value);
+
+        //when input is detected in the 'stockBuyQuantity' field (up/down arrow press), it gets parsed as in int and stored in this.stockBuyQuantity
+        quantity.addEventListener('input', () => {
+            this.updateStockBuyTotalSpan(stockPrice, quantity);
+        });
+    }
+
+    updateStockBuyTotalSpan(stockPrice, quantity){
+        document.getElementById('spanStockBuyPrice').textContent = `$${(stockPrice * quantity).toFixed(2)}`;
+    }
+
+    updateStockSellTotalSpan(stockPrice, quantity){
+        document.getElementById('spanStockSellPrice').textContent = `$${(stockPrice * quantity).toFixed(2)}`;
     }
 
     handleBuyButtonClick(userPortfolio){
@@ -151,37 +214,45 @@ export default class PortfolioUIController{
         });
     }
 
-    updateBuyTotalDisplay(selectedStock, quantity){
-        document.getElementById('buy-total').textContent = `$${(selectedStock.marketPrice * quantity).toFixed(2)}`;
-    }
 
-    updateSellTotalDisplay(selectedStock, quantity){
-        document.getElementById('sell-total').textContent = `$${(selectedStock.marketPrice * quantity).toFixed(2)}`;
-    }
+    //TODO: finish working on this function
+    populateHoldingsTable(userProfile) {
+        const tableBody = document.getElementById("holdings-table-body");
+        tableBody.innerHTML = ""; // Clear existing rows
 
-    // Update buy/sell price displays
-    updateBuySellPriceDisplay(){
-        const selectedStock = getSelectedStock();
+        const holdingsMap = user.portfolio.holdingsMap;
 
-        let sellQuantity = getInputSellQuantity(selectedStock);
-        document.getElementById('sell-total').textContent = `$${(selectedStock.marketPrice * sellQuantity).toFixed(2)}`;
-    }
-
-    getInputSellQuantity(selectedStock){
-        let sellQuantity;
-
-        if(selectedStock){
-            sellQuantity = parseInt(document.getElementById('sell-quantity').value) || 0;
+        if (!holdingsMap || holdingsMap.size === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+            <td colspan="3" class="py-4 text-center text-gray-500">
+                No stocks in portfolio
+            </td>`;
+            tableBody.appendChild(row);
+            return;
         }
 
-        return sellQuantity;
-    }
-    
+        holdingsMap.forEach((holding, symbol) => {
+            const currentPrice = holding.marketPrice;
+            const value = currentPrice * holding.quantity;
+            const profitLoss = currentPrice - holding.avgPrice;
+            const profitLossClass = profitLoss >= 0 ? 'text-green-600' : 'text-red-600';
 
-    updateTotalAssetsDisplay(userPortfolio){
-        // Update total assets
-        const totalAssetsDisplay = document.getElementById('total-assets');
-        totalAssetsDisplay.textContent = `$${(userPortfolio.cash + portfolioValue).toFixed(2)}`;
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+            row.innerHTML = `
+            <td class="py-2">
+                <div>${symbol}</div>
+                <div class="text-xs text-gray-500">${holding.quantity} shares @ $${holding.marketPrice.toFixed(2)}</div>
+            </td>
+            <td class="py-2 text-right">${holding.quantity}</td>
+            <td class="py-2 text-right">
+                <div>$${value.toFixed(2)}</div>
+                <div class="text-xs ${profitLossClass}">${profitLoss >= 0 ? '+' : ''}${((profitLoss / holding.avgPrice) * 100).toFixed(2)}%</div>
+            </td>
+        `;
+            tableBody.appendChild(row);
+        });
     }
 
     updatePortfolioDisplay(userPortfolio){
@@ -190,11 +261,7 @@ export default class PortfolioUIController{
         portfolioValueDisplay.textContent = `$${userPortfolio.totalAssetsValue.toFixed(2)}`;
     }
 
-    updateCashDisplay(userPortfolio){
-        // Update cash display
-        const cashDisplay = document.getElementById('available-cash');
-        cashDisplay.textContent = `$${userPortfolio.balance.toFixed(2)}`;
-    }
+
 
     // Update holdings table
     updateHoldingsTable(userPortfolio) {
@@ -212,7 +279,7 @@ export default class PortfolioUIController{
 
         //TODO: work on this bit:
         Object.values(userPortfolio.holdingsMap).forEach(holding => {
-            const currentPrice = holding.stock.marketPrice;
+            const currentPrice = holding.marketPrice;
             const value = currentPrice * holding.quantity;
             const profit = currentPrice - holding.purchasePrice;
             const profitLossClass = profitLoss >= 0 ? 'text-green-600' : 'text-red-600';
@@ -234,23 +301,4 @@ export default class PortfolioUIController{
             tableBody.appendChild(row);
         });
     }
-
-    //---------------------------------some useful notes for meeting------------------------------//
-    /* exerpt from chatGPT regarding es6 (modern javascript) modules (any js file that is a class):
-    Modules (import/export) need setup:
-    If you're using ES6 modules (import/export), your HTML file must load your JavaScript with the type="module" attribute:
-    <script type="module" src="main.js"></script>
-    And your files must be served from a local server (not just opened as file://), or some browsers will block them due to security policies.
-
-    exerpt regarding moving data from front end (javascript) to back end (java w/ springboot):
-    Backend Options in Java:
-    Spring Boot (Most Popular & Modern)
-    Easy setup for REST APIs
-
-    Works great with MySQL
-
-    Handles JSON, validation, security, etc.
-
-    Ideal for full-stack apps
-    */
 }
