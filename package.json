@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
@@ -15,15 +16,17 @@
     "url": "https://github.com/RyanByers1023/Commerce-Bank-Project/issues"
   },
   "homepage": "https://github.com/RyanByers1023/Commerce-Bank-Project#readme",
-  "description": "",
   "dependencies": {
     "@tailwindcss/cli": "^4.0.7",
     "@tailwindcss/vite": "^4.0.7",
+    "bcrypt": "^5.1.1",
     "node-cron": "^3.0.3"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.0.7"
-  }
+  },
+  "keywords": [],
+  "description": ""
 }
