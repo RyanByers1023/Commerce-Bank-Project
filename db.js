@@ -1,14 +1,11 @@
-// db.js (JavaScript)
-const mysql = require('mysql2');
+// db.js
+import mysql;
 
-const pool = mysql.createPool({
-    host: 'localhost',          // Your MySQL host
-    user: 'ibra-ryz9ai',      // Your MySQL username (replace with your actual username)
-    password: 'stock_password',  // Your MySQL password (replace with your actual password)
-    database: 'stock_market',  // The database containing stock_test
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+const db = mysql.createPool({
+    host: 'localhost',
+    user: 'root',
+    password: 'stockpassword',
+    database: 'invested'
 });
 
-module.exports = pool.promise();
+export default db;
