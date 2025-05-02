@@ -59,6 +59,7 @@ export default class Stock {
     async initializeStock(apiKey, apiHost) {
         try {
             await this.setStockInfoViaAPI(apiKey, apiHost);
+            this.updatePriceHistory();
         }
         catch (error) { //stock info could not be obtained from the provided API
             console.error(`API error for ${this.symbol}:`, error, `\n\nCreating randomized attributes for ${this.symbol}...`);
@@ -231,6 +232,8 @@ export default class Stock {
         const sectorVolatility = this.setSectorVolatility(this.sector);
          */
 
+        this.updatePriceHistory();
+
         console.log(`Initialized simulated data for ${this.symbol} (${this.sector}: ${this.industry}) at $${this.marketPrice}`);
     }
 
@@ -286,7 +289,12 @@ export default class Stock {
 
             // Add to the beginning of the array (oldest first)
             this.priceHistory.unshift(marketPrice);
+            //unshift again to get the most recent item to the top of the list
+            this.priceHistory.unshift(marketPrice);
         }
+
+        // guarantee the *current* price is the last entry
+        this.priceHistory.push(this.marketPrice);
     }
 
     //for debugging purposes,

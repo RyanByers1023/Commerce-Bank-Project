@@ -79,12 +79,12 @@ export default class SimulatorGraphController{
         });
 
         // Set up quantity input listeners for buy/sell
-        const buyQuantityInput = document.getElementById('buy-quantity');
+        const buyQuantityInput = document.getElementById('inputStockBuyQuantity');
         if (buyQuantityInput) {
             buyQuantityInput.addEventListener('input', () => this.updateBuySellInterface());
         }
 
-        const sellQuantityInput = document.getElementById('sell-quantity');
+        const sellQuantityInput = document.getElementById('inputStockSellQuantity');
         if (sellQuantityInput) {
             sellQuantityInput.addEventListener('input', () => this.updateBuySellInterface());
         }
@@ -136,8 +136,11 @@ export default class SimulatorGraphController{
         }
 
         // Update portfolio value and other global displays
+
+        /* TODO: implement these two functions
         this.updatePortfolioValue();
         this.updateWatchlistDisplay();
+        */
     }
 
     updateCurrentStockDisplay() {

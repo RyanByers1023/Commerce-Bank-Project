@@ -79,14 +79,19 @@
                         <span id="spanStockPriceChange" class="text-sm font-medium px-2 py-1 rounded"></span>
                     </div>
 
-                    <!--Timeframe buttons-->
+                    <!-- Time-frame buttons -->
                     <div class="flex space-x-2">
-                        <button class="bg-gray-400 px-4 py-2 text-white rounded hover:bg-gray-500 transition" onclick="setTimeframe('1D')">1D</button>
-                        <button class="bg-gray-400 px-4 py-2 text-white rounded hover:bg-gray-500 transition" onclick="setTimeframe('1W')">1W</button>
-                        <button class="bg-gray-400 px-4 py-2 text-white rounded hover:bg-gray-500 transition" onclick="setTimeframe('1M')">1M</button>
+                        <button class="bg-gray-400 px-4 py-2 text-white rounded hover:bg-gray-500 transition"
+                                data-timeframe="1D">1D</button>
+
+                        <button class="bg-gray-400 px-4 py-2 text-white rounded hover:bg-gray-500 transition"
+                                data-timeframe="1W">1W</button>
+
+                        <button class="bg-gray-400 px-4 py-2 text-white rounded hover:bg-gray-500 transition"
+                                data-timeframe="1M">1M</button>
                     </div>
 
-                    <!--Fast Forward buttons-->
+                    <!--Fast Forward buttons (not yet implemented)-->
                     <div class="flex space-x-2">
                         <button class="bg-green-500 px-4 py-2 text-white rounded hover:bg-green-700 transition" onclick="setSimSpeed('1x')">1x</button>
                         <button class="bg-orange-500 px-4 py-2 text-white rounded hover:bg-orange-700 transition" onclick="setSimSpeed('10x')">10x</button>

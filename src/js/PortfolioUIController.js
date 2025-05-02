@@ -185,7 +185,7 @@ export default class PortfolioUIController {
     }
 
     updateBuyForm(stockPrice) {
-        const quantityInput = document.getElementById('spanStockBuyQuantity');
+        const quantityInput = document.getElementById('inputStockBuyQuantity');
         if (quantityInput) {
             const quantity = parseInt(quantityInput.value) || 1;
             this.updateStockBuyTotalSpan(stockPrice, quantity);
@@ -193,7 +193,7 @@ export default class PortfolioUIController {
     }
 
     updateSellForm(stockPrice) {
-        const quantityInput = document.getElementById('spanStockSellQuantity');
+        const quantityInput = document.getElementById('inputStockSellQuantity');
         if (quantityInput) {
             const quantity = parseInt(quantityInput.value) || 1;
             this.updateStockSellTotalSpan(stockPrice, quantity);
@@ -205,7 +205,7 @@ export default class PortfolioUIController {
         if (!buyButton) return;
 
         buyButton.addEventListener('click', () => {
-            const quantityInput = document.getElementById('spanStockBuyQuantity');
+            const quantityInput = document.getElementById('inputStockBuyQuantity');
             const selectElement = document.getElementById("selectStock");
 
             if (!quantityInput || !selectElement) return;
@@ -283,7 +283,7 @@ export default class PortfolioUIController {
     }
 
     updateHoldingsTable(){
-        const tableBody = document.getElementById('tableHoldings');
+        const tableBody = document.getElementById('holdings-table-body');
         if (!tableBody) return;
 
         tableBody.innerHTML = '';
