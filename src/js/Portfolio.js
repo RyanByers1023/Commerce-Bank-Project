@@ -97,7 +97,7 @@ class Portfolio {
         //initialize a transaction object based on this transaction
         let newTransaction = this.createTransaction(stock, "BUY", quantity)
 
-        this.addStockToPortfolio(stock.symbol, quantity);
+        this.addStockToPortfolio(stock, quantity);
 
         //store the transaction in transactionHistory array
         this.transactionHistory.push(newTransaction);
@@ -137,16 +137,19 @@ class Portfolio {
 
     //void, removes 'quantity' 'stock's from this.holdingsMap
     addStockToPortfolio(stock, quantity) {
-        //reference to the user's holding
         const holding = this.holdingsMap[stock.symbol];
 
-        //user has at least one of these stocks already:
         if (holding) {
+            // weighted-average purchase price
+            const oldCost = holding.avgPrice * holding.quantity;
+            const newCost = stock.marketPrice * quantity;
             holding.quantity += quantity;
+            holding.avgPrice  = (oldCost + newCost) / holding.quantity;
         } else {
             this.holdingsMap[stock.symbol] = {
-                stock: stock, //the Stock object itself
+                stock: stock,
                 quantity: quantity,
+                avgPrice: stock.marketPrice     // first purchase price
             };
         }
     }

@@ -300,9 +300,10 @@ export default class PortfolioUIController {
         Object.values(holdings).forEach(holding => {
             const currentPrice = holding.stock.marketPrice;
             const value = currentPrice * holding.quantity;
-            const profitLoss = currentPrice - holding.marketPrice;
+            const profitLoss  = currentPrice - holding.avgPrice;
+            const percentChange = (profitLoss / holding.avgPrice) * 100;
             const profitLossClass = profitLoss >= 0 ? 'text-green-600' : 'text-red-600';
-            const percentChange = (profitLoss / holding.marketPrice) * 100;
+
 
             const row = document.createElement('tr');
             row.className = 'border-b border-gray-200 hover:bg-gray-50';
