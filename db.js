@@ -1,5 +1,5 @@
 // db.js
-import mysql;
+import mysql
 
 const db = mysql.createPool({
     host: 'localhost',
