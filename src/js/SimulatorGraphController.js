@@ -112,7 +112,7 @@ export default class SimulatorGraphController{
 
         // Set new interval based on selected timeframe
         this.updateInterval = setInterval(() => {
-            this.updateStockPrices();
+            this.updateAllStockPrices();
         }, this.TIME_FRAMES[this.timeframe].interval);
 
         // Trigger immediate update
@@ -142,19 +142,19 @@ export default class SimulatorGraphController{
 
     updateCurrentStockDisplay() {
         // Update stock price display
-        const priceElement = document.getElementById("stockPrice");
+        const priceElement = document.getElementById("spanStockPrice");
         if (priceElement) {
             priceElement.textContent = `$${this.focusedStock.marketPrice.toFixed(2)}`;
         }
 
         // Update stock name/symbol display
-        const nameElement = document.getElementById("stockName");
+        const nameElement = document.getElementById("spanStockName");
         if (nameElement) {
             nameElement.textContent = `${this.focusedStock.companyName} (${this.focusedStock.symbol})`;
         }
 
         // Update price change
-        const changeElement = document.getElementById("priceChange");
+        const changeElement = document.getElementById("spanStockPriceChange");
         if (changeElement) {
             const change = this.focusedStock.marketPrice - this.focusedStock.previousClosePrice;
             const changePercent = (change / this.focusedStock.previousClosePrice) * 100;
@@ -173,26 +173,26 @@ export default class SimulatorGraphController{
 
     updateBuySellInterface() {
         // Update buy price
-        const buyPriceElement = document.getElementById("buy-price");
+        const buyPriceElement = document.getElementById("spanStockBuyPrice");
         if (buyPriceElement) {
             buyPriceElement.textContent = `$${this.focusedStock.marketPrice.toFixed(2)}`;
         }
 
         // Update sell price
-        const sellPriceElement = document.getElementById("sell-price");
+        const sellPriceElement = document.getElementById("spanStockSellPrice");
         if (sellPriceElement) {
             sellPriceElement.textContent = `$${this.focusedStock.marketPrice.toFixed(2)}`;
         }
 
         // Update totals
-        const buyQuantity = parseInt(document.getElementById("buy-quantity").value) || 0;
-        const buyTotalElement = document.getElementById("buy-total");
+        const buyQuantity = parseInt(document.getElementById("inputStockBuyQuantity").value) || 0;
+        const buyTotalElement = document.getElementById("spanStockBuyPriceTotal");
         if (buyTotalElement) {
             buyTotalElement.textContent = `$${(this.focusedStock.marketPrice * buyQuantity).toFixed(2)}`;
         }
 
-        const sellQuantity = parseInt(document.getElementById("sell-quantity").value) || 0;
-        const sellTotalElement = document.getElementById("sell-total");
+        const sellQuantity = parseInt(document.getElementById("inputStockSellQuantity").value) || 0;
+        const sellTotalElement = document.getElementById("spanStockSellPriceTotal");
         if (sellTotalElement) {
             sellTotalElement.textContent = `$${(this.focusedStock.marketPrice * sellQuantity).toFixed(2)}`;
         }
