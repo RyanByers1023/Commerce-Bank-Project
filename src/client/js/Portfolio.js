@@ -1,13 +1,17 @@
+//will push this file later tn (it exists but it didnt push for some reason):
 import DatabaseManager from '/js/DatabaseManager.js';
 
 class Portfolio {
     //change the value passed to this constructor to change user starting money
-    constructor(initialBalance = 500.0) {
+    constructor(initialBalance = 500.0, username) {
         //give the user 500 dollars (or a provided value) to start investing with:
         this.initialBalance = initialBalance;
 
         //stores the amount of cash the user has
         this.balance = initialBalance;
+
+        //used to uniquely identify the owner of this instantantiation of the portfolio
+        this.username = username;
 
         this.holdingsMap = {}; // stock.symbol => quantity owned
 
@@ -35,13 +39,13 @@ class Portfolio {
             symbol: stock.symbol, //string
             companyName: stock.companyName, //string
             quantity: quantity, //int
-            pricePaid: stock.marketPrice, //float
-            totalTransactionValue: stock.pricePaid * quantity, //float
+            price: stock.marketPrice, //float
+            totalTransactionValue: stock.marketPrice * quantity, //float
             timestamp: new Date()
         };
     }
 
-    async buyStock(stock, quantity) {
+    async buyStockDB(stock, quantity) {
         // Run existing buyStock method
         const success = this.buyStock(stock, quantity);
 
@@ -52,6 +56,7 @@ class Portfolio {
             // Record in database
             try {
                 await this.dbManager.recordTransaction(transaction);
+                //TODO: this.username, and this.holdingsMap do not exist in this context
                 await this.dbManager.updateHoldings(this.username, this.holdingsMap);
                 await this.dbManager.saveUserProfile(this.userProfile);
             } catch (error) {
@@ -64,7 +69,7 @@ class Portfolio {
     }
 
     //returns a bool, true if purchase was successful, false otherwise
-    _buyStock(stock, quantity) {
+    buyStock(stock, quantity) {
         //quantity must be a number between 0 and 10, and stock must be initialized:
         if (isNaN(quantity)
             || quantity <= 0
@@ -84,7 +89,6 @@ class Portfolio {
             return false;
         }
 
-        //negative value provided bc we are subtracting this value from the user's balance
         this.addToBalance(-totalCost)
 
         //initialize a transaction object based on this transaction
@@ -100,8 +104,8 @@ class Portfolio {
     }
 
     //TODO: refactor code -- lots of duplicate code
-    async _sellStock(stock, quantity) {
-        // Run existing buyStock method
+    async sellStockDB(stock, quantity) {
+        // Run existing sellStock method
         const success = this.sellStock(stock, quantity);
 
         if (success) {
@@ -139,10 +143,10 @@ class Portfolio {
         //negative value provided bc we are subtracting this value from the user's balance
         this.addToBalance(-totalValue)
 
-        this.addStockToPortfolio(stock.symbol, quantity);
+        this.removeStockFromPortfolio(stock, quantity);
 
         //initialize a transaction object based on this transaction
-        let newTransaction = this.createTransaction(stock, "BUY", quantity)
+        let newTransaction = this.createTransaction(stock, "SELL", quantity)
 
         //store the transaction in transactionHistory array
         this.transactionHistory.push(newTransaction);
@@ -151,6 +155,7 @@ class Portfolio {
         return true;
     }
 
+    //TODO: fix access to "holding.price/avgPrice" this doesn't exist
     //void, removes 'quantity' 'stock's from this.holdingsMap
     addStockToPortfolio(stock, quantity) {
         const holding = this.holdingsMap[stock.symbol];
@@ -160,11 +165,13 @@ class Portfolio {
             const oldCost = holding.avgPrice * holding.quantity;
             const newCost = stock.marketPrice * quantity;
             holding.quantity += quantity;
+            holding.price = stock.marketPrice;
             holding.avgPrice  = (oldCost + newCost) / holding.quantity;
         } else {
             this.holdingsMap[stock.symbol] = {
                 stock: stock,
                 quantity: quantity,
+                price: stock.marketPrice,
                 avgPrice: stock.marketPrice     // first purchase price
             };
         }
@@ -199,7 +206,7 @@ class Portfolio {
         }
 
         for(let i = 0; i < relevantTransactions.length; ++i){
-            totalMoneySpent += relevantTransactions[i].pricePaid;
+            totalMoneySpent += relevantTransactions[i].totalTransactionValue;
         }
 
         return totalMoneySpent;
@@ -239,7 +246,7 @@ class Portfolio {
         //(with their current values, not the values the stocks were bought at initially)
         for (const symbol in this.holdingsMap) {
             if (this.holdingsMap[symbol]) {
-                this.portfolioValue += this.holdingsMap[symbol].pricePaid * this.holdingsMap[symbol].quantity;
+                this.portfolioValue += this.holdingsMap[symbol].price * this.holdingsMap[symbol].quantity;
             }
         }
     }
@@ -249,9 +256,8 @@ class Portfolio {
         this.totalAssetsValue = this.balance + this.portfolioValue;
     }
 
-    // returns float, returns the earnings/losings the user
     setEarnings() {
-        this.earnings = this.totalAssetsValue - this.startingCash;
+        this.earnings = this.totalAssetsValue - this.initialBalance
     }
 }
 
