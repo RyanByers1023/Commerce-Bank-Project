@@ -31,7 +31,7 @@ class Portfolio {
         return {
             //This gives something like: txn-1714526102005-g8kzq -- a unique transaction ID -- can be used as primary key in DB
             transactionID: `txn-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-            transactionType: type, //string, "BUY" or "SELL"
+            type: type, //string, "BUY" or "SELL"
             symbol: stock.symbol, //string
             companyName: stock.companyName, //string
             quantity: quantity, //int
@@ -198,7 +198,7 @@ class Portfolio {
             return 0.0;
         }
 
-        for(let i = 0; i < relevantTransactions.size(); ++i){
+        for(let i = 0; i < relevantTransactions.length; ++i){
             totalMoneySpent += relevantTransactions[i].pricePaid;
         }
 
