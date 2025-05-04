@@ -1,4 +1,3 @@
-//  NewsGenerator.js  –  crash-free, still simple
 export default class NewsGenerator {
     constructor(userProfile, onUpdate = null) {
         this.userProfile  = userProfile;          // we need access to stocks

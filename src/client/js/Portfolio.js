@@ -1,35 +1,4 @@
-//DB Schema: (WIP, make changes as you please)
-
-//USER:
-//userID: primary key, uniquely identifies users
-//username: the user's chosen username
-//password: make sure to hash this before storing it
-//email: the user's email address
-//dateCreated: the date and time the account was created (optional)
-//portfolioID: foreign key, links to PORTFOLIO
-
-//PORTFOLIO:
-//portfolioID: primary key, uniquely identifies a portfolio
-//balance: amount of cash the user has that is not in the market
-//initialBalance: the cash the user started with
-//holdings: list of stocks the user owns
-//transactionHistory: list of transactionIDs, foreign keys, that link to TRANSACTION
-
-//TRANSACTION:
-//transactionID: primary key, uniquely identifies a transaction
-//status: complete, incomplete, failed
-//type: (either "SELL" or "BUY")
-
-
-//STOCK (stock prices are generated on the fly after being obtained via API, so these will be unique for each user)
-//stockSymbol: primary key, uniquely identifies a stock
-//companyName: the name of the company associated with the stock
-//sector: the industry this stock is in
-//previousClosePrice: the price of the stock at the end of the last trading day
-//openPrice: price stock is at the beginning of the trading day
-//volume: how many shares have been traded during the current market day
-//sentimentValue: influenced by news, ranges from -1 (very negative) to 1 (very positive)
-//priceHistory: an array, stores the previous prices of the stock as float values, make sure to cap the size of the array
+import DatabaseManager from '/js/DatabaseManager.js';
 
 class Portfolio {
     //change the value passed to this constructor to change user starting money
@@ -53,6 +22,8 @@ class Portfolio {
         this.transactionHistory = [];
 
         this.earnings = 0.0;
+
+        this.dbManager = new DatabaseManager();
     }
 
     //returns transaction, associated attributes detailed below:
@@ -70,8 +41,30 @@ class Portfolio {
         };
     }
 
+    async buyStock(stock, quantity) {
+        // Run existing buyStock method
+        const success = this.buyStock(stock, quantity);
+
+        if (success) {
+            // Get the last transaction (which was just created)
+            const transaction = this.transactionHistory[this.transactionHistory.length - 1];
+
+            // Record in database
+            try {
+                await this.dbManager.recordTransaction(transaction);
+                await this.dbManager.updateHoldings(this.username, this.holdingsMap);
+                await this.dbManager.saveUserProfile(this.userProfile);
+            } catch (error) {
+                console.error('Failed to record transaction:', error);
+                //TODO: Consider how to handle database failures
+            }
+        }
+
+        return success;
+    }
+
     //returns a bool, true if purchase was successful, false otherwise
-    buyStock(stock, quantity) {
+    _buyStock(stock, quantity) {
         //quantity must be a number between 0 and 10, and stock must be initialized:
         if (isNaN(quantity)
             || quantity <= 0
@@ -104,6 +97,29 @@ class Portfolio {
 
         //buy successful
         return true;
+    }
+
+    //TODO: refactor code -- lots of duplicate code
+    async _sellStock(stock, quantity) {
+        // Run existing buyStock method
+        const success = this.sellStock(stock, quantity);
+
+        if (success) {
+            // Get the last transaction (which was just created)
+            const transaction = this.transactionHistory[this.transactionHistory.length - 1];
+
+            // Record in database
+            try {
+                await this.dbManager.recordTransaction(transaction);
+                await this.dbManager.updateHoldings(this.username, this.holdingsMap);
+                await this.dbManager.saveUserProfile(this.userProfile);
+            } catch (error) {
+                console.error('Failed to record transaction:', error);
+                //TODO: Consider how to handle database failures
+            }
+        }
+
+        return success;
     }
 
     //returns a bool, true if purchase was successful, false otherwise
