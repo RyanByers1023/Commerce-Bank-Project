@@ -1,5 +1,5 @@
 // db.js
-import mysqlv from 'mysql2/promise'
+import mysql from 'mysql2/promise'
 
 const db = mysql.createPool({
     host: 'localhost',
