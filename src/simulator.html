@@ -1,132 +1,319 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Market Simulator</title>
+    <title>InvestED Stock Market Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            light: '#2EF090',
+                            DEFAULT: '#46C586',
+                            dark: '#519B76'
+                        },
+                        secondary: '#4D705F',
+                        tertiary: '#5E8A75',
+                        background: '#28332D'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #28332D 0%, #3D4B44 100%);
+        }
+        .card-hover {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+        .btn-active {
+            background-color: #46C586;
+            color: white;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(70, 197, 134, 0.5);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(70, 197, 134, 0.8);
+        }
+    </style>
 </head>
-<body class="bg-gray-100">
-
-<!-- Navbar Placeholder -->
-<div id="navbar-container"></div>
-
-<!-- Load Navbar -->
-<script src="js/navbar.js"></script>
+<body class="gradient-bg text-white font-sans min-h-screen">
+<!-- Navbar -->
+<nav class="fixed w-full bg-background/90 backdrop-blur-md z-10 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 flex items-center">
+                    <i class="fas fa-chart-line text-primary-light text-2xl mr-2"></i>
+                    <span class="font-bold text-xl">InvestED</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="index.html" class="text-gray-300 hover:text-white transition">Home</a>
+                <a href="about.html" class="text-gray-300 hover:text-white transition">About</a>
+                <a href="#" class="text-primary-light font-medium transition">Simulator</a>
+                <a href="#" class="bg-primary/80 hover:bg-primary text-white px-4 py-2 rounded-md transition flex items-center">
+                    <i class="fas fa-sign-out-alt mr-2"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
 
 <!-- Main Content -->
-<div class="container mx-auto px-4 pt-20 pb-10">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">Stock Market Simulator</h1>
+<div class="container mx-auto px-4 pt-24 pb-10">
+    <!-- Page Header with Portfolio Stats -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+        <div>
+            <h1 class="text-3xl sm:text-4xl font-bold mb-2 text-white flex items-center">
+                <i class="fas fa-chart-line text-primary-light mr-3"></i>
+                Market Simulator
+            </h1>
+            <p class="text-gray-300">Practice investing with virtual money in a realistic market environment</p>
+        </div>
 
-    <!-- User Portfolio Summary -->
-    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div class="flex justify-between items-center">
-            <div>
-                <h2 class="text-xl font-semibold text-gray-700">Your Portfolio</h2>
-                <p class="text-gray-600">Available Cash: <span id="available-cash" class="font-bold text-green-600">$10,000.00</span></p>
+        <!-- User Info -->
+        <div class="mt-4 md:mt-0 flex items-center">
+            <div class="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mr-3">
+                <i class="fas fa-user text-primary-light"></i>
             </div>
-            <div class="text-right">
-                <!--TODO: values below are hard coded, obtain info from user instead-->
-                <p class="text-gray-600">Portfolio Value: <span id="portfolio-value" class="font-bold">$0.00</span></p>
-                <p class="text-gray-600">Total Assets: <span id="total-assets" class="font-bold text-blue-600">$10,000.00</span></p>
+            <div>
+                <p class="text-sm text-gray-300">Welcome back,</p>
+                <p class="font-medium">John Doe</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Portfolio Summary Card -->
+    <div class="bg-secondary/90 rounded-xl shadow-lg p-6 mb-8 border border-tertiary/20">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="flex flex-col">
+                <p class="text-gray-300 mb-1 flex items-center">
+                    <i class="fas fa-wallet text-primary-light mr-2"></i>
+                    Available Cash
+                </p>
+                <p class="text-2xl font-bold text-white" id="available-cash">$10,000.00</p>
+            </div>
+            <div class="flex flex-col">
+                <p class="text-gray-300 mb-1 flex items-center">
+                    <i class="fas fa-chart-pie text-primary-light mr-2"></i>
+                    Portfolio Value
+                </p>
+                <p class="text-2xl font-bold text-white" id="portfolio-value">$0.00</p>
+            </div>
+            <div class="flex flex-col">
+                <p class="text-gray-300 mb-1 flex items-center">
+                    <i class="fas fa-coins text-primary-light mr-2"></i>
+                    Total Assets
+                </p>
+                <p class="text-2xl font-bold text-primary-light" id="total-assets">$10,000.00</p>
             </div>
         </div>
     </div>
 
     <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Stock Graph Panel -->
+        <div class="lg:col-span-8 bg-secondary/90 rounded-xl shadow-lg overflow-hidden">
+            <!-- Panel Header with Stock Selection -->
+            <div class="p-5 border-b border-tertiary/30">
+                <div class="flex flex-wrap justify-between items-center">
+                    <div class="flex items-center space-x-4 mb-4 sm:mb-0">
+                        <select id="stockSelect" class="bg-background/70 text-white border border-tertiary/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50" onchange="changeFocusedStock()">
+                            <!-- Options populated dynamically -->
+                        </select>
+                        <div>
+                            <span id="currentPrice" class="text-2xl font-bold text-white">$0.00</span>
+                            <span id="priceChange" class="ml-2 text-sm font-medium px-3 py-1 rounded-full"></span>
+                        </div>
+                    </div>
 
-        <!-- Stock Graph Panel (Spans 2 columns on large screens) -->
-        <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-4">
-            <!-- Stock Selection and Timeframe -->
-            <div class="flex flex-wrap justify-between items-center mb-4">
-                <div class="flex items-center space-x-2 mb-2 sm:mb-0">
-                    <select id="stockSelect" class="px-3 py-2 border rounded" onchange="changeFocusedStock()">
-                        <!-- Options populated dynamically -->
-                    </select>
-                    <span id="currentPrice" class="text-xl font-bold">$0.00</span>
-                    <span id="priceChange" class="text-sm font-medium px-2 py-1 rounded"></span>
-                </div>
-
-                <div class="flex space-x-2">
-                    <button class="bg-gray-400 px-4 py-2 text-white rounded hover:bg-gray-500 transition" onclick="setTimeframe('1D')">1D</button>
-                    <button class="bg-gray-400 px-4 py-2 text-white rounded hover:bg-gray-500 transition" onclick="setTimeframe('1W')">1W</button>
-                    <button class="bg-gray-400 px-4 py-2 text-white rounded hover:bg-gray-500 transition" onclick="setTimeframe('1M')">1M</button>
+                    <div class="flex space-x-1">
+                        <button class="px-4 py-2 rounded-lg bg-background/70 hover:bg-primary/80 transition text-gray-300 hover:text-white" onclick="setTimeframe('1D')">1D</button>
+                        <button class="px-4 py-2 rounded-lg bg-background/70 hover:bg-primary/80 transition text-gray-300 hover:text-white" onclick="setTimeframe('1W')">1W</button>
+                        <button class="px-4 py-2 rounded-lg bg-background/70 hover:bg-primary/80 transition text-gray-300 hover:text-white" onclick="setTimeframe('1M')">1M</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Stock Chart -->
-            <div class="relative">
-                <canvas id="stockCanvas" width="800" height="400" class="w-full border-2 border-gray-300 bg-gray-200 shadow-inner rounded"></canvas>
+            <!-- Chart Container -->
+            <div class="p-5">
+                <div class="rounded-lg overflow-hidden bg-background/40 p-1">
+                    <canvas id="stockCanvas" width="800" height="400" class="w-full rounded-lg"></canvas>
+                </div>
             </div>
 
             <!-- Buy/Sell Interface -->
-            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-gray-100 p-4 rounded">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Buy Shares</h3>
-                    <div class="flex items-center space-x-2 mb-4">
-                        <input type="number" id="buy-quantity" min="1" value="1" class="w-20 px-2 py-1 border rounded text-right">
-                        <span>shares at <span id="buy-price" class="font-medium">$0.00</span></span>
+            <div class="p-5 pt-0">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Buy Panel -->
+                    <div class="bg-background/40 p-5 rounded-xl">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <i class="fas fa-shopping-cart text-primary-light mr-2"></i>
+                            Buy Shares
+                        </h3>
+                        <div class="flex items-center space-x-3 mb-4">
+                            <div class="relative flex-1">
+                                <input type="number" id="buy-quantity" min="1" value="1" class="w-full bg-background/70 border border-tertiary/50 rounded-lg px-4 py-2 text-right focus:outline-none focus:ring-2 focus:ring-primary/50">
+                                <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">Qty</span>
+                            </div>
+                            <span class="text-gray-300">at <span id="buy-price" class="font-medium text-white">$0.00</span></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-300">Total: <span id="buy-total" class="font-medium text-white">$0.00</span></span>
+                            <button id="buy-button" class="bg-primary hover:bg-primary-light text-white px-6 py-2 rounded-lg transition flex items-center">
+                                <i class="fas fa-arrow-right mr-2"></i>
+                                Buy
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <span>Total: <span id="buy-total" class="font-medium">$0.00</span></span>
-                        <button id="buy-button" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">Buy</button>
-                    </div>
-                </div>
 
-                <div class="bg-gray-100 p-4 rounded">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Sell Shares</h3>
-                    <div class="flex items-center space-x-2 mb-4">
-                        <input type="number" id="sell-quantity" min="1" value="1" class="w-20 px-2 py-1 border rounded text-right">
-                        <span>shares at <span id="sell-price" class="font-medium">$0.00</span></span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span>Total: <span id="sell-total" class="font-medium">$0.00</span></span>
-                        <button id="sell-button" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">Sell</button>
+                    <!-- Sell Panel -->
+                    <div class="bg-background/40 p-5 rounded-xl">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center">
+                            <i class="fas fa-hand-holding-usd text-primary-light mr-2"></i>
+                            Sell Shares
+                        </h3>
+                        <div class="flex items-center space-x-3 mb-4">
+                            <div class="relative flex-1">
+                                <input type="number" id="sell-quantity" min="1" value="1" class="w-full bg-background/70 border border-tertiary/50 rounded-lg px-4 py-2 text-right focus:outline-none focus:ring-2 focus:ring-primary/50">
+                                <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">Qty</span>
+                            </div>
+                            <span class="text-gray-300">at <span id="sell-price" class="font-medium text-white">$0.00</span></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-300">Total: <span id="sell-total" class="font-medium text-white">$0.00</span></span>
+                            <button id="sell-button" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg transition flex items-center">
+                                <i class="fas fa-arrow-left mr-2"></i>
+                                Sell
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- News and Portfolio Panel -->
-        <div class="lg:col-span-1">
-            <!-- News Panel -->
-            <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">Market News</h2>
-                <div id="news-container" class="space-y-4">
-                    <!-- News items will be populated dynamically -->
-                    <div class="py-2 border-b border-gray-200">
-                        <p class="text-sm text-gray-500">Loading market news...</p>
+        <div class="lg:col-span-4 space-y-6">
+            <!-- Holdings Panel -->
+            <div class="bg-secondary/90 rounded-xl shadow-lg overflow-hidden">
+                <div class="px-5 py-4 border-b border-tertiary/30 flex justify-between items-center">
+                    <h2 class="text-xl font-semibold flex items-center">
+                        <i class="fas fa-briefcase text-primary-light mr-2"></i>
+                        Your Holdings
+                    </h2>
+                    <span class="bg-primary/20 text-primary-light text-xs px-3 py-1 rounded-full">
+                            Live
+                        </span>
+                </div>
+                <div id="holdings-container" class="overflow-y-auto max-h-80 custom-scrollbar">
+                    <div class="p-5">
+                        <table class="w-full">
+                            <thead>
+                            <tr class="border-b border-tertiary/30">
+                                <th class="text-left py-2 text-gray-300 font-medium">Stock</th>
+                                <th class="text-right py-2 text-gray-300 font-medium">Shares</th>
+                                <th class="text-right py-2 text-gray-300 font-medium">Value</th>
+                            </tr>
+                            </thead>
+                            <tbody id="holdings-table-body">
+                            <!-- Holdings will be populated dynamically -->
+                            <tr>
+                                <td colspan="3" class="py-6 text-center text-gray-400">
+                                    <div class="flex flex-col items-center">
+                                        <i class="fas fa-folder-open text-2xl mb-2 text-gray-500"></i>
+                                        No stocks in portfolio
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
 
-            <!-- Holdings Panel -->
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">Your Holdings</h2>
-                <div id="holdings-container" class="overflow-y-auto max-h-80">
-                    <table class="w-full">
-                        <thead>
-                        <tr class="border-b-2 border-gray-300">
-                            <th class="text-left py-2">Stock</th>
-                            <th class="text-right py-2">Shares</th>
-                            <th class="text-right py-2">Value</th>
-                        </tr>
-                        </thead>
-                        <tbody id="holdings-table-body">
-                        <!-- Holdings will be populated dynamically -->
-                        <tr>
-                            <td colspan="3" class="py-4 text-center text-gray-500">No stocks in portfolio</td>
-                        </tr>
-                        </tbody>
-                    </table>
+            <!-- News Panel -->
+            <div class="bg-secondary/90 rounded-xl shadow-lg overflow-hidden">
+                <div class="px-5 py-4 border-b border-tertiary/30 flex justify-between items-center">
+                    <h2 class="text-xl font-semibold flex items-center">
+                        <i class="fas fa-newspaper text-primary-light mr-2"></i>
+                        Market News
+                    </h2>
+                    <button class="text-gray-300 hover:text-white text-sm px-3 py-1 rounded-full bg-background/40 hover:bg-background/70 transition flex items-center">
+                        <i class="fas fa-sync-alt mr-1"></i>
+                        Refresh
+                    </button>
+                </div>
+                <div id="news-container" class="overflow-y-auto max-h-96 custom-scrollbar">
+                    <div class="p-5 space-y-5">
+                        <!-- News items will be populated dynamically -->
+                        <div class="py-2 border-b border-tertiary/30 pb-4">
+                            <div class="flex items-start">
+                                <div class="p-2 rounded-lg bg-background/40 text-primary-light mr-3">
+                                    <i class="fas fa-newspaper"></i>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-gray-400 block mb-1">Just now</span>
+                                    <p class="text-sm">Loading market news...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Link to controllers -->
+<!-- Quick Stats Footer -->
+<footer class="bg-background/90 py-4 border-t border-gray-700/30">
+    <div class="container mx-auto px-4">
+        <div class="flex flex-wrap justify-between items-center">
+            <div class="text-sm text-gray-400">
+                &copy; 2025 InvestED Stock Market Simulator
+            </div>
+            <div class="flex space-x-6">
+                <div class="text-sm text-gray-400">
+                        <span class="text-primary-light mr-1">
+                            <i class="fas fa-clock"></i>
+                        </span>
+                </div>
+                <div class="text-sm text-gray-400">
+                        <span class="text-primary-light mr-1">
+                            <i class="fas fa-chart-line"></i>
+                        </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Link to controllers (unchanged) -->
 <script src="js/stock.js"></script>
 <script src="js/simulatorGraphController.js"></script>
 <script src="js/portfolioController.js"></script>

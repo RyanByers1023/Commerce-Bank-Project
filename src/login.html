@@ -1,97 +1,234 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Stock Market Simulator</title>
+    <title>Login - InvestED Stock Market Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            light: '#2EF090',
+                            DEFAULT: '#46C586',
+                            dark: '#519B76'
+                        },
+                        secondary: '#4D705F',
+                        tertiary: '#5E8A75',
+                        background: '#28332D'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #28332D 0%, #3D4B44 100%);
+        }
+        .input-focus-effect {
+            transition: all 0.3s ease;
+        }
+        .input-focus-effect:focus {
+            border-color: #2EF090;
+            box-shadow: 0 0 0 2px rgba(46, 240, 144, 0.25);
+        }
+        .btn-hover-effect {
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+        .btn-hover-effect:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.5s ease;
+            z-index: -1;
+        }
+        .btn-hover-effect:hover:after {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+    </style>
 </head>
-<body class="bg-[#28332D] text-white min-h-screen">
-    <!-- Navbar Placeholder -->
-    <div id="navbar-container"></div>
-
-    <!-- Load Navbar -->
-    <script src="js/navbar.js"></script>
- 
-    <!-- Login Container -->
-    <div class="flex items-center justify-center min-h-screen pt-16">
-        <div class="bg-[#4D705F] p-8 rounded-lg shadow-lg w-full max-w-md">
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold">Welcome Back</h1>
-                <p class="text-gray-200 mt-2">Sign in to access your portfolio</p>
+<body class="gradient-bg text-white font-sans">
+<!-- Navbar -->
+<nav class="fixed w-full bg-background/90 backdrop-blur-md z-10 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 flex items-center">
+                    <i class="fas fa-chart-line text-primary-light text-2xl mr-2"></i>
+                    <span class="font-bold text-xl">InvestED</span>
+                </div>
             </div>
-
-            <form class="space-y-6">
-                <!-- Email Input -->
-                <div>
-                    <label for="email" class="block text-sm font-medium mb-2">Email Address</label>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        class="w-full px-4 py-3 bg-[#3A4F41] border border-[#5E8A75] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2EF090]" 
-                        placeholder="name@example.com"
-                        required
-                    >
-                </div>
-
-                <!-- Password Input -->
-                <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <label for="password" class="block text-sm font-medium">Password</label>
-                        <a href="#" class="text-sm text-[#2EF090] hover:underline">Forgot password?</a>
-                    </div>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        class="w-full px-4 py-3 bg-[#3A4F41] border border-[#5E8A75] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2EF090]" 
-                        placeholder="••••••••"
-                        required
-                    >
-                </div>
-
-                <!-- Remember Me Checkbox -->
-                <div class="flex items-center">
-                    <input 
-                        type="checkbox" 
-                        id="remember" 
-                        class="h-4 w-4 bg-[#3A4F41] border-[#5E8A75] rounded"
-                    >
-                    <label for="remember" class="ml-2 block text-sm">Remember me</label>
-                </div>
-
-                <!-- Sign In Button -->
-                <div>
-                    <button 
-                        type="submit" 
-                        class="w-full bg-[#46C586] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#2EF090] transition-colors duration-300"
-                    >
-                        Sign In
-                    </button>
-                </div>
-            </form>
-
-            <!-- Registration Link -->
-            <div class="text-center mt-6">
-                <p class="text-sm">
-                    Don't have an account? 
-                    <a href="register.html" class="text-[#2EF090] hover:underline">Register now</a>
-                </p>
-            </div>
-
-            <!-- Demo Account Info -->
-            <div class="mt-8 p-4 bg-[#3A4F41] rounded-lg text-sm">
-                <p class="font-medium mb-2">Demo Account:</p>
-                <p>Email: demo@stocksim.com</p>
-                <p>Password: demo123</p>
-                <p class="mt-2 text-xs text-gray-300">For testing purposes only. Your actual data will be secure.</p>
+            <div class="flex items-center space-x-4">
+                <a href="index.html" class="text-gray-300 hover:text-white transition">Home</a>
+                <a href="about.html" class="text-gray-300 hover:text-white transition">About</a>
+                <a href="login.html" class="text-primary-light font-medium transition">Login</a>
+                <a href="register.html" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-md transition">Sign Up</a>
             </div>
         </div>
     </div>
+</nav>
 
-    <!-- Simple Footer -->
-    <footer class="py-6 text-center text-gray-400 text-sm">
-        <p>The Project Last Minute Stock Market Simulator</p>
-    </footer>
+<!-- Login Container with Decorative Elements -->
+<div class="flex items-center justify-center min-h-screen pt-24 pb-16 px-4 sm:px-6 relative">
+    <!-- Decorative Elements -->
+    <div class="absolute top-20 left-1/4 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-10 right-1/4 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl"></div>
 
+    <div class="relative max-w-md w-full">
+        <!-- Card with enhanced design -->
+        <div class="bg-secondary/90 rounded-xl shadow-2xl overflow-hidden backdrop-blur-sm">
+            <!-- Top accent bar -->
+            <div class="h-2 bg-gradient-to-r from-primary-light to-primary"></div>
+
+            <div class="p-8">
+                <!-- Header -->
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-background/40 rounded-full mb-4">
+                        <i class="fas fa-user-lock text-primary-light text-2xl"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold">Welcome Back</h1>
+                    <p class="text-gray-200 mt-2">Sign in to access your portfolio</p>
+                </div>
+
+                <!-- Login Form -->
+                <form class="space-y-6">
+                    <!-- Email Input -->
+                    <div>
+                        <label for="email" class="block text-sm font-medium mb-2 flex items-center">
+                            <i class="fas fa-envelope text-primary-light mr-2"></i>
+                            Email Address
+                        </label>
+                        <div class="relative">
+                            <input
+                                    type="email"
+                                    id="email"
+                                    class="w-full pl-4 pr-10 py-3 bg-background/50 border border-tertiary/50 rounded-lg focus:outline-none input-focus-effect"
+                                    placeholder="name@example.com"
+                                    required
+                            >
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <i class="fas fa-envelope text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Password Input -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label for="password" class="block text-sm font-medium flex items-center">
+                                <i class="fas fa-lock text-primary-light mr-2"></i>
+                                Password
+                            </label>
+                            <a href="#" class="text-sm text-primary-light hover:text-white transition-colors duration-300">Forgot password?</a>
+                        </div>
+                        <div class="relative">
+                            <input
+                                    type="password"
+                                    id="password"
+                                    class="w-full pl-4 pr-10 py-3 bg-background/50 border border-tertiary/50 rounded-lg focus:outline-none input-focus-effect"
+                                    placeholder="••••••••"
+                                    required
+                            >
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <i class="fas fa-lock text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Remember Me Checkbox -->
+                    <div class="flex items-center">
+                        <div class="relative inline-block w-4 h-4 mr-2">
+                            <input
+                                    type="checkbox"
+                                    id="remember"
+                                    class="opacity-0 absolute w-0 h-0"
+                            >
+                            <label for="remember" class="inline-block w-4 h-4 rounded border border-tertiary/70 bg-background/40 cursor-pointer"></label>
+                            <div class="absolute top-0 left-0 w-4 h-4 flex items-center justify-center text-primary-light opacity-0 peer-checked:opacity-100 pointer-events-none">
+                                <i class="fas fa-check text-xs"></i>
+                            </div>
+                        </div>
+                        <label for="remember" class="text-sm cursor-pointer">Remember me</label>
+                    </div>
+
+                    <!-- Sign In Button -->
+                    <div>
+                        <button
+                                type="submit"
+                                class="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-light transition-colors duration-300 btn-hover-effect flex items-center justify-center"
+                        >
+                            <i class="fas fa-sign-in-alt mr-2"></i>
+                            Sign In
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Registration Link -->
+                <div class="text-center mt-6">
+                    <p class="text-sm">
+                        Don't have an account?
+                        <a href="register.html" class="text-primary-light hover:text-white transition-colors duration-300 font-medium">Register now</a>
+                    </p>
+                </div>
+
+                <!-- Demo Account Info -->
+                <div class="mt-8 p-5 bg-background/40 rounded-lg border border-tertiary/30">
+                    <div class="flex items-start mb-2">
+                        <i class="fas fa-info-circle text-primary-light mt-1 mr-2"></i>
+                        <h3 class="font-medium">Demo Account:</h3>
+                    </div>
+                    <div class="pl-6 space-y-1">
+                        <p class="flex items-center">
+                            <span class="text-gray-400 mr-2">Email:</span>
+                            <span class="font-mono">demo@stocksim.com</span>
+                        </p>
+                        <p class="flex items-center">
+                            <span class="text-gray-400 mr-2">Password:</span>
+                            <span class="font-mono">demo123</span>
+                        </p>
+                    </div>
+                    <p class="mt-3 text-xs text-gray-300 pl-6 italic">For testing purposes only. Your actual data will be secure.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card shadow effect -->
+        <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-11/12 h-1 bg-background rounded-full blur-md"></div>
+    </div>
+</div>
+
+<!-- Enhanced Footer -->
+<footer class="bg-background/90 py-6 border-t border-gray-700/30">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center mb-4 md:mb-0">
+                <i class="fas fa-chart-line text-primary-light text-xl mr-2"></i>
+                <span class="font-bold text-lg">InvestED</span>
+            </div>
+
+            <div class="text-sm text-gray-400">
+                &copy; 2025 Project Last Minute. All rights reserved.
+            </div>
+        </div>
+    </div>
+</footer>
 </body>
 </html>

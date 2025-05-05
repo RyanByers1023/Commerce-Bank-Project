@@ -1,7 +1,7 @@
 // Portfolio Controller - Manages user portfolio, cash, and transactions
 
 class Portfolio {
-    constructor(initialCash = 10000) {
+    constructor(initialCash = 2000) {
         this.cash = initialCash;
         this.holdings = {};  // Map of stock symbols to quantity owned
         this.transactions = []; // Record of all transactions
