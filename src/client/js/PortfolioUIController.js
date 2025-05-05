@@ -155,7 +155,7 @@ export default class PortfolioUIController {
     }
 
     setStockBuyQuantityInputListener() {
-        const quantityInput = document.getElementById('spanStockBuyQuantity');
+        const quantityInput = document.getElementById('inputStockBuyQuantity');
         if (!quantityInput) return;
 
         quantityInput.addEventListener('input', () => {
@@ -171,7 +171,7 @@ export default class PortfolioUIController {
     }
 
     updateStockBuyTotalSpan(stockPrice, quantity) {
-        const totalSpan = document.getElementById('spanStockBuyPriceTotal');
+        const totalSpan = document.getElementById('inputStockBuyPriceTotal');
         if (totalSpan) {
             totalSpan.textContent = `$${(stockPrice * quantity).toFixed(2)}`;
         }
