@@ -61,9 +61,9 @@ export default class SimulatorGraphController{
 
     setupEventListeners() {
         // Set up stock selection change listener
-        const stockSelect = document.getElementById("selectStock");
-        if (stockSelect) {
-            stockSelect.addEventListener('change', (e) => {
+        const selectedStock = document.getElementById("selectStock");
+        if (selectedStock) {
+            selectedStock.addEventListener('change', (e) => {
                 this.setFocusedStock(e.target.value);
             });
         }
@@ -313,20 +313,20 @@ export default class SimulatorGraphController{
 
     populateStockDropdown(stockList) {
         //get the selected stock from the simulator.html:
-        const stockSelect = document.getElementById("stockSelect");
+        const selectedStock = document.getElementById("selectStock");
 
-        if (!stockSelect){
+        if (!selectedStock){
             return;
         }
 
-        stockSelect.innerHTML = ""; // Clear existing options
+        selectedStock.innerHTML = ""; // Clear existing options
 
         //populate the drop down menu:
         stockList.forEach(stock => {
             const option = document.createElement("option");
             option.value = stock.symbol;
             option.textContent = `${stock.companyName} (${stock.symbol})`;
-            stockSelect.appendChild(option);
+            selectedStock.appendChild(option);
         });
     }
 
