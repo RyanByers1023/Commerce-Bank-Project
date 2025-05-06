@@ -6,13 +6,13 @@ const path = require('path');
 // Import db
 const db = require('./middleware/db');
 
-// Import route files - comment out any that aren't ready yet
+// Import route files
 const authRoutes = require('./routes/auth');
-// const userRoutes = require('./routes/users');
-// const portfolioRoutes = require('./routes/portfolios');
-// const stockRoutes = require('./routes/stocks');
-// const transactionRoutes = require('./routes/transactions');
-// const settingsRoutes = require('./routes/settings');
+const userRoutes = require('./routes/users');
+const portfolioRoutes = require('./routes/portfolios');
+const stockRoutes = require('./routes/stocks');
+const transactionRoutes = require('./routes/transactions');
+const settingsRoutes = require('./routes/settings');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,12 +29,12 @@ app.use(session({
 }));
 
 // Routes - only include ones that are ready
-app.use('./routes/auth.js', authRoutes);
-// app.use('/api/users', userRoutes);
-// app.use('/api/portfolios', portfolioRoutes);
-// app.use('/api/stocks', stockRoutes);
-// app.use('/api/transactions', transactionRoutes);
-// app.use('/api/settings', settingsRoutes);
+app.use('/api/auth.js', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/portfolios', portfolioRoutes);
+app.use('/api/stocks', stockRoutes);
+app.use('/api/transactions', transactionRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Test route
 app.get('/api/test', (req, res) => {

@@ -1,8 +1,6 @@
 // server/routes/users.js
 const express = require('express');
 const router = express.Router();
-
-//get middleware:
 const db = require('../middleware/db');
 const auth = require('../middleware/auth');
 
@@ -126,8 +124,8 @@ router.put('/:username/active-portfolio', auth.verifyToken, async (req, res) => 
         // Verify portfolio exists and belongs to user
         const [portfolios] = await db.query(
             `SELECT p.portfolioID FROM portfolios p
-       JOIN users u ON p.userID = u.userID
-       WHERE u.username = ? AND p.portfolioID = ?`,
+               JOIN users u ON p.userID = u.userID
+               WHERE u.username = ? AND p.portfolioID = ?`,
             [username, activePortfolioId]
         );
 

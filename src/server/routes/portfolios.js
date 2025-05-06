@@ -19,11 +19,11 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
         // Get user's portfolios
         const [portfolios] = await db.query(
             `SELECT p.portfolioID, p.name, p.description, p.initialBalance, p.balance, 
-              p.createdAt, p.updatedAt
-       FROM portfolios p
-       JOIN users u ON p.userID = u.userID
-       WHERE u.username = ?
-       ORDER BY p.createdAt`,
+                 p.createdAt, p.updatedAt
+               FROM portfolios p
+               JOIN users u ON p.userID = u.userID
+               WHERE u.username = ?
+               ORDER BY p.createdAt`,
             [username]
         );
 
@@ -36,9 +36,9 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
             // Get holdings
             const [holdingsResult] = await db.query(
                 `SELECT h.quantity, h.avgPrice, s.symbol, s.marketPrice
-         FROM holdings h
-         JOIN stocks s ON h.stockID = s.stockID
-         WHERE h.portfolioID = ?`,
+                     FROM holdings h
+                     JOIN stocks s ON h.stockID = s.stockID
+                     WHERE h.portfolioID = ?`,
                 [portfolio.portfolioID]
             );
 
@@ -74,9 +74,9 @@ router.get('/:username/:portfolioId', auth.verifyToken, async (req, res) => {
         const [portfolios] = await db.query(
             `SELECT p.portfolioID, p.name, p.description, p.initialBalance, p.balance, 
               p.createdAt, p.updatedAt
-       FROM portfolios p
-       JOIN users u ON p.userID = u.userID
-       WHERE u.username = ? AND p.portfolioID = ?`,
+                   FROM portfolios p
+                   JOIN users u ON p.userID = u.userID
+                   WHERE u.username = ? AND p.portfolioID = ?`,
             [username, portfolioId]
         );
 

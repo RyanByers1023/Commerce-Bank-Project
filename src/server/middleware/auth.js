@@ -1,5 +1,5 @@
-// server/middleware/auth.js
-const db = require('../middleware/db');
+// src/server/middleware/auth.js
+const db = require('./db');
 
 /**
  * Middleware to verify user authentication token
@@ -146,20 +146,4 @@ exports.checkDemoAccount = async (req, res, next) => {
         console.error('Demo account check error:', error);
         next();
     }
-};
-
-/**
- * Create database connection function
- * This is used to initialize the database connection
- */
-exports.initDatabaseConnection = () => {
-    return db.getConnection()
-        .then(connection => {
-            console.log('Database connection established');
-            connection.release();
-        })
-        .catch(err => {
-            console.error('Failed to connect to database:', err);
-            process.exit(1);
-        });
 };
