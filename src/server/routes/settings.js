@@ -1,9 +1,10 @@
 // server/routes/settings.js
 const express = require('express');
 const router = express.Router();
-const db = require('../db/database');
-const auth = require('../middleware/auth');
 
+//get middleware:
+const db = require('../middleware/db');
+const auth = require('../middleware/auth');
 // Get simulation settings for a user
 router.get('/:username', auth.verifyToken, async (req, res) => {
     try {

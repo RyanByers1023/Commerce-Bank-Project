@@ -1,7 +1,9 @@
 // server/routes/users.js
 const express = require('express');
 const router = express.Router();
-const db = require('../db/database');
+
+//get middleware:
+const db = require('../middleware/db');
 const auth = require('../middleware/auth');
 
 // Get user profile

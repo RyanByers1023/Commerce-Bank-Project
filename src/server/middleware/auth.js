@@ -1,5 +1,5 @@
 // server/middleware/auth.js
-const db = require('../db/database');
+const db = require('../middleware/db');
 
 /**
  * Middleware to verify user authentication token

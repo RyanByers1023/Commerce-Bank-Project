@@ -1,12 +1,12 @@
-// server/middleware/auth.js
-const db = require('../db/database');
+const db = require('../middleware/db');
+const router = require("./users");
 
 /**
  * Middleware to verify user authentication token
  * This uses Express session authentication
  */
 exports.verifyToken = async (req, res, next) => {
-    try {
+    try{
         // Check if session exists
         if (!req.session || !req.session.userID) {
             return res.status(401).json({ error: 'Not authenticated' });

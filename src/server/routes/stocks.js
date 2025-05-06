@@ -1,7 +1,9 @@
 // server/routes/stocks.js (continued)
 const express = require('express');
 const router = express.Router();
-const db = require('../db/database');
+
+//get middleware:
+const db = require('../middleware/db');
 const auth = require('../middleware/auth');
 
 // Get all stocks available to a user
