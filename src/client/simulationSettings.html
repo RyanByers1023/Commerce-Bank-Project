@@ -1,0 +1,69 @@
+
+<div id="simulation-settings-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-800">Simulation Settings</h2>
+            <button id="close-settings-btn" class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="space-y-4">
+            <!-- Simulation Speed -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Simulation Speed</label>
+                <div class="flex items-center space-x-4">
+                    <input id="simulation-speed-range" type="range" min="1" max="40" value="1" class="w-full">
+                    <span id="simulation-speed-value" class="text-gray-700 font-medium">1x</span>
+                </div>
+            </div>
+
+            <!-- Market Volatility -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Market Volatility</label>
+                <select id="market-volatility" class="w-full px-3 py-2 border rounded">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+
+            <!-- Event Frequency -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Event Frequency</label>
+                <select id="event-frequency" class="w-full px-3 py-2 border rounded">
+                    <option value="none">None</option>
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+
+            <!-- Starting Cash -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Starting Cash</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                    <input id="starting-cash" type="number" value="500" min="100" max="10000" step="100" class="pl-8 w-full px-3 py-2 border rounded">
+                </div>
+                <p class="mt-1 text-xs text-gray-500">Changes take effect for new simulations only.</p>
+            </div>
+
+            <!-- Reset Simulation -->
+            <div class="pt-2">
+                <button id="reset-simulation-btn" class="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition">
+                    Reset Simulation
+                </button>
+                <p class="mt-1 text-xs text-gray-500">This will reset all stocks and your portfolio to initial values.</p>
+            </div>
+        </div>
+
+        <div class="mt-6 flex justify-end">
+            <button id="save-settings-btn" class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition">
+                Save Settings
+            </button>
+        </div>
+    </div>
+</div>
