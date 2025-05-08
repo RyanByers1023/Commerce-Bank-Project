@@ -1,3 +1,28 @@
+/* src/client/css/tailwind.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom Styles Below */
+/* You can add any custom CSS here - it will be processed by Tailwind */
+
+/* Add the project's color scheme as custom variables */
+:root {
+    --color-primary: #46C586;
+    --color-primary-dark: #2EF090;
+    --color-secondary: #4D705F;
+    --color-tertiary: #5E8A75;
+    --color-background: #28332D;
+    --color-foreground: #3A4F41;
+}
+
+/* Add any custom components or utilities here */
+@layer components {
+    .btn-primary {
+        @apply bg-[#46C586] text-white py-2 px-4 rounded-lg hover:bg-[#2EF090] transition-colors duration-300;
+    }
+
+    .btn-secondary {
+        @apply bg-[#3A4F41] text-white py-2 px-4 rounded-lg hover:bg-[#5E8A75] transition-colors duration-300;
+    }
+}
