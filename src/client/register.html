@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="./css/styles.css" rel="stylesheet">
 </head>
 
 <body class="bg-gray-50 font-sans flex flex-col min-h-screen">
@@ -13,7 +13,7 @@
 <div id="navbar-container"></div>
 
 <!-- Load the Navbar -->
-<script src="js/navbar.js"></script>
+<script src="./js/Navbar.js"></script>
      
     <h1 class="text-3xl font-bold underline bg-orange-500">
         Registration page placeholder
@@ -23,12 +23,6 @@
 <!-- Footer -->
 <div id="footer-container"></div>
 
-<script>
-    fetch('footer.html')
-        .then(response => response.text())
-        .then(data => {
-            document.getElementById('footer-container').innerHTML = data;
-        });
-</script>
+<script src="./js/loadFooter.js"></script>
 
 </html>

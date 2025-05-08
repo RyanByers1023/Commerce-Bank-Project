@@ -1,5 +1,7 @@
 require('dotenv').config();
 const express   = require('express');
+const app  = express();
+
 const session   = require('express-session');
 const path      = require('path');
 const helmet    = require('helmet');
@@ -13,7 +15,7 @@ const stockRoutes       = require('./routes/stocks');
 const transactionRoutes = require('./routes/transactions');
 const settingsRoutes    = require('./routes/settings');
 
-const app  = express();
+
 const PORT = process.env.PORT
 
 // ─── Global middleware ────────────────────────────────────────────────────────
@@ -57,6 +59,8 @@ app.use('/api/settings',    settingsRoutes);
 app.get('/api/test', (_, res) => res.json({ message: 'Server is running!' }));
 
 app.use(express.static(path.join(__dirname, '../client')));
+
+app.get('/', (req, res) => {})
 
 // ─── Error handling ───────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
