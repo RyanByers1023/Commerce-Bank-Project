@@ -94,6 +94,8 @@
                     <p class="text-gray-200 mt-2">Sign in to access your portfolio</p>
                 </div>
 
+                <!-- Message containers will be inserted here by JS -->
+
                 <!-- Login Form -->
                 <form id="login-form" class="space-y-6">
                     <!-- Email Input -->
@@ -106,6 +108,7 @@
                             <input
                                     type="email"
                                     id="email"
+                                    name="email"
                                     class="w-full pl-4 pr-10 py-3 bg-background/50 border border-tertiary/50 rounded-lg focus:outline-none input-focus-effect"
                                     placeholder="name@example.com"
                                     required
@@ -123,12 +126,13 @@
                                 <i class="fas fa-lock text-primary-light mr-2"></i>
                                 Password
                             </label>
-                            <a href="#" class="text-sm text-primary-light hover:text-white transition-colors duration-300">Forgot password?</a>
+                            <a href="resetPassword.html" class="text-sm text-primary-light hover:text-white transition-colors duration-300">Forgot password?</a>
                         </div>
                         <div class="relative">
                             <input
                                     type="password"
                                     id="password"
+                                    name="password"
                                     class="w-full pl-4 pr-10 py-3 bg-background/50 border border-tertiary/50 rounded-lg focus:outline-none input-focus-effect"
                                     placeholder="••••••••"
                                     required
@@ -145,6 +149,7 @@
                             <input
                                     type="checkbox"
                                     id="remember"
+                                    name="remember"
                                     class="opacity-0 absolute w-0 h-0 peer"
                             >
                             <label for="remember" class="inline-block w-4 h-4 rounded border border-tertiary/70 bg-background/40 cursor-pointer"></label>
@@ -160,6 +165,7 @@
                         <button
                                 type="submit"
                                 class="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-light transition-colors duration-300 btn-hover-effect flex items-center justify-center"
+                                id="login-button"
                         >
                             <i class="fas fa-sign-in-alt mr-2"></i>
                             Sign In
@@ -171,6 +177,7 @@
                         <button
                                 id="demo-login-btn"
                                 class="w-full bg-background/70 text-gray-200 py-3 px-4 rounded-lg font-medium hover:bg-background transition-colors duration-300 btn-hover-effect flex items-center justify-center"
+                                type="button"
                         >
                             <i class="fas fa-rocket mr-2"></i>
                             Or Try a Demo!
@@ -207,6 +214,8 @@
                     <p class="text-gray-200 mt-2">Join and start your investment journey</p>
                 </div>
 
+                <!-- Message containers will be inserted here by JS -->
+
                 <!-- Registration Form -->
                 <form id="register-form" class="space-y-6">
                     <!-- Username Input -->
@@ -219,6 +228,7 @@
                             <input
                                     type="text"
                                     id="username"
+                                    name="username"
                                     class="w-full pl-4 pr-10 py-3 bg-background/50 border border-tertiary/50 rounded-lg focus:outline-none input-focus-effect"
                                     placeholder="investorjohn"
                                     required
@@ -240,6 +250,7 @@
                             <input
                                     type="email"
                                     id="register-email"
+                                    name="email"
                                     class="w-full pl-4 pr-10 py-3 bg-background/50 border border-tertiary/50 rounded-lg focus:outline-none input-focus-effect"
                                     placeholder="name@example.com"
                                     required
@@ -260,6 +271,7 @@
                             <input
                                     type="password"
                                     id="register-password"
+                                    name="password"
                                     class="w-full pl-4 pr-10 py-3 bg-background/50 border border-tertiary/50 rounded-lg focus:outline-none input-focus-effect"
                                     placeholder="••••••••"
                                     required
@@ -281,6 +293,7 @@
                             <input
                                     type="password"
                                     id="confirm-password"
+                                    name="confirm-password"
                                     class="w-full pl-4 pr-10 py-3 bg-background/50 border border-tertiary/50 rounded-lg focus:outline-none input-focus-effect"
                                     placeholder="••••••••"
                                     required
@@ -296,6 +309,7 @@
                         <button
                                 type="submit"
                                 class="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-light transition-colors duration-300 btn-hover-effect flex items-center justify-center"
+                                id="register-button"
                         >
                             <i class="fas fa-user-plus mr-2"></i>
                             Create Account
@@ -321,8 +335,38 @@
 <!-- Footer, from footer.html -->
 <div id="footer-container"></div>
 
+<!-- Scripts -->
 <script src="./js/loadFooter.js"></script>
+<script src="./js/SessionChecker.js"></script>
+<script src="./js/LoginEnhancements.js"></script>
+<script src="./js/DbStatusIndicator.js"></script>
 <script src="./js/AuthHandler.js"></script>
+
+<script>
+    // Add a simple connection test on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check server connectivity immediately
+        fetch('/api/test')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Server connection test successful:', data.message);
+            })
+            .catch(error => {
+                console.error('Server connection test failed:', error);
+
+                // If server is unavailable, show an error message
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'fixed top-0 left-0 right-0 bg-red-500 text-white text-center py-3 px-4 shadow-lg z-50';
+                errorMsg.innerHTML = `
+                <p class="flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Server connection failed. Please check if the server is running.
+                </p>
+            `;
+                document.body.prepend(errorMsg);
+            });
+    });
+</script>
 
 </body>
 </html>

@@ -1,4 +1,4 @@
-import { getUserProfile } from './authManager.js';
+import { getUserProfile } from './authHandler.js';
 import DatabaseManager from 'src/client/js/DatabaseManager.js';
 import NotificationSystem from './NotificationSystem.js';
 import PortfolioMetricsController from 'src/client/js/PortfolioMetricsController.js';
