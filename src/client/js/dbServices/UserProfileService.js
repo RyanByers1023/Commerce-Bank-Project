@@ -3,7 +3,7 @@ import { authService } from './AuthService.js';
 import { stockService } from './StockService.js';
 import { simulationService } from './SimulationService.js';
 import DatabaseService from './DatabaseService.js';
-import Portfolio from '../Portfolio.js';
+import Portfolio from './Portfolio.js';
 
 /**
  * Central service for managing the user profile, portfolio, and stocks
@@ -307,6 +307,16 @@ export default class UserProfileService {
         if (!stock || isNaN(quantity) || quantity <= 0 || quantity > 10) {
             return {
                 success: false,
+                message: `Failed to buy ${quantity} shares of ${stock ? stock.symbol : 'unknown'}: Invalid inputs`
+            };
+        }
+
+        const totalCost = quantity * stock.marketPrice;
+
+        // Check if user has enough cash
+        if (totalCost > this.portfolio.balance) {
+            return {
+                success: false,
                 message: `Failed to buy ${quantity} shares of ${stock.symbol}: Insufficient funds`
             };
         }
@@ -339,7 +349,7 @@ export default class UserProfileService {
 
         return {
             success: true,
-            message: `Successfully bought ${quantity} shares of ${stock.symbol} for ${(stock.marketPrice * quantity).toFixed(2)}`
+            message: `Successfully bought ${quantity} shares of ${stock.symbol} for $${(stock.marketPrice * quantity).toFixed(2)}`
         };
     }
 
@@ -385,7 +395,7 @@ export default class UserProfileService {
 
         return {
             success: true,
-            message: `Successfully sold ${quantity} shares of ${stock.symbol} for ${(stock.marketPrice * quantity).toFixed(2)}`
+            message: `Successfully sold ${quantity} shares of ${stock.symbol} for $${(stock.marketPrice * quantity).toFixed(2)}`
         };
     }
 
@@ -465,14 +475,3 @@ export default class UserProfileService {
 // Create singleton instance
 const userProfileService = new UserProfileService();
 export { userProfileService };
-    ? stock.symbol : 'unknown'}: Invalid inputs`
-            };
-        }
-        
-        const totalCost = quantity * stock.marketPrice;
-        
-        // Check if user has enough cash
-        if (totalCost > this.portfolio.balance) {
-            return {
-                success: false,
-                message: `Failed to buy ${quantity} shares of ${stock
