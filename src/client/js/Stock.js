@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 
 export default class Stock {
     //TODO: this is a potential vulnerability apparently (Passing apikey/host via constructor)

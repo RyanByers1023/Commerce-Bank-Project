@@ -3,12 +3,14 @@ import Stock from 'src/client/js/Stock';
 export default class StockDataService {
     constructor() {
         // Default options
+        this.url = 'https://yahoo-finance15.p.rapidapi.com/api/v1/markets/quote?ticker=AAPL&type=STOCKS';
         this.options = {
-            useRealApi: false,     // Set to true to use real API (requires API key)
-            apiKey: 'demo-key',    // API key for real data (not used in demo)
-            apiHost: 'demo-host',  // API host for real data (not used in demo)
-            cacheExpiration: 3600  // Cache expiration in seconds
-        };
+            method: 'GET',
+            headers: {
+                'x-rapidapi-key': '43c4bdb7a0mshac6db6fb0a5241ep1a044bjsn071e9eadf8a3',
+                'x-rapidapi-host': 'yahoo-finance15.p.rapidapi.com'
+            }
+        }
 
         // Stock data cache
         this.stockCache = new Map();
