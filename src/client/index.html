@@ -1,74 +1,159 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulator Splash Page</title>
+    <title>InvestEd Stock Market Simulator</title>
     <link href="./css/styles.css" rel="stylesheet">
-    <script src = "./js/LoadTailwindConfigs.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            light: '#2EF090',
+                            DEFAULT: '#46C586',
+                            dark: '#519B76'
+                        },
+                        secondary: '#4D705F',
+                        tertiary: '#5E8A75',
+                        background: '#28332D'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #28332D 0%, #3D4B44 100%);
+        }
+        .card-hover {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+    </style>
 </head>
-<body class="bg-background text-white">
+<body class="gradient-bg text-white font-sans">
 
-<!-- create a Navbar Placeholder -->
 <div id="navbar-container"></div>
 
 <!-- Load the Navbar -->
 <script src="./js/Navbar.js"></script>
-    <!-- Main Content Container -->
-    <div class="flex items-center justify-center min-h-screen pt-16 pb-10 px-4">
-        <!-- Content Wrapper -->
-        <div class="flex flex-col items-center space-y-8 w-full max-w-lg">
-            <!-- Main Content Box -->
-            <div class="text-center bg-secondary p-8 rounded-lg shadow-lg w-full">
-                <h1 class="text-3xl font-bold mb-6">The InvestED Stock Market Simulator</h1>
 
-                <!-- Logo/Icon Placeholder -->
-                <div class="mb-6">
+<!-- Hero Section -->
+<div class="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-5xl mx-auto">
+        <div class="text-center">
+            <h1 class="text-4xl sm:text-5xl font-bold text-white mb-4 leading-tight">InvestEd Stock Market Simulator</h1>
+            <p class="text-xl text-gray-300 max-w-2xl mx-auto mb-8">Learn to trade like a pro with real-time market simulation. Build your portfolio and track your progress without risking real money.</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4 mb-16">
+                <a href="login.html" class="px-8 py-3 bg-primary rounded-lg hover:bg-primary-dark transition duration-200 text-lg font-medium">Login/Create An Account</a>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- Main Content -->
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+    <!-- What Does It Do Section -->
+    <div class="bg-secondary/90 rounded-2xl shadow-xl overflow-hidden mb-16">
+        <div class="p-8 sm:p-10">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold mb-4">What does this simulator do?</h2>
+                <p class="text-gray-200 max-w-3xl mx-auto">Our simulator provides a risk-free environment to practice trading stocks with realistic market conditions and events.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-background/40 p-6 rounded-xl card-hover">
+                    <div class="text-primary-light text-3xl mb-4">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Real-time Simulation</h3>
+                    <p class="text-gray-300">Experience market events that affect companies, sectors, and the entire market in real time.</p>
                 </div>
-
-                <!-- Login & Register Buttons -->
-                <div class="flex flex-col sm:flex-row sm:justify-center space-y-3 sm:space-y-0 sm:space-x-4">
-                    <a href="./login.html" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition duration-200">Login</a>
-                    <a href="./register.html" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition duration-200">Make an account</a>
+                <div class="bg-background/40 p-6 rounded-xl card-hover">
+                    <div class="text-primary-light text-3xl mb-4">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Portfolio Tracking</h3>
+                    <p class="text-gray-300">Monitor your investments with detailed analytics and performance metrics.</p>
+                </div>
+                <div class="bg-background/40 p-6 rounded-xl card-hover">
+                    <div class="text-primary-light text-3xl mb-4">
+                        <i class="fas fa-save"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Progress Saving</h3>
+                    <p class="text-gray-300">Your portfolio and market state are automatically saved and accessible from anywhere.</p>
                 </div>
             </div>
-
-            <!-- About Box: -->
-            <div class="bg-tertiary p-6 rounded-lg shadow-md w-full text-center">
-                <h2 class="text-xl font-semibold mb-2">What does this simulator do?</h2>
-                <p class="text-sm text-gray-200 mb-4">Learn how the simulator functions.</p>
-                <a href="about.html" class="inline-block px-5 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition duration-200">How does it work?</a>
+            <div class="text-center mt-8">
+                <a href="about.html" class="inline-flex items-center px-6 py-3 bg-primary/90 text-white rounded-lg hover:bg-primary transition duration-200">
+                    Learn how it works
+                    <i class="fas fa-arrow-right ml-2"></i>
+                </a>
             </div>
-
-            <!-- Features Section -->
-            <img src="img/sim_demo.jpg" alt="Description" class="w-128 h-auto rounded-lg shadow-md" />
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                <div class="bg-secondary/80 p-4 rounded-lg text-center">
-                    <h3 class="font-semibold mb-2">Real-time Simulator</h3>
-                    <p class="text-sm">Simulated company-wide, sector-wide, and even market-wide events occur in real time.</p>
-                </div>
-                <div class="bg-secondary/80 p-4 rounded-lg text-center">
-                    <h3 class="font-semibold mb-2">Portfolio Tracking</h3>
-                    <p class="text-sm">Monitor how much money you are making (or losing) on the stocks you choose to purchase.</p>
-                    <p class="text-sm">With an account with us, both your portfolio and the state of your simulated market are saved, and can be easily returned to at any time!</p>
-                </div>
-            </div>
-
-            <!-- About Us Box: -->
-            <div class="bg-tertiary p-6 rounded-lg shadow-md w-full text-center">
-                <h2 class="text-xl font-semibold mb-2">Who made this?</h2>
-                <p class="text-sm text-gray-200 mb-4">We are Team Last Minute. We have four members: Logan, Hayley, Ryan, and Ibraham. This is our software engineering capstone project; this project's guidelines were provided via a collaboration between Commerce Bank and The University of Missouri-Kansas City.</p>
-                <p class="text-sm text-gray-200 mb-4">Even with this being a college project, our hope still is that you are able to extract some meaningful trading information from your time with our simulator!</p>
-            </div>
-
         </div>
     </div>
 
-    <!-- Footer, from footer.html -->
-    <div id="footer-container"></div>
+    <!-- About Us Section -->
+    <div class="bg-tertiary/90 rounded-2xl shadow-xl overflow-hidden">
+        <div class="p-8 sm:p-10">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold mb-4">Who made this?</h2>
+            </div>
+            <div class="bg-background/30 p-6 rounded-xl max-w-3xl mx-auto">
+                <p class="text-gray-200 mb-4">We are <span class="font-semibold">Team Last Minute</span>, a group of four members: Logan, Hayley, Ryan, and Ibraham. This simulator is our software engineering capstone project, developed in collaboration between Commerce Bank and The University of Missouri-Kansas City.</p>
+                <p class="text-gray-200">Even as a college project, our goal is to provide a meaningful learning experience that helps you understand trading mechanics and market dynamics in a risk-free environment.</p>
+            </div>
+            <div class="flex justify-center mt-8">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 max-w-3xl">
+                    <div class="text-center">
+                        <div class="w-16 h-16 md:w-20 md:h-20 mx-auto bg-background/40 rounded-full flex items-center justify-center mb-2">
+                            <i class="fas fa-user text-primary-light text-xl"></i>
+                        </div>
+                        <p class="font-medium">Logan</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 md:w-20 md:h-20 mx-auto bg-background/40 rounded-full flex items-center justify-center mb-2">
+                            <i class="fas fa-user text-primary-light text-xl"></i>
+                        </div>
+                        <p class="font-medium">Hayley</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 md:w-20 md:h-20 mx-auto bg-background/40 rounded-full flex items-center justify-center mb-2">
+                            <i class="fas fa-user text-primary-light text-xl"></i>
+                        </div>
+                        <p class="font-medium">Ryan</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 md:w-20 md:h-20 mx-auto bg-background/40 rounded-full flex items-center justify-center mb-2">
+                            <i class="fas fa-user text-primary-light text-xl"></i>
+                        </div>
+                        <p class="font-medium">Ibrahim</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <script src="./js/loadFooter.js"></script>
+<!-- Footer, from footer.html -->
+<div id="footer-container"></div>
 
+<script src="./js/loadFooter.js"></script>
+
+<script>
+</script>
 </body>
 </html>
+
+
