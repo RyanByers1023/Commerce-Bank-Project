@@ -614,100 +614,142 @@ class Stock {
     }
 }
 
-// NewsGenerator class (minimal implementation)
+/* ────────────────────────────────────────────────────────────────
+   NewsGenerator  v2
+   — calls  POST /api/news/generate  for a GPT headline
+   — falls back to your older random-headline logic on failure
+   — bumps each stock’s currentSentiment by the “weight” returned
+────────────────────────────────────────────────────────────────── */
 class NewsGenerator {
     constructor(userProfile) {
-        this.userProfile = userProfile;
+        this.userProfile   = userProfile;
         this.newsContainer = document.getElementById('news-container');
-        this.interval = null;
-        this.newsHistory = [];
+        this.interval      = null;
+
+        /* cache AI headlines for 60 s so you don’t hammer your quota */
+        this.cache          = { items: [], ts: 0 };
+        this.cacheDuration  = 60_000;
     }
 
-    start(interval = 10000) {
-        // Clear any existing interval
-        if (this.interval) {
-            clearInterval(this.interval);
-        }
-
-        // Generate initial news
-        this.generateNews();
-
-        // Set up interval for news generation
-        this.interval = setInterval(() => {
-            this.generateNews();
-        }, interval);
+    /* public ----------------------------------------------------- */
+    start(interval = 90_000) {
+        this.stop();
+        this.publishNews();                       // first headline immediately
+        this.interval = setInterval(() => this.publishNews(), interval);
     }
 
     stop() {
-        if (this.interval) {
-            clearInterval(this.interval);
-            this.interval = null;
+        if (this.interval) clearInterval(this.interval);
+        this.interval = null;
+    }
+
+    /* core ------------------------------------------------------- */
+    async publishNews() {
+        try {
+            const item = await this.getAIHeadline();
+            this.applyImpact(item);           // nudge the stock’s sentiment
+            this.render(item);
+        } catch (err) {
+            console.warn('AI news failed, fallback headline →', err);
+            const fallback = this.createLegacyHeadline();
+            this.applyImpact(fallback);
+            this.render(fallback);
         }
     }
 
-    generateNews() {
-        if (!this.userProfile || !this.userProfile.stocksAddedToSim || !this.newsContainer) return;
-
-        // Get random stock
-        const stocks = this.userProfile.stocksAddedToSim;
-        const stock = stocks[Math.floor(Math.random() * stocks.length)];
-
-        // Create news item
-        const isPositive = Math.random() > 0.5;
-        const headlines = isPositive ?
-            [
-                `${stock.companyName} Reports Strong Quarterly Results`,
-                `Analysts Upgrade ${stock.companyName} Rating`,
-                `${stock.companyName} Announces New Product Line`,
-                `${stock.companyName} Exceeds Market Expectations`
-            ] :
-            [
-                `${stock.companyName} Faces Challenges in Quarterly Report`,
-                `Analysts Downgrade ${stock.companyName}`,
-                `${stock.companyName} Dealing with Supply Chain Issues`,
-                `${stock.companyName} Stock Under Pressure After Announcement`
-            ];
-
-        const headline = headlines[Math.floor(Math.random() * headlines.length)];
-
-        // Update stock sentiment based on news
-        if (stock) {
-            stock.currentSentiment += isPositive ? 0.05 : -0.05;
-            // Clamp sentiment between -1 and 1
-            stock.currentSentiment = Math.max(-1, Math.min(1, stock.currentSentiment));
+    /* ── SERVER CALL ───────────────────────────────────────────── */
+    async getAIHeadline() {
+        /* use cached response if < 60 s old */
+        const now = Date.now();
+        if (now - this.cache.ts < this.cacheDuration && this.cache.items.length) {
+            return this.cache.items.shift();          // reuse cached headline
         }
 
-        // Create news element
+        const res = await fetch('/api/news/generate', { method: 'POST' });
+        if (!res.ok) throw new Error(`API status ${res.status}`);
+
+        const { story, company, weight } = await res.json();
+        const item = {
+            headline : story,
+            company,
+            weight,
+            timestamp: new Date()
+        };
+
+        /* store in cache in case UI asks again within 60 s */
+        this.cache = { items: [item], ts: now };
+        return item;
+    }
+
+    /* ── FALLBACK ──────────────────────────────────────────────── */
+    createLegacyHeadline() {
+        const stocks = this.userProfile.stocksAddedToSim;
+        const stock  = stocks[Math.floor(Math.random() * stocks.length)];
+
+        const positive = Math.random() > 0.5;
+        const list = positive
+            ? [`${stock.companyName} Reports Strong Quarterly Results`,
+                `Analysts Upgrade ${stock.companyName}`,
+                `${stock.companyName} Announces New Product Line`,
+                `${stock.companyName} Exceeds Market Expectations`]
+            : [`${stock.companyName} Faces Challenges in Quarterly Report`,
+                `Analysts Downgrade ${stock.companyName}`,
+                `${stock.companyName} Dealing with Supply-Chain Issues`,
+                `${stock.companyName} Stock Under Pressure After Announcement`];
+
+        return {
+            headline : list[Math.floor(Math.random() * list.length)],
+            company  : stock.symbol,
+            weight   : positive ? 0.05 : -0.05,
+            timestamp: new Date()
+        };
+    }
+
+    /* ── SIDE-EFFECTS ──────────────────────────────────────────── */
+    applyImpact({ company, weight }) {
+        const stock = this.userProfile.stocksAddedToSim
+            .find(s => s.symbol === company);
+        if (stock) {
+            stock.currentSentiment += weight;
+            stock.currentSentiment = Math.max(-1, Math.min(1, stock.currentSentiment));
+        }
+    }
+
+    /* ── UI RENDERING ──────────────────────────────────────────── */
+    render({ headline, weight, timestamp }) {
+        if (!this.newsContainer) return;
+
+        const isPositive = weight > 0.001;
+        const isNegative = weight < -0.001;
+
         const newsItem = document.createElement('div');
         newsItem.className = 'py-2 border-b border-tertiary/30 pb-4';
         newsItem.innerHTML = `
-            <div class="flex items-start">
-                <div class="p-2 rounded-lg ${isPositive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} mr-3">
-                    <i class="fas ${isPositive ? 'fa-chart-line' : 'fa-chart-line-down'}"></i>
-                </div>
-                <div>
-                    <span class="text-xs text-gray-400 block mb-1">Just now</span>
-                    <p class="text-sm">${headline}</p>
-                </div>
-            </div>
-        `;
+      <div class="flex items-start">
+        <div class="p-2 rounded-lg ${
+            isPositive ? 'bg-green-100 text-green-800'
+                : isNegative ? 'bg-red-100 text-red-800'
+                    : 'bg-background/40 text-primary-light'
+        } mr-3">
+          <i class="fas fa-newspaper"></i>
+        </div>
+        <div>
+          <span class="text-xs text-gray-400 block mb-1">
+            ${timestamp.toLocaleTimeString()}
+          </span>
+          <p class="text-sm">${headline}</p>
+        </div>
+      </div>`;
 
-        // Add to news container
-        if (this.newsContainer.firstChild) {
-            this.newsContainer.insertBefore(newsItem, this.newsContainer.firstChild);
-        } else {
-            this.newsContainer.appendChild(newsItem);
-        }
+        this.newsContainer.prepend(newsItem);
 
-        // Keep only the most recent news items
-        const newsItems = this.newsContainer.querySelectorAll('.py-2');
-        if (newsItems.length > 5) {
-            for (let i = 5; i < newsItems.length; i++) {
-                newsItems[i].remove();
-            }
+        /* keep only the five newest items */
+        while (this.newsContainer.children.length > 5) {
+            this.newsContainer.lastChild.remove();
         }
     }
 }
+/* ────────────────────────────────────────────────────────────── */
 
 // PortfolioUIController class (minimal implementation for backward compatibility)
 class PortfolioUIController {

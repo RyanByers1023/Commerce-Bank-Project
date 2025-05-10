@@ -8,6 +8,8 @@ const helmet    = require('helmet');
 const morgan    = require('morgan');
 const db        = require('./middleware/db');  // make sure this connects
 
+
+const newsRoutes        = require('./routes/news.js');
 const authRoutes        = require('./routes/auth');
 const userRoutes        = require('./routes/users');
 const portfolioRoutes   = require('./routes/portfolios');
@@ -54,6 +56,7 @@ app.use('/api/portfolios',  portfolioRoutes);
 app.use('/api/stocks',      stockRoutes);
 app.use('/api/transactions',transactionRoutes);
 app.use('/api/settings',    settingsRoutes);
+app.use('/api/news', newsRoutes);      //  →  POST /api/news/generate
 
 // Simple liveness check
 app.get('/api/test', (_, res) => res.json({ message: 'Server is running!' }));

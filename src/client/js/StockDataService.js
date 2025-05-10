@@ -7,8 +7,8 @@ export default class StockDataService {
         this.options = {
             method: 'GET',
             headers: {
-                'x-rapidapi-key': '43c4bdb7a0mshac6db6fb0a5241ep1a044bjsn071e9eadf8a3',
-                'x-rapidapi-host': 'yahoo-finance15.p.rapidapi.com'
+                'x-rapidapi-key': process.env.RAPID_API_KEY,
+                'x-rapidapi-host': process.env.RAPID_API_HOST,
             }
         }
 
@@ -28,6 +28,9 @@ export default class StockDataService {
             { symbol: 'JPM', name: 'JPMorgan Chase & Co.', sector: 'Financial Services', price: 186.89 },
             { symbol: 'DIS', name: 'The Walt Disney Company', sector: 'Entertainment', price: 111.67 }
         ];
+
+        this.newsCacheMs = 60_000;         // 1 min
+        this._newsCache  = { headline: [], ts: 0 };
     }
 
     /**
@@ -134,7 +137,7 @@ export default class StockDataService {
         };
 
         // Create a new stock object
-        const stock = {
+        return {
             symbol: preset.symbol,
             companyName: preset.name,
             sector: preset.sector,
@@ -151,7 +154,7 @@ export default class StockDataService {
             priceHistory: this._generatePriceHistory(preset.price, 50),
 
             // Update price method
-            updatePrice: function() {
+            updatePrice: function () {
                 // Calculate price change
                 const volatilityFactor = this.volatility || 0.015;
                 const sentimentFactor = this.currentSentiment || 0;
@@ -185,7 +188,7 @@ export default class StockDataService {
             },
 
             // Get day change
-            getDayChange: function() {
+            getDayChange: function () {
                 return {
                     value: this.marketPrice - this.openPrice,
                     percent: ((this.marketPrice / this.openPrice) - 1) * 100
@@ -193,12 +196,10 @@ export default class StockDataService {
             },
 
             // Get formatted price
-            getFormattedPrice: function() {
+            getFormattedPrice: function () {
                 return `$${this.marketPrice.toFixed(2)}`;
             }
         };
-
-        return stock;
     }
 
     /**
@@ -249,23 +250,63 @@ export default class StockDataService {
      * Get market news data (mock implementation)
      * @returns {Array<Object>} - Array of news items
      */
-    getMarketNews() {
-        // Sample news items
-        const newsItems = [
-            { headline: "Markets Rally on Economic News", type: "positive", impact: 0.02 },
-            { headline: "Fed Signals Interest Rate Changes", type: "neutral", impact: 0.00 },
-            { headline: "Tech Sector Boosted by New Regulations", type: "positive", impact: 0.03 },
-            { headline: "Energy Stocks Fall on Supply Concerns", type: "negative", impact: -0.02 },
-            { headline: "Consumer Confidence Index Rises", type: "positive", impact: 0.01 },
-            { headline: "Healthcare Stocks React to Policy Changes", type: "neutral", impact: 0.00 }
-        ];
+    /**
+     * Return up-to-three news objects.  Tries OpenAI first; if that
+     * fails, falls back to static demo headlines.
+     *
+     * Each item:  { headline, company, weight, timestamp }
+     */
+    async getMarketNews() {
+        /* 1 ▸ re-use cached headlines for 60 s to protect your quota */
+        const now = Date.now();
+        if (now - this._newsCache.ts < this.newsCacheMs &&
+            this._newsCache.headline.length) {
+            return this._newsCache.headline;
+        }
 
-        // Return a random subset of news
-        return newsItems.sort(() => 0.5 - Math.random()).slice(0, 3).map(item => {
-            return {
-                ...item,
+        try {
+            /* 2 ▸ Ask the server for ONE fresh headline */
+            const aiItem = await this.getAIHeadline();   //  { story, company, weight }
+
+            const enriched = {
+                headline : aiItem.story,
+                company  : aiItem.company,          // 'AAPL', 'MSFT', …
+                weight   : aiItem.weight,           // –1.000 … +1.000
                 timestamp: new Date()
             };
-        });
+
+            /* 3 ▸ cache & return (wrap in array to keep signature) */
+            this._newsCache = { headline: [enriched], ts: now };
+            return [enriched];
+
+        } catch (e) {
+            console.warn('AI news unavailable, falling back →', e);
+            /* 4 ▸ use legacy random headlines (your old logic) */
+            const fallback = this._getLegacyNews();
+            this._newsCache = { headline: fallback, ts: now };
+            return fallback;
+        }
+    }
+
+    /** Low-level fetch that hits your Express route */
+    async getAIHeadline() {
+        const res = await fetch('/api/news/generate', { method: 'POST' });
+        if (!res.ok) throw new Error(`News API ${res.status}`);
+        return res.json();   // { story, company, weight }
+    }
+
+    /** exactly the random array you had before */
+    _getLegacyNews() {
+        const legacy = [
+            { headline: 'Markets Rally on Economic News', company: null, weight: 0.02 },
+            { headline: 'Fed Signals Interest-Rate Changes', company: null, weight: 0.00 },
+            { headline: 'Tech Sector Boosted by New Regulations', company: null, weight: 0.03 },
+            { headline: 'Energy Stocks Fall on Supply Concerns', company: null, weight: -0.02 },
+            { headline: 'Consumer Confidence Index Rises', company: null, weight: 0.01 },
+            { headline: 'Healthcare Stocks React to Policy Changes', company: null, weight: 0.00 }
+        ];
+        return legacy.sort(() => 0.5 - Math.random())
+            .slice(0, 3)
+            .map(item => ({ ...item, timestamp: new Date() }));
     }
 }

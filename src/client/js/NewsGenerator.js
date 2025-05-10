@@ -1,157 +1,165 @@
 // NewsGenerator.js
-// This is a replacement for your current NewsGenerator.js file
-// It uses the browser's built-in fetch API instead of node-fetch
+// Requires the Express route shown earlier:  POST /api/news/generate
+// - Ryan Byers — 2025-05-09
 
 export default class NewsGenerator {
     constructor(userProfile) {
-        this.userProfile = userProfile;
-        this.newsContainer = document.getElementById('newsContainer');
-        this.newsInterval = null;
-        this.newsTopics = [
+        this.userProfile  = userProfile;                         // holds stocksAddedToSim
+        this.newsContainer = document.getElementById('news-container');
+        this.newsInterval  = null;
+
+        /* topics and text snippets used ONLY when we fall back to client-side stories */
+        this.fallbackTopics = [
             'earnings report', 'new product launch', 'partnership',
             'management change', 'analyst rating', 'market trend',
             'regulatory news', 'competition', 'industry outlook'
         ];
     }
 
-    start(interval = 5000) {
-        // Clear any existing interval
-        if (this.newsInterval) {
-            clearInterval(this.newsInterval);
-        }
-
-        // Generate initial news
-        this.generateNews();
-
-        // Set interval for news generation
-        this.newsInterval = setInterval(() => {
-            this.generateNews();
-        }, interval);
+    /* ────────────────────────────────────────────────────────────────
+       HIGH-LEVEL CONTROL
+    ─────────────────────────────────────────────────────────────────− */
+    start(intervalMs = 90_000) {
+        if (this.newsInterval) clearInterval(this.newsInterval);
+        this.publishNews();                         // first headline immediately
+        this.newsInterval = setInterval(() => this.publishNews(), intervalMs);
     }
 
     stop() {
-        if (this.newsInterval) {
-            clearInterval(this.newsInterval);
-            this.newsInterval = null;
-        }
+        if (this.newsInterval) clearInterval(this.newsInterval);
+        this.newsInterval = null;
     }
 
-    async generateNews() {
+    /* ────────────────────────────────────────────────────────────────
+       FETCH (or fabricate) A NEWS ITEM, THEN DISPLAY IT
+    ─────────────────────────────────────────────────────────────────− */
+    async publishNews() {
         try {
-            // Get a random stock from the user's portfolio
-            const stocks = this.userProfile.stocksAddedToSim;
-            if (!stocks || stocks.length === 0) return;
-
-            const randomStock = stocks[Math.floor(Math.random() * stocks.length)];
-
-            // Generate news content
-            const newsItem = this.createNewsItem(randomStock);
-
-            // Update stock sentiment based on news
-            this.updateStockSentiment(randomStock, newsItem.sentiment);
-
-            // Display news
+            const newsItem = await this.fetchNewsFromAPI();
+            this.applyImpact(newsItem);
             this.displayNews(newsItem);
-
-        } catch (error) {
-            console.error('Error generating news:', error);
+        } catch (err) {
+            console.warn('News API failed, falling back to local story →', err);
+            const fallbackItem = this.createLocalNewsItem();
+            this.applyImpact(fallbackItem);
+            this.displayNews(fallbackItem);
         }
     }
 
-    createNewsItem(stock) {
-        // Select a random news topic
-        const topic = this.newsTopics[Math.floor(Math.random() * this.newsTopics.length)];
+    /* ────────────────────────────────────────────────────────────────
+       1)  GET NEWS FROM /api NEWS ROUTE
+    ─────────────────────────────────────────────────────────────────− */
+    async fetchNewsFromAPI() {
+        const res = await fetch('/api/news/generate', { method: 'POST' });
+        if (!res.ok) throw new Error(`status ${res.status}`);
 
-        // Determine if news is positive, negative, or neutral
-        const sentimentValue = Math.random();
-        let sentiment, headline, content;
-
-        if (sentimentValue > 0.6) {
-            // Positive news (40% chance)
-            sentiment = 'positive';
-
-            switch(topic) {
-                case 'earnings report':
-                    headline = `${stock.companyName} (${stock.symbol}) Beats Earnings Expectations`;
-                    content = `${stock.companyName} reported quarterly earnings above analyst expectations, with revenue growth of ${(Math.random() * 20 + 5).toFixed(1)}% year-over-year.`;
-                    break;
-                case 'new product launch':
-                    headline = `${stock.companyName} Announces Innovative New Product`;
-                    content = `${stock.companyName} unveiled a groundbreaking new product that analysts expect will significantly boost market share in the coming quarters.`;
-                    break;
-                default:
-                    headline = `${stock.companyName} Receives Positive Industry Recognition`;
-                    content = `${stock.companyName} has been recognized for excellence in the ${stock.sector} sector, boosting investor confidence.`;
-            }
-
-        } else if (sentimentValue > 0.3) {
-            // Neutral news (30% chance)
-            sentiment = 'neutral';
-
-            headline = `${stock.companyName} (${stock.symbol}) Announces Strategic Changes`;
-            content = `${stock.companyName} is implementing organizational changes to adapt to current market conditions. Analysts remain divided on the potential impact.`;
-
-        } else {
-            // Negative news (30% chance)
-            sentiment = 'negative';
-
-            switch(topic) {
-                case 'earnings report':
-                    headline = `${stock.companyName} (${stock.symbol}) Misses Earnings Targets`;
-                    content = `${stock.companyName} reported disappointing quarterly results, with earnings per share below analyst expectations.`;
-                    break;
-                case 'competition':
-                    headline = `${stock.companyName} Faces New Competitive Pressure`;
-                    content = `New market entrants are challenging ${stock.companyName}'s position in key markets, potentially impacting future revenue.`;
-                    break;
-                default:
-                    headline = `${stock.companyName} Faces Industry Headwinds`;
-                    content = `Recent developments in the ${stock.sector} sector may pose challenges for ${stock.companyName}'s growth strategy.`;
-            }
-        }
+        const { story, company, weight } = await res.json();     // { story, company, weight }
+        const stock = this.lookupStock(company);
 
         return {
-            stock: stock,
-            headline: headline,
-            content: content,
-            timestamp: new Date(),
-            sentiment: sentiment === 'positive' ? 0.02 : sentiment === 'negative' ? -0.02 : 0
+            headline  : story,
+            content   : '',                                        // one-line API response is the headline
+            stock,
+            timestamp : new Date(),
+            sentiment : weight                                     // already in –1 → +1 range
         };
     }
 
-    updateStockSentiment(stock, sentimentChange) {
-        // Update the stock's sentiment which will affect price in the simulation
-        if (stock) {
-            stock.currentSentiment = (stock.currentSentiment || 0) + sentimentChange;
-        }
+    lookupStock(ticker) {
+        const { stocksAddedToSim } = this.userProfile;
+        const hit = stocksAddedToSim.find(s => s.symbol === ticker);
+        if (hit) return hit;
+
+        // If the news is for a company the user doesn’t hold yet, create a stub so UI can still show it.
+        return { symbol: ticker, companyName: ticker, sector: '', currentSentiment: 0 };
     }
 
-    displayNews(newsItem) {
+    /* ────────────────────────────────────────────────────────────────
+       2)  CLIENT-SIDE FALLBACK HEADLINES (original behaviour)
+    ─────────────────────────────────────────────────────────────────− */
+    createLocalNewsItem() {
+        const stocks = this.userProfile.stocksAddedToSim;
+        if (!stocks.length) throw new Error('No stocks in sim for fallback news');
+
+        const stock = stocks[Math.floor(Math.random() * stocks.length)];
+        const topic = this.fallbackTopics[Math.floor(Math.random() * this.fallbackTopics.length)];
+
+        const roll = Math.random();
+        let headline, content, sentiment;
+
+        if (roll > 0.6) {                   // positive 40 %
+            sentiment = +0.02;
+            switch (topic) {
+                case 'earnings report':
+                    headline = `${stock.companyName} (${stock.symbol}) Beats Earnings Expectations`;
+                    content  = `${stock.companyName} reported quarterly earnings above analyst expectations, with revenue up ${(Math.random()*20+5).toFixed(1)} %.`;
+                    break;
+                case 'new product launch':
+                    headline = `${stock.companyName} Unveils Innovative New Product`;
+                    content  = `${stock.companyName} introduced a groundbreaking product analysts believe will lift market share.`;
+                    break;
+                default:
+                    headline = `${stock.companyName} Wins Industry Accolades`;
+                    content  = `${stock.companyName} has been recognised for excellence in the ${stock.sector} sector.`;
+            }
+        } else if (roll > 0.3) {            // neutral 30 %
+            sentiment = 0;
+            headline  = `${stock.companyName} (${stock.symbol}) Announces Strategic Changes`;
+            content   = `${stock.companyName} is restructuring to adapt to evolving market conditions. Analysts are split on the impact.`;
+        } else {                            // negative 30 %
+            sentiment = -0.02;
+            switch (topic) {
+                case 'earnings report':
+                    headline = `${stock.companyName} (${stock.symbol}) Misses Earnings Targets`;
+                    content  = `${stock.companyName} posted weaker-than-expected quarterly results, disappointing investors.`;
+                    break;
+                case 'competition':
+                    headline = `${stock.companyName} Faces New Competitive Pressure`;
+                    content  = `Fresh entrants are chipping away at ${stock.companyName}’s market share, raising concerns about growth.`;
+                    break;
+                default:
+                    headline = `${stock.companyName} Faces Industry Headwinds`;
+                    content  = `Developments in the ${stock.sector} sector could hamper ${stock.companyName}’s expansion plans.`;
+            }
+        }
+
+        return { stock, headline, content, timestamp: new Date(), sentiment };
+    }
+
+    /* ────────────────────────────────────────────────────────────────
+       3)  APPLY IMPACT TO STOCK SENTIMENT (for your price logic)
+    ─────────────────────────────────────────────────────────────────− */
+    applyImpact({ stock, sentiment }) {
+        if (!stock) return;
+        stock.currentSentiment = (stock.currentSentiment || 0) + sentiment;
+    }
+
+    /* ────────────────────────────────────────────────────────────────
+       4)  RENDER THE NEWS IN THE PANEL
+    ─────────────────────────────────────────────────────────────────− */
+    displayNews({ stock, headline, content, timestamp, sentiment }) {
         if (!this.newsContainer) return;
 
-        // Create news element
-        const newsElement = document.createElement('div');
-        newsElement.className = `news-item ${newsItem.sentiment}`;
+        const el = document.createElement('div');
+        el.className = `news-item ${
+            sentiment >  0.01 ? 'positive' :
+                sentiment < -0.01 ? 'negative' : 'neutral'
+        }`;
 
-        // Format timestamp
-        const timeString = newsItem.timestamp.toLocaleTimeString();
+        el.innerHTML = `
+      <div class="news-header flex justify-between">
+        <span class="news-ticker font-bold">${stock.symbol}</span>
+        <span class="news-time text-xs text-gray-400">${timestamp.toLocaleTimeString()}</span>
+      </div>
+      <h3 class="font-medium">${headline}</h3>
+      ${content ? `<p class="text-sm">${content}</p>` : ''}
+    `;
 
-        // Add content to news element
-        newsElement.innerHTML = `
-            <div class="news-header">
-                <span class="news-ticker">${newsItem.stock.symbol}</span>
-                <span class="news-time">${timeString}</span>
-            </div>
-            <h3>${newsItem.headline}</h3>
-            <p>${newsItem.content}</p>
-        `;
+        this.newsContainer.prepend(el);
 
-        // Add to news container (at the top)
-        this.newsContainer.insertBefore(newsElement, this.newsContainer.firstChild);
-
-        // Limit number of news items (keep the 10 most recent)
+        // keep only the 10 newest
         while (this.newsContainer.children.length > 10) {
-            this.newsContainer.removeChild(this.newsContainer.lastChild);
+            this.newsContainer.lastChild.remove();
         }
     }
 }

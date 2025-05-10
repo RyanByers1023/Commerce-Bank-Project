@@ -267,13 +267,6 @@
                         <!-- News items will be populated dynamically -->
                         <div class="py-2 border-b border-tertiary/30 pb-4">
                             <div class="flex items-start">
-                                <div class="p-2 rounded-lg bg-background/40 text-primary-light mr-3">
-                                    <i class="fas fa-newspaper"></i>
-                                </div>
-                                <div>
-                                    <span class="text-xs text-gray-400 block mb-1">Just now</span>
-                                    <p class="text-sm">Loading market news...</p>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -287,6 +280,40 @@
 <div id="footer-container"></div>
 
 <script src="./js/loadFooter.js"></script>
+
+<script type="module">
+    /* ------------------------------------------------------------------
+       1)  Get the class
+    ------------------------------------------------------------------ */
+    import NewsGenerator from './js/NewsGenerator.js';
+
+    /* ------------------------------------------------------------------
+       2)  Build (or grab) the user profile that the sim already uses
+           — adjust this to match your real code.
+    ------------------------------------------------------------------ */
+    const userProfile = window.userProfile
+        /* if you create it elsewhere */ || {
+            /* demo stub — replace with your real user profile object */
+            stocksAddedToSim: [
+                { symbol: 'AAPL', companyName: 'Apple',  sector: 'Technology' },
+                { symbol: 'MSFT', companyName: 'Microsoft', sector: 'Technology' }
+            ]
+        };
+
+    /* ------------------------------------------------------------------
+       3)  Spin up the generator and start it
+           (90 000 ms = 90 s between headlines; tweak as you like)
+    ------------------------------------------------------------------ */
+    const newsGen = new NewsGenerator(userProfile);
+    newsGen.start(90_000);          // first headline now, then every 90 s
+
+    /* ------------------------------------------------------------------
+       4)  Wire the “Refresh” button so users can force a new headline
+    ------------------------------------------------------------------ */
+    document.querySelector('.fa-sync-alt')
+        .closest('button')
+        .addEventListener('click', () => newsGen.publishNews?.());
+</script>
 
 </body>
 </html>
