@@ -1,4 +1,4 @@
-// NewsGenerator.js
+// newsGenerator.js
 // Requires the Express route shown earlier:  POST /api/news/generate
 // - Ryan Byers — 2025-05-09
 

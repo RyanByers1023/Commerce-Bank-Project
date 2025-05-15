@@ -1,4 +1,5 @@
-// src/client/js/DatabaseService.js
+import Portfolio from "../models/portfolio";
+
 /**
  * Service for handling all database operations via API calls
  * This client-side service communicates with the server-side MySQL database
@@ -186,21 +187,6 @@ export default class DatabaseService {
     }
 
     /**
-     * Update a portfolio
-     * @param {string} username - Username
-     * @param {string} portfolioId - Portfolio ID
-     * @param {object} updateData - Data to update (name, description)
-     */
-    async updatePortfolio(username, portfolioId, updateData) {
-        try {
-            return await this.sendRequest(`portfolios/${username}/${portfolioId}`, 'PUT', updateData);
-        } catch (error) {
-            console.error('Failed to update portfolio:', error);
-            throw error;
-        }
-    }
-
-    /**
      * Reset a portfolio to initial state
      * @param {string} username - Username
      * @param {string} portfolioId - Portfolio ID
@@ -237,12 +223,34 @@ export default class DatabaseService {
      * @param {string} portfolioId - Portfolio ID to set as active
      */
     async setActivePortfolio(username, portfolioId) {
+        this.currentUser.setEarnings();
+        this.currentUser.setTotalStocksOwned();
         try {
             return await this.sendRequest(`users/${username}/active-portfolio`, 'PUT', {
                 activePortfolioId: portfolioId
             });
         } catch (error) {
             console.error('Failed to set active portfolio:', error);
+            throw error;
+        }
+    }
+
+    async updatePortfolio(username, portfolioId, portfolioData) {
+        try {
+            return await this.sendRequest(`portfolios/${username}/${portfolioId}`, 'PUT', portfolioData);
+        } catch (error) {
+            console.error('Failed to update portfolio data:', error);
+            throw error;
+        }
+    }
+
+    async saveTransactions(username, portfolioId, transactions) {
+        try {
+            return await this.sendRequest(`portfolios/${username}/${portfolioId}/transactions`, 'POST', {
+                transactions: transactions
+            });
+        } catch (error) {
+            console.error('Failed to save transactions:', error);
             throw error;
         }
     }

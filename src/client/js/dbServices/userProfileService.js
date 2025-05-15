@@ -1,9 +1,8 @@
-// src/client/js/UserProfileService.js
-import { authService } from './AuthService.js';
-import { stockService } from './StockService.js';
-import { simulationService } from './SimulationService.js';
-import DatabaseService from './DatabaseService.js';
-import Portfolio from './Portfolio.js';
+import { authService } from './authService.js';
+import { stockService } from './stockService.js';
+import DatabaseService from './databaseService.js';
+import Portfolio from '../models/portfolio.js';
+import {simulationService} from "./simulationService";
 
 /**
  * Central service for managing the user profile, portfolio, and stocks

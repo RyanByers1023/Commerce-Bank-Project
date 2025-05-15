@@ -1,9 +1,8 @@
-//will push this file later tn (it exists but it didnt push for some reason):
-import DatabaseManager from '/js/DatabaseManager.js';
+import DatabaseService from '../dbServices/databaseService.js';
 
 class Portfolio {
     //change the value passed to this constructor to change user starting money
-    constructor(initialBalance = 500.0, username) {
+    constructor(initialBalance = 500.0, username, portfolioID) {
         //give the user 500 dollars (or a provided value) to start investing with:
         this.initialBalance = initialBalance;
 
@@ -27,7 +26,7 @@ class Portfolio {
 
         this.earnings = 0.0;
 
-        this.dbManager = new DatabaseManager();
+        this.dbService = new DatabaseService();
     }
 
     //returns transaction, associated attributes detailed below:
@@ -43,29 +42,6 @@ class Portfolio {
             totalTransactionValue: stock.marketPrice * quantity, //float
             timestamp: new Date()
         };
-    }
-
-    async buyStockDB(stock, quantity) {
-        // Run existing buyStock method
-        const success = this.buyStock(stock, quantity);
-
-        if (success) {
-            // Get the last transaction (which was just created)
-            const transaction = this.transactionHistory[this.transactionHistory.length - 1];
-
-            // Record in database
-            try {
-                await this.dbManager.recordTransaction(transaction);
-                //TODO: this.username, and this.holdingsMap do not exist in this context
-                await this.dbManager.updateHoldings(this.username, this.holdingsMap);
-                await this.dbManager.saveUserProfile(this.userProfile);
-            } catch (error) {
-                console.error('Failed to record transaction:', error);
-                //TODO: Consider how to handle database failures
-            }
-        }
-
-        return success;
     }
 
     //returns a bool, true if purchase was successful, false otherwise
@@ -103,29 +79,6 @@ class Portfolio {
         return true;
     }
 
-    //TODO: refactor code -- lots of duplicate code
-    async sellStockDB(stock, quantity) {
-        // Run existing sellStock method
-        const success = this.sellStock(stock, quantity);
-
-        if (success) {
-            // Get the last transaction (which was just created)
-            const transaction = this.transactionHistory[this.transactionHistory.length - 1];
-
-            // Record in database
-            try {
-                await this.dbManager.recordTransaction(transaction);
-                await this.dbManager.updateHoldings(this.username, this.holdingsMap);
-                await this.dbManager.saveUserProfile(this.userProfile);
-            } catch (error) {
-                console.error('Failed to record transaction:', error);
-                //TODO: Consider how to handle database failures
-            }
-        }
-
-        return success;
-    }
-
     //returns a bool, true if purchase was successful, false otherwise
     sellStock(stock, quantity) {
         //quantity must be a number between 0 and the amount of this stock the user owns
@@ -155,7 +108,6 @@ class Portfolio {
         return true;
     }
 
-    //TODO: fix access to "holding.price/avgPrice" this doesn't exist
     //void, removes 'quantity' 'stock's from this.holdingsMap
     addStockToPortfolio(stock, quantity) {
         const holding = this.holdingsMap[stock.symbol];
@@ -191,9 +143,9 @@ class Portfolio {
         }
     }
 
-    getAverageMoneySpentOnStock(stockSymbol){
+    setAverageMoneySpentOnStock(stockSymbol){
         let totalMoneySpent = this.calculateTotalMoneySpentOnStock(stockSymbol);
-        return totalMoneySpent / this.holdingsMap[stockSymbol].quantity;
+        this.holdingsMap[stockSymbol].avgPrice = totalMoneySpent / this.holdingsMap[stockSymbol].quantity;
     }
 
     //returns float, helper function for getAverageStockPurchasePrice()
@@ -233,12 +185,19 @@ class Portfolio {
             transaction.symbol === stockSymbol);
     }
 
+    setTotalStocksOwned(){
+        this.totalStocksOwned = 0;
+        for (const quantity of this.holdingsMap.values()) {
+            this.totalStocksOwned += quantity;
+        }
+    }
+
     //returns void, updates this.balance (is okay to provide a negative value to subtract from the user's balance)
     addToBalance(value){
         this.balance += value;
     }
 
-    setPortfolioValue() {
+    __setPortfolioValue() {
         //reset portfolioValue:
         this.portfolioValue = 0;
 
@@ -252,11 +211,13 @@ class Portfolio {
     }
 
     //returns float, returns the value of the user's available money + the value of their investments
-    setTotalAssetsValue() {
+    __setTotalAssetsValue() {
+        this.__setPortfolioValue();
         this.totalAssetsValue = this.balance + this.portfolioValue;
     }
 
     setEarnings() {
+        this.__setTotalAssetsValue();
         this.earnings = this.totalAssetsValue - this.initialBalance
     }
 }

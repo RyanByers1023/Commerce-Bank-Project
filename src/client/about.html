@@ -1,270 +1,228 @@
 <!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About - InvestEd Stock Market Simulator</title>
-    <link href="./css/styles.css" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            light: '#2EF090',
-                            DEFAULT: '#46C586',
-                            dark: '#519B76'
-                        },
-                        secondary: '#4D705F',
-                        tertiary: '#5E8A75',
-                        background: '#28332D'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                }
-            }
-        }
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #28332D 0%, #3D4B44 100%);
-        }
-        .card-hover {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .card-hover:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-        }
-        .feature-icon {
-            transition: all 0.3s ease;
-        }
-        .feature-icon:hover {
-            transform: scale(1.1);
-            background-color: #2EF090;
-        }
-        .step-item {
-            transition: all 0.3s ease;
-        }
-        .step-item:hover .step-number {
-            background-color: #2EF090;
-        }
-    </style>
-</head>
-<body class="gradient-bg text-white font-sans">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>About - InvestEd Stock Market Simulator</title>
+        <link href="./css/styles.css" rel="stylesheet">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-background gradient-bg text-white font-sans">
 
-<div id="navbar-container"></div>
+        <div id="navbar-container"></div>
 
-<!-- Load the Navbar -->
-<script src="./js/Navbar.js"></script>
+        <!-- Load the Navbar -->
+        <script src="./js/ui/navbar.js"></script>
 
-<!-- Hero Section with Decorative Elements -->
-<div class="pt-28 pb-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-    <!-- Decorative Elements -->
-    <div class="absolute top-20 left-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-0 right-0 w-64 h-64 bg-tertiary/10 rounded-full blur-3xl"></div>
+        <!-- Hero Section with Decorative Elements -->
+        <div class="pt-28 pb-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+            <!-- Decorative Elements -->
+            <div class="absolute top-20 left-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-0 right-0 w-64 h-64 bg-tertiary/10 rounded-full blur-3xl"></div>
 
-    <div class="max-w-5xl mx-auto relative">
-        <div class="text-center mb-16">
-            <h1 class="text-4xl sm:text-5xl font-bold mb-6 leading-tight">About The Project</h1>
-            <p class="text-xl text-gray-300 max-w-3xl mx-auto">
-                Learn to trade without the risk. Our simulator provides a realistic stock market experience for both beginners and experienced traders.
-            </p>
-        </div>
-    </div>
-</div>
-
-<!-- Main Content -->
-<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-    <!-- Main Content Grid with Enhanced Cards -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
-        <!-- Mission Card -->
-        <div class="bg-secondary/90 rounded-2xl shadow-xl overflow-hidden card-hover">
-            <div class="h-2 bg-gradient-to-r from-primary-light to-primary"></div>
-            <div class="p-8">
-                <div class="flex items-center mb-6">
-                    <i class="fas fa-bullseye text-primary-light text-2xl mr-3"></i>
-                    <h2 class="text-2xl font-bold">Our Mission</h2>
-                </div>
-
-                <p class="mb-4 text-gray-200">
-                    The Project Last Minute Stock Market Simulator was created to help users understand how the stock market works without risking real money. Whether you're a student, a curious beginner, or someone looking to practice new trading strategies, our platform provides a safe environment to learn and experiment.
-                </p>
-
-                <p class="mb-4 text-gray-200">
-                    Our simulator mimics real market conditions with:
-                </p>
-
-                <ul class="space-y-3 mb-6">
-                    <li class="flex items-start">
-                        <i class="fas fa-check-circle text-primary-light mt-1 mr-3"></i>
-                        <span>Real-time price fluctuations based on simulated market movements</span>
-                    </li>
-                    <li class="flex items-start">
-                        <i class="fas fa-check-circle text-primary-light mt-1 mr-3"></i>
-                        <span>News events that impact stock performance</span>
-                    </li>
-                    <li class="flex items-start">
-                        <i class="fas fa-check-circle text-primary-light mt-1 mr-3"></i>
-                        <span>Portfolio management tools to track your investments</span>
-                    </li>
-                    <li class="flex items-start">
-                        <i class="fas fa-check-circle text-primary-light mt-1 mr-3"></i>
-                        <span>Multiple timeframes to analyze stock performance</span>
-                    </li>
-                </ul>
-
-                <div class="bg-background/30 p-4 rounded-xl">
-                    <p class="flex items-center">
-                        <i class="fas fa-gift text-primary-light text-xl mr-3"></i>
-                        <span>Start with <span class="font-bold text-primary-light">$1,000</span> in virtual cash and build your portfolio through strategic buying and selling. Track your progress and see how your investment decisions perform over time.</span>
+            <div class="max-w-5xl mx-auto relative">
+                <div class="text-center mb-16">
+                    <h1 class="text-4xl sm:text-5xl font-bold mb-6 leading-tight">About The Project</h1>
+                    <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+                        Learn to trade without the risk. Our simulator provides a realistic stock market experience for both beginners and experienced traders.
                     </p>
                 </div>
             </div>
         </div>
 
-        <!-- Features Grid -->
-        <div class="space-y-8">
-            <!-- Key Features Card -->
-            <div class="bg-secondary/90 rounded-2xl shadow-xl overflow-hidden card-hover">
-                <div class="h-2 bg-gradient-to-r from-primary-light to-primary"></div>
-                <div class="p-8">
-                    <div class="flex items-center mb-6">
-                        <i class="fas fa-star text-primary-light text-2xl mr-3"></i>
-                        <h2 class="text-2xl font-bold">Key Features</h2>
+        <!-- Main Content -->
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+            <!-- Main Content Grid with Enhanced Cards -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+
+                <!-- Mission Card -->
+                <div class="bg-secondary/90 rounded-2xl shadow-xl overflow-hidden card-hover">
+                    <div class="h-2 bg-gradient-to-r from-primary-light to-primary"></div>
+                    <div class="p-8">
+                        <div class="flex items-center mb-6">
+                            <i class="fas fa-bullseye text-primary-light text-2xl mr-3"></i>
+                            <h2 class="text-2xl font-bold">Our Mission</h2>
+                        </div>
+
+                        <p class="mb-4 text-gray-200">
+                            The Project Last Minute Stock Market Simulator was created to help users understand how the stock market works without risking real money. Whether you're a student, a curious beginner, or someone looking to practice new trading strategies, our platform provides a safe environment to learn and experiment.
+                        </p>
+
+                        <p class="mb-4 text-gray-200">
+                            Our simulator mimics real market conditions with:
+                        </p>
+
+                        <ul class="space-y-3 mb-6">
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-primary-light mt-1 mr-3"></i>
+                                <span>Real-time price fluctuations based on simulated market movements</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-primary-light mt-1 mr-3"></i>
+                                <span>News events that impact stock performance</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-primary-light mt-1 mr-3"></i>
+                                <span>Portfolio management tools to track your investments</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-primary-light mt-1 mr-3"></i>
+                                <span>Multiple timeframes to analyze stock performance</span>
+                            </li>
+                        </ul>
+
+                        <div class="bg-background/30 p-4 rounded-xl">
+                            <p class="flex items-center">
+                                <i class="fas fa-gift text-primary-light text-xl mr-3"></i>
+                                <span>Start with <span class="font-bold text-primary-light">$1,000</span> in virtual cash and build your portfolio through strategic buying and selling. Track your progress and see how your investment decisions perform over time.</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Features Grid -->
+                <div class="space-y-8">
+                    <!-- Key Features Card -->
+                    <div class="bg-secondary/90 rounded-2xl shadow-xl overflow-hidden card-hover">
+                        <div class="h-2 bg-gradient-to-r from-primary-light to-primary"></div>
+                        <div class="p-8">
+                            <div class="flex items-center mb-6">
+                                <i class="fas fa-star text-primary-light text-2xl mr-3"></i>
+                                <h2 class="text-2xl font-bold">Key Features</h2>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div class="flex items-start group">
+                                    <div class="rounded-full p-3 bg-background/50 text-primary-light mr-4 feature-icon">
+                                        <i class="fas fa-chart-line text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-lg mb-1">Real-time Charts</h3>
+                                        <p class="text-gray-300">Track stock performance with interactive and responsive data visualization</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start group">
+                                    <div class="rounded-full p-3 bg-background/50 text-primary-light mr-4 feature-icon">
+                                        <i class="fas fa-newspaper text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-lg mb-1">Market News</h3>
+                                        <p class="text-gray-300">Simulated news events affect stock prices and market sectors</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start group">
+                                    <div class="rounded-full p-3 bg-background/50 text-primary-light mr-4 feature-icon">
+                                        <i class="fas fa-wallet text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-lg mb-1">Portfolio Tracking</h3>
+                                        <p class="text-gray-300">Monitor your investments with detailed performance analytics</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start group">
+                                    <div class="rounded-full p-3 bg-background/50 text-primary-light mr-4 feature-icon">
+                                        <i class="fas fa-shield-alt text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-lg mb-1">Risk-Free Trading</h3>
+                                        <p class="text-gray-300">Practice investment strategies with virtual money</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div class="flex items-start group">
-                            <div class="rounded-full p-3 bg-background/50 text-primary-light mr-4 feature-icon">
-                                <i class="fas fa-chart-line text-xl"></i>
+                    <!-- How It Works Card -->
+                    <div class="bg-secondary/90 rounded-2xl shadow-xl overflow-hidden card-hover">
+                        <div class="h-2 bg-gradient-to-r from-primary-light to-primary"></div>
+                        <div class="p-8">
+                            <div class="flex items-center mb-6">
+                                <i class="fas fa-question-circle text-primary-light text-2xl mr-3"></i>
+                                <h2 class="text-2xl font-bold">How It Works</h2>
                             </div>
-                            <div>
-                                <h3 class="font-semibold text-lg mb-1">Real-time Charts</h3>
-                                <p class="text-gray-300">Track stock performance with interactive and responsive data visualization</p>
-                            </div>
-                        </div>
 
-                        <div class="flex items-start group">
-                            <div class="rounded-full p-3 bg-background/50 text-primary-light mr-4 feature-icon">
-                                <i class="fas fa-newspaper text-xl"></i>
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-lg mb-1">Market News</h3>
-                                <p class="text-gray-300">Simulated news events affect stock prices and market sectors</p>
-                            </div>
-                        </div>
+                            <div class="space-y-5">
+                                <div class="flex items-start step-item">
+                                    <div class="bg-background/50 text-white rounded-full w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0 step-number">
+                                        <span class="font-bold">1</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-lg mb-1">Create an account</h3>
+                                        <p class="text-gray-300">Sign up to get your virtual trading portfolio with starting capital of your choosing</p>
+                                    </div>
+                                </div>
 
-                        <div class="flex items-start group">
-                            <div class="rounded-full p-3 bg-background/50 text-primary-light mr-4 feature-icon">
-                                <i class="fas fa-wallet text-xl"></i>
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-lg mb-1">Portfolio Tracking</h3>
-                                <p class="text-gray-300">Monitor your investments with detailed performance analytics</p>
-                            </div>
-                        </div>
+                                <div class="flex items-start step-item">
+                                    <div class="bg-background/50 text-white rounded-full w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0 step-number">
+                                        <span class="font-bold">2</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-lg mb-1">Explore stocks</h3>
+                                        <p class="text-gray-300">Browse different companies and analyze their performance using our interactive tools</p>
+                                    </div>
+                                </div>
 
-                        <div class="flex items-start group">
-                            <div class="rounded-full p-3 bg-background/50 text-primary-light mr-4 feature-icon">
-                                <i class="fas fa-shield-alt text-xl"></i>
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-lg mb-1">Risk-Free Trading</h3>
-                                <p class="text-gray-300">Practice investment strategies with virtual money</p>
+                                <div class="flex items-start step-item">
+                                    <div class="bg-background/50 text-white rounded-full w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0 step-number">
+                                        <span class="font-bold">3</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-lg mb-1">Build your portfolio</h3>
+                                        <p class="text-gray-300">Buy and sell stocks to create a diverse investment strategy based on your market analysis</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start step-item">
+                                    <div class="bg-background/50 text-white rounded-full w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0 step-number">
+                                        <span class="font-bold">4</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-lg mb-1">Track progress</h3>
+                                        <p class="text-gray-300">Monitor your performance and learn from your investment decisions over time</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
             </div>
 
-            <!-- How It Works Card -->
-            <div class="bg-secondary/90 rounded-2xl shadow-xl overflow-hidden card-hover">
-                <div class="h-2 bg-gradient-to-r from-primary-light to-primary"></div>
-                <div class="p-8">
-                    <div class="flex items-center mb-6">
-                        <i class="fas fa-question-circle text-primary-light text-2xl mr-3"></i>
-                        <h2 class="text-2xl font-bold">How It Works</h2>
-                    </div>
+            <!-- Call to Action with Enhanced Visual Appeal -->
+            <div class="relative overflow-hidden rounded-2xl shadow-xl bg-gradient-to-r from-secondary to-tertiary">
+                <!-- Decorative Elements -->
+                <div class="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-xl"></div>
+                <div class="absolute bottom-0 left-0 w-32 h-32 bg-primary/20 rounded-full blur-xl"></div>
 
-                    <div class="space-y-5">
-                        <div class="flex items-start step-item">
-                            <div class="bg-background/50 text-white rounded-full w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0 step-number">
-                                <span class="font-bold">1</span>
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-lg mb-1">Create an account</h3>
-                                <p class="text-gray-300">Sign up to get your virtual trading portfolio with starting capital of your choosing</p>
-                            </div>
-                        </div>
+                <div class="relative p-10 text-center">
+                    <h2 class="text-3xl font-bold mb-4">Ready to Start Trading?</h2>
+                    <p class="text-lg mb-8 max-w-2xl mx-auto">Join users who are learning the ins and outs of the stock market by investing in a risk-free, customized environment.</p>
 
-                        <div class="flex items-start step-item">
-                            <div class="bg-background/50 text-white rounded-full w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0 step-number">
-                                <span class="font-bold">2</span>
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-lg mb-1">Explore stocks</h3>
-                                <p class="text-gray-300">Browse different companies and analyze their performance using our interactive tools</p>
-                            </div>
-                        </div>
-
-                        <div class="flex items-start step-item">
-                            <div class="bg-background/50 text-white rounded-full w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0 step-number">
-                                <span class="font-bold">3</span>
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-lg mb-1">Build your portfolio</h3>
-                                <p class="text-gray-300">Buy and sell stocks to create a diverse investment strategy based on your market analysis</p>
-                            </div>
-                        </div>
-
-                        <div class="flex items-start step-item">
-                            <div class="bg-background/50 text-white rounded-full w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0 step-number">
-                                <span class="font-bold">4</span>
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-lg mb-1">Track progress</h3>
-                                <p class="text-gray-300">Monitor your performance and learn from your investment decisions over time</p>
-                            </div>
-                        </div>
+                    <div class="flex flex-col sm:flex-row justify-center gap-4">
+                        <a href="./simulator.html" class="group relative px-8 py-4 bg-background/50 rounded-lg hover:bg-background transition-all duration-300 text-lg font-medium overflow-hidden">
+                                <span class="relative z-10 flex items-center justify-center">
+                                    <i class="fas fa-play-circle mr-2"></i>
+                                    <span>Try Demo</span>
+                                </span>
+                            <div class="absolute inset-0 bg-white/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
+                        </a>
                     </div>
                 </div>
             </div>
+
         </div>
-    </div>
 
-    <!-- Call to Action with Enhanced Visual Appeal -->
-    <div class="relative overflow-hidden rounded-2xl shadow-xl bg-gradient-to-r from-secondary to-tertiary">
-        <!-- Decorative Elements -->
-        <div class="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-xl"></div>
-        <div class="absolute bottom-0 left-0 w-32 h-32 bg-primary/20 rounded-full blur-xl"></div>
+        <!-- Footer, from footer.html -->
+        <div id="footer-container"></div>
 
-        <div class="relative p-10 text-center">
-            <h2 class="text-3xl font-bold mb-4">Ready to Start Trading?</h2>
-            <p class="text-lg mb-8 max-w-2xl mx-auto">Join users who are learning the ins and outs of the stock market by investing in a risk-free, customized environment.</p>
+        <script src="./js/ui/footer.js"></script>
+        <script src="./js/ui/tailwindConfig.js"></script>
 
-            <div class="flex flex-col sm:flex-row justify-center gap-4">
-                <a href="simulator.html" class="group relative px-8 py-4 bg-background/50 rounded-lg hover:bg-background transition-all duration-300 text-lg font-medium overflow-hidden">
-                        <span class="relative z-10 flex items-center justify-center">
-                            <i class="fas fa-play-circle mr-2"></i>
-                            <span>Try Demo</span>
-                        </span>
-                    <div class="absolute inset-0 bg-white/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Footer, from footer.html -->
-<div id="footer-container"></div>
-
-<script src="./js/loadFooter.js"></script>
-
-</body>
+    </body>
 </html>

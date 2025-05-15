@@ -1,5 +1,4 @@
-// src/client/js/AuthService.js
-import DatabaseService from './DatabaseService.js';
+import DatabaseService from './databaseService.js';
 
 /**
  * Service for handling authentication and user management

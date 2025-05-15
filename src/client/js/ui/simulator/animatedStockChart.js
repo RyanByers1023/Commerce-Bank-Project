@@ -1,4 +1,4 @@
-// src/client/js/AnimatedStockChart.js
+// src/client/js/animatedStockChart.js
 export default class AnimatedStockChart {
     constructor(userProfile) {
         this.userProfile = userProfile;

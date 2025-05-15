@@ -1,6 +1,5 @@
-// src/client/js/PortfolioService.js
-import DatabaseService from './DatabaseService.js';
-import { getCurrentUser } from './AuthService.js';
+import DatabaseService from './databaseService.js';
+import {getCurrentUser} from './authService.js';
 
 /**
  * Service for managing user portfolios
@@ -81,8 +80,7 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            const portfolio = await this.dbService.getPortfolio(user.username, portfolioId);
-            return portfolio;
+            return await this.dbService.getPortfolio(user.username, portfolioId);
         } catch (error) {
             console.error('Failed to get portfolio:', error);
             throw error;

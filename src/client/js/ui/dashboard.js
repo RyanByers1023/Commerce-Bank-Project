@@ -1,7 +1,7 @@
-import { getUserProfile } from './authHandler.js';
-import DatabaseManager from 'src/client/js/DatabaseManager.js';
-import NotificationSystem from './NotificationSystem.js';
-import PortfolioMetricsController from 'src/client/js/PortfolioMetricsController.js';
+import { getUserProfile } from '../authentication/authHandler.js';
+import DatabaseManager from 'src/client/js/services/databaseManager.js';
+import NotificationSystem from './notificationSystem.js';
+import PortfolioMetricsController from 'src/client/js/utils/portfolioMetricsController.js';
 
 // Initialize components
 const notifications = new NotificationSystem();

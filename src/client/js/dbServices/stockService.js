@@ -1,6 +1,5 @@
-// src/client/js/StockService.js
-import DatabaseService from './DatabaseService.js';
-import { getCurrentUser } from './AuthService.js';
+import DatabaseService from './databaseService.js';
+import { getCurrentUser } from './authService.js';
 
 /**
  * Service for managing stocks and market data

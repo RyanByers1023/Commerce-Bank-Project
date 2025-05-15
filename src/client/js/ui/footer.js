@@ -1,5 +1,3 @@
-
-
 function loadFooter(){
     fetch('footer.html')
         .then(response => response.text())

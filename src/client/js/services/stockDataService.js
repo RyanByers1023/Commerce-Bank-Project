@@ -1,4 +1,4 @@
-import Stock from 'src/client/js/Stock';
+import Stock from 'src/client/js/models/stock';
 
 export default class StockDataService {
     constructor() {

@@ -1,4 +1,4 @@
-// src/js/ErrorHandler.js
+// src/js/errorHandler.js
 export default class ErrorHandler {
     constructor(notificationSystem) {
         this.notificationSystem = notificationSystem;
