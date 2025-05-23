@@ -1,4 +1,7 @@
-class User {
+import Portfolio from './portfolio.js';
+import DatabaseManager from '../services/databaseManager.js';
+
+class UserProfile {
     constructor(userData = null) {
         this.stocksAddedToSim = [];
         this.username = "";

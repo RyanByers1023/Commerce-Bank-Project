@@ -1,12 +1,10 @@
-import Portfolio from "../models/portfolio";
-
 /**
  * Service for handling all database operations via API calls
  * This client-side service communicates with the server-side MySQL database
  */
 export default class DatabaseService {
     constructor() {
-        // Base API URL - adjust as needed for your environment
+        // Base API URL
         this.baseUrl = '/api';
 
         // Track auth status

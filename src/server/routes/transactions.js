@@ -1,18 +1,17 @@
-// server/routes/transactions.js
 const express = require('express');
 const router = express.Router();
 
 //get middleware:
-const db = require('../middleware/db');
-const auth = require('../middleware/auth');
+const db = require('../middleware/db.js');
+const auth = require('../middleware/auth.js');
 
 // Get all transactions for a user
-router.get('/:username', auth.verifyToken, async (req, res) => {
+router.get('/:userID', auth.verifyToken, async (req, res) => {
     try {
-        const { username } = req.params;
+        const { userID } = req.params;
 
         // Verify user is accessing their own data
-        if (req.user.username !== username) {
+        if (req.user.userID !== userID) {
             return res.status(403).json({ error: 'Unauthorized access to transaction data' });
         }
 
@@ -25,9 +24,9 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
        JOIN stocks s ON t.stockID = s.stockID
        JOIN portfolios p ON t.portfolioID = p.portfolioID
        JOIN users u ON p.userID = u.userID
-       WHERE u.username = ?
+       WHERE u.userID = ?
        ORDER BY t.timestamp DESC`,
-            [username]
+            [userID]
         );
 
         res.json(transactions);
@@ -37,44 +36,51 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
     }
 });
 
-// Get transactions for a specific portfolio
-router.get('/:username/:portfolioId', auth.verifyToken, async (req, res) => {
+router.get('/:userID/:portfolioId', auth.verifyToken, async (req, res) => {
     try {
-        const { username, portfolioId } = req.params;
+        const {userID, portfolioId} = req.params;
 
         // Verify user is accessing their own data
-        if (req.user.username !== username) {
-            return res.status(403).json({ error: 'Unauthorized access to transaction data' });
+        if (req.user.userID !== userID) {
+            return res.status(403).json({error: 'Unauthorized access to transaction data'});
         }
 
         // Check if portfolio belongs to user
         const [portfolios] = await db.query(
-            `SELECT p.portfolioID FROM portfolios p
-       JOIN users u ON p.userID = u.userID
-       WHERE u.username = ? AND p.portfolioID = ?`,
-            [username, portfolioId]
+            `SELECT p.portfolioID
+             FROM portfolios p
+             WHERE p.userID = ?
+               AND p.portfolioID = ?`,
+            [userID, portfolioId]
         );
 
         if (portfolios.length === 0) {
-            return res.status(404).json({ error: 'Portfolio not found or does not belong to user' });
+            return res.status(404).json({error: 'Portfolio not found or does not belong to user'});
         }
 
         // Get transactions
         const [transactions] = await db.query(
-            `SELECT t.transactionID, t.portfolioID, t.stockID, t.transactionType, 
-              t.quantity, t.pricePaid, t.totalValue, t.timestamp,
-              s.symbol, s.companyName
-       FROM transactions t
-       JOIN stocks s ON t.stockID = s.stockID
-       WHERE t.portfolioID = ?
-       ORDER BY t.timestamp DESC`,
+            `SELECT t.transactionID,
+                    t.portfolioID,
+                    t.stockID,
+                    t.transactionType,
+                    t.quantity,
+                    t.pricePaid,
+                    t.totalValue,
+                    t.timestamp,
+                    s.symbol,
+                    s.companyName
+             FROM transactions t
+                      JOIN stocks s ON t.stockID = s.stockID
+             WHERE t.portfolioID = ?
+             ORDER BY t.timestamp DESC`,
             [portfolioId]
         );
 
         res.json(transactions);
     } catch (error) {
         console.error('Get portfolio transactions error:', error);
-        res.status(500).json({ error: 'Failed to get portfolio transactions' });
+        res.status(500).json({error: 'Failed to get portfolio transactions'});
     }
 });
 

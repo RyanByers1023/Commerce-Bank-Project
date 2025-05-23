@@ -28,7 +28,12 @@ exports.verifyToken = async (req, res, next) => {
 
         // Get user information
         const [users] = await db.query(
-            'SELECT userID, username, email, (CASE WHEN role = "admin" THEN 1 ELSE 0 END) as isAdmin FROM users WHERE userID = ?',
+            'SELECT ' +
+                'userID, username, email ' +
+            'FROM ' +
+                'users ' +
+            'WHERE ' +
+                'userID = ?',
             [req.session.userID]
         );
 

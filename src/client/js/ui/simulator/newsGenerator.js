@@ -1,11 +1,7 @@
-// newsGenerator.js
-// Requires the Express route shown earlier:  POST /api/news/generate
-// - Ryan Byers — 2025-05-09
-
 export default class NewsGenerator {
     constructor(userProfile) {
         this.userProfile  = userProfile;                         // holds stocksAddedToSim
-        this.newsContainer = document.getElementById('news-container');
+        this.newsContainer = document.getElementById('table-container-news');
         this.newsInterval  = null;
 
         /* topics and text snippets used ONLY when we fall back to client-side stories */
@@ -21,7 +17,7 @@ export default class NewsGenerator {
     ─────────────────────────────────────────────────────────────────− */
     start(intervalMs = 90_000) {
         if (this.newsInterval) clearInterval(this.newsInterval);
-        this.publishNews();                         // first headline immediately
+        this.publishNews();
         this.newsInterval = setInterval(() => this.publishNews(), intervalMs);
     }
 
@@ -30,9 +26,7 @@ export default class NewsGenerator {
         this.newsInterval = null;
     }
 
-    /* ────────────────────────────────────────────────────────────────
-       FETCH (or fabricate) A NEWS ITEM, THEN DISPLAY IT
-    ─────────────────────────────────────────────────────────────────− */
+    //FETCH (or fabricate) A NEWS ITEM, THEN DISPLAY IT
     async publishNews() {
         try {
             const newsItem = await this.fetchNewsFromAPI();

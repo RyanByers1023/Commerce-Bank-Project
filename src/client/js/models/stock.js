@@ -1,5 +1,3 @@
-// src/client/js/stock.js
-
 /**
  * Represents a stock in the simulation
  */

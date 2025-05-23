@@ -36,8 +36,7 @@
                         <i class="fas fa-user text-primary-light"></i>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-300">Welcome back,</p>
-                        <p class="font-medium">Demo User</p>
+                        <p class="text-sm text-gray-300" id="span-welcome-message">Welcome</p>
                     </div>
                 </div>
 
@@ -51,25 +50,25 @@
                     <div class="flex flex-col">
                         <p class="text-gray-300 mb-1 flex items-center">
                             <i class="fas fa-wallet text-primary-light mr-2"></i>
-                            Available Cash
+                            Current Cash Balance
                         </p>
-                        <p class="text-2xl font-bold text-white" id="available-cash">$10,000.00</p>
-                    </div>
-
-                    <div class="flex flex-col">
-                        <p class="text-gray-300 mb-1 flex items-center">
-                            <i class="fas fa-chart-pie text-primary-light mr-2"></i>
-                            Portfolio Value
-                        </p>
-                        <p class="text-2xl font-bold text-white" id="portfolio-value">$0.00</p>
+                        <p class="text-2xl font-bold text-white" id="span-balance">$0.00</p>
                     </div>
 
                     <div class="flex flex-col">
                         <p class="text-gray-300 mb-1 flex items-center">
                             <i class="fas fa-coins text-primary-light mr-2"></i>
-                            Total Assets
+                            Current Value of All Your Owned Stocks
                         </p>
-                        <p class="text-2xl font-bold text-primary-light" id="total-assets">$10,000.00</p>
+                        <p class="text-2xl font-bold text-primary-light" id="span-total-assets-value">$0.00</p>
+                    </div>
+
+                    <div class="flex flex-col">
+                        <p class="text-gray-300 mb-1 flex items-center">
+                            <i class="fas fa-chart-pie text-primary-light mr-2"></i>
+                            Portfolio Total Value
+                        </p>
+                        <p class="text-2xl font-bold text-white" id="span-portfolio-value">$0.00</p>
                     </div>
 
                 </div>
@@ -86,21 +85,27 @@
                         <div class="flex flex-wrap justify-between items-center">
                             <div class="flex items-center space-x-4 mb-4 sm:mb-0">
 
-                                <select id="stockSelect" class="bg-background/70 text-white border border-tertiary/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50">
+                                <select id="select-stock" class="bg-background/70 text-white border border-tertiary/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50">
                                     <!-- Options populated dynamically -->
                                 </select>
 
                                 <div>
-                                    <span id="currentPrice" class="text-2xl font-bold text-white">$0.00</span>
-                                    <span id="priceChange" class="ml-2 text-sm font-medium px-3 py-1 rounded-full"></span>
+                                    <span id="span-stock-market-price" class="text-2xl font-bold text-white">$0.00</span>
+                                    <span id="span-stock-price-change" class="ml-2 text-sm font-medium px-3 py-1 rounded-full"></span>
                                 </div>
 
                             </div>
 
+                            <!-- timeframe button -->
                             <div class="flex space-x-1">
                                 <button class="px-4 py-2 rounded-lg bg-primary hover:bg-primary/80 transition text-white" data-timeframe="1D">1D</button>
                                 <button class="px-4 py-2 rounded-lg bg-background/70 hover:bg-primary/80 transition text-gray-300 hover:text-white" data-timeframe="1W">1W</button>
                                 <button class="px-4 py-2 rounded-lg bg-background/70 hover:bg-primary/80 transition text-gray-300 hover:text-white" data-timeframe="1M">1M</button>
+                                <!-- settings button -->
+                                <button id="open-settings-btn" class="bg-background/70 hover:bg-primary/80 text-gray-300 hover:text-white px-4 py-2 rounded-lg transition flex items-center">
+                                    <i class="fas fa-cog mr-2"></i>
+                                    Settings
+                                </button>
                             </div>
 
                         </div>
@@ -109,7 +114,7 @@
                     <!-- Chart Container -->
                     <div class="p-5">
                         <div class="rounded-lg overflow-hidden bg-background/40 p-1">
-                            <canvas id="stockCanvas" width="800" height="400" class="w-full rounded-lg"></canvas>
+                            <canvas id="graph-stock" width="800" height="400" class="w-full rounded-lg"></canvas>
                         </div>
                     </div>
 
@@ -124,14 +129,14 @@
                                 </h3>
                                 <div class="flex items-center space-x-3 mb-4">
                                     <div class="relative flex-1">
-                                        <input type="number" id="buy-quantity" min="1" value="1" class="w-full bg-background/70 border border-tertiary/50 rounded-lg px-4 py-2 text-right focus:outline-none focus:ring-2 focus:ring-primary/50">
+                                        <input type="number" id="input-buy-quantity" min="1" value="1" class="w-full bg-background/70 border border-tertiary/50 rounded-lg px-4 py-2 text-right focus:outline-none focus:ring-2 focus:ring-primary/50">
                                         <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">Qty</span>
                                     </div>
-                                    <span class="text-gray-300">at <span id="buy-price" class="font-medium text-white">$0.00</span></span>
+                                    <span class="text-gray-300">at <span id="span-buy-market-price" class="font-medium text-white">$0.00</span></span>
                                 </div>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-gray-300">Total: <span id="buy-total" class="font-medium text-white">$0.00</span></span>
-                                    <button id="buy-button" class="bg-primary hover:bg-primary-light text-white px-6 py-2 rounded-lg transition flex items-center">
+                                    <span class="text-gray-300">Total: <span id="span-buy-total-price" class="font-medium text-white">$0.00</span></span>
+                                    <button id="button-buy" class="bg-primary hover:bg-primary-light text-white px-6 py-2 rounded-lg transition flex items-center">
                                         <i class="fas fa-arrow-right mr-2"></i>
                                         Buy
                                     </button>
@@ -146,14 +151,14 @@
                                 </h3>
                                 <div class="flex items-center space-x-3 mb-4">
                                     <div class="relative flex-1">
-                                        <input type="number" id="sell-quantity" min="1" value="1" class="w-full bg-background/70 border border-tertiary/50 rounded-lg px-4 py-2 text-right focus:outline-none focus:ring-2 focus:ring-primary/50">
+                                        <input type="number" id="input-sell-quantity" min="1" value="1" class="w-full bg-background/70 border border-tertiary/50 rounded-lg px-4 py-2 text-right focus:outline-none focus:ring-2 focus:ring-primary/50">
                                         <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">Qty</span>
                                     </div>
-                                    <span class="text-gray-300">at <span id="sell-price" class="font-medium text-white">$0.00</span></span>
+                                    <span class="text-gray-300">at <span id="span-sell-market-price" class="font-medium text-white">$0.00</span></span>
                                 </div>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-gray-300">Total: <span id="sell-total" class="font-medium text-white">$0.00</span></span>
-                                    <button id="sell-button" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg transition flex items-center">
+                                    <span class="text-gray-300">Total: <span id="span-sell-total-price" class="font-medium text-white">$0.00</span></span>
+                                    <button id="button-sell" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg transition flex items-center">
                                         <i class="fas fa-arrow-left mr-2"></i>
                                         Sell
                                     </button>
@@ -176,17 +181,17 @@
                                     Live
                                 </span>
                         </div>
-                        <div id="holdings-container" class="overflow-y-auto max-h-80 custom-scrollbar">
+                        <div id="table-container-holdings" class="overflow-y-auto max-h-80 custom-scrollbar">
                             <div class="p-5">
                                 <table class="w-full">
                                     <thead>
                                     <tr class="border-b border-tertiary/30">
                                         <th class="text-left py-2 text-gray-300 font-medium">Stock</th>
                                         <th class="text-right py-2 text-gray-300 font-medium">Shares</th>
-                                        <th class="text-right py-2 text-gray-300 font-medium">Value</th>
+                                        <th class="text-right py-2 text-gray-300 font-medium">Purchased at</th>
                                     </tr>
                                     </thead>
-                                    <tbody id="holdings-table-body">
+                                    <tbody id="table-body-holdings">
                                     <!-- Holdings will be populated dynamically -->
                                     <tr>
                                         <td colspan="3" class="py-6 text-center text-gray-400">
@@ -214,7 +219,7 @@
                                 Refresh
                             </button>
                         </div>
-                        <div id="news-container" class="overflow-y-auto max-h-96 custom-scrollbar">
+                        <div id="table-container-news" class="overflow-y-auto max-h-96 custom-scrollbar">
                             <div class="p-5 space-y-5">
                                 <!-- News items will be populated dynamically -->
                                 <div class="py-2 border-b border-tertiary/30 pb-4">
@@ -228,22 +233,9 @@
             </div>
         </div>
 
-
-
         <!-- Footer, from footer.html -->
-        <div id="footer-container"></div>
+        <div id="container-footer"></div>
 
-        <script type="module">
-            import NewsInitializer from './js/utils/newsInitializer.js';
-            new NewsInitializer().init();
-        </script>
-        <script src="./js/ui/footer.js"></script>
-        <script src="./js/models/stock.js"></script>
-        <script src="./js/ui/simulator/simulatorGraphController.js"></script>
-        <script src="./js/ui/simulator/simulationSettings.js"></script>
-        <script src="./js/ui/simulator/simulator.js"></script>
-        <script src="./js/ui/portfolioUIController.js"></script>
-        <script src="./js/services/newsGenerator.js"></script>
-
+        <script type="module" src="./js/ui/simulator/simulator.js"></script>
     </body>
 </html>
