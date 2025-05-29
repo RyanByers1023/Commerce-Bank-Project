@@ -1,12 +1,12 @@
-import DatabaseService from './databaseService.js';
-import {getCurrentUser} from './authService.js';
+import { databaseService } from './databaseService.js';
+import { getCurrentUser } from './authService.js';
 
 /**
  * Service for managing user portfolios
  */
 export default class PortfolioService {
     constructor() {
-        this.dbService = new DatabaseService();
+        this.dbService = databaseService;
         this.currentPortfolio = null;
         this.portfolios = [];
     }

@@ -2,7 +2,7 @@
  * Service for handling all database operations via API calls
  * This client-side service communicates with the server-side MySQL database
  */
-export default class DatabaseService {
+class DatabaseService {
     constructor() {
         // Base API URL
         this.baseUrl = '/api';
@@ -242,24 +242,24 @@ export default class DatabaseService {
         }
     }
 
-    async saveTransactions(username, portfolioId, transactions) {
+    async saveTransaction(portfolioId, txnOrList) {
+        const payload = Array.isArray(txnOrList) ? txnOrList : [txnOrList];
+
         try {
-            return await this.sendRequest(`portfolios/${username}/${portfolioId}/transactions`, 'POST', {
-                transactions: transactions
-            });
-        } catch (error) {
-            console.error('Failed to save transactions:', error);
-            throw error;
+            return await this.sendRequest(
+                `portfolios/${portfolioId}/transactions`,   // ← note: removed stray space
+                'POST',
+                { transactions: payload }
+            );
+        } catch (err) {
+            console.error('Failed to save transaction(s):', err);
+            throw err;
         }
     }
 
-    /**
-     * Get all stocks for a user
-     * @param {string} username - Username
-     */
-    async getStocks(username) {
+    async getStocks(userID) {
         try {
-            return await this.sendRequest(`stocks/${username}`, 'GET');
+            return await this.sendRequest(`stocks/${userID}`, 'GET');
         } catch (error) {
             console.error('Failed to get stocks:', error);
             throw error;
@@ -268,12 +268,12 @@ export default class DatabaseService {
 
     /**
      * Get a specific stock
-     * @param {string} username - Username
+     * @param {int} user_id -- user's unique id
      * @param {string} symbol - Stock symbol
      */
-    async getStock(username, symbol) {
+    async getStock(user_id, symbol) {
         try {
-            return await this.sendRequest(`stocks/${username}/${symbol}`, 'GET');
+            return await this.sendRequest(`stocks/${user_id}/${symbol}`, 'GET');
         } catch (error) {
             console.error('Failed to get stock:', error);
             throw error;
@@ -335,10 +335,7 @@ export default class DatabaseService {
         }
     }
 
-    /**
-     * Execute a buy/sell transaction
-     * @param {object} transactionData - Transaction data
-     */
+
     async executeTransaction(transactionData) {
         try {
             return await this.sendRequest('transactions', 'POST', transactionData);
@@ -348,10 +345,6 @@ export default class DatabaseService {
         }
     }
 
-    /**
-     * Get transaction statistics
-     * @param {string} username - Username
-     */
     async getTransactionStats(username) {
         try {
             return await this.sendRequest(`transactions/${username}/stats`, 'GET');
@@ -361,10 +354,6 @@ export default class DatabaseService {
         }
     }
 
-    /**
-     * Get simulation settings
-     * @param {string} username - Username
-     */
     async getSimulationSettings(username) {
         try {
             return await this.sendRequest(`settings/${username}`, 'GET');
@@ -374,11 +363,6 @@ export default class DatabaseService {
         }
     }
 
-    /**
-     * Save simulation settings
-     * @param {string} username - Username
-     * @param {object} settings - Settings data
-     */
     async saveSimulationSettings(username, settings) {
         try {
             return await this.sendRequest(`settings/${username}`, 'PUT', settings);
@@ -388,10 +372,6 @@ export default class DatabaseService {
         }
     }
 
-    /**
-     * Reset simulation settings to defaults
-     * @param {string} username - Username
-     */
     async resetSimulationSettings(username) {
         try {
             return await this.sendRequest(`settings/${username}/reset`, 'POST');
@@ -401,42 +381,33 @@ export default class DatabaseService {
         }
     }
 
-    /**
-     * Generic function to send API requests
-     * @param {string} endpoint - API endpoint
-     * @param {string} method - HTTP method
-     * @param {object} data - Data to send (for POST/PUT)
-     */
     async sendRequest(endpoint, method = 'GET', data = null) {
-        try {
-            const url = `${this.baseUrl}/${endpoint}`;
+        const url = `${this.baseUrl}/${endpoint}`;
+        const opts = {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        };
+        // allow bodies for PATCH / DELETE too
+        if (data && !['GET','HEAD'].includes(method))
+            opts.body = JSON.stringify(data);
 
-            const options = {
-                method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                // Include credentials to send cookies for session authentication
-                credentials: 'include'
-            };
+        const res = await fetch(url, opts);
 
-            if (data && (method === 'POST' || method === 'PUT')) {
-                options.body = JSON.stringify(data);
-            }
-
-            const response = await fetch(url, options);
-
-            // Handle non-OK responses
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
-            }
-
-            // Parse and return JSON response
-            return await response.json();
-        } catch (error) {
-            console.error(`API request failed (${endpoint}):`, error);
-            throw error;
+        if (!res.ok) {
+            // 204 or 205 have no body → skip .json()
+            let msg = `HTTP ${res.status}`;
+            try { msg = (await res.json()).error || msg; } catch (_){}
+            throw new Error(msg);
         }
+
+        // 204 No Content → return null
+        if (res.status === 204) return null;
+        return res.json();
     }
 }
+
+export default DatabaseService;
+
+const databaseService = new DatabaseService();
+export { databaseService };

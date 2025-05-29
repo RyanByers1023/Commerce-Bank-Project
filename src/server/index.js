@@ -9,7 +9,6 @@ const morgan    = require('morgan');
 const db        = require('./middleware/db');  // make sure this connects
 
 
-const newsRoutes        = require('./routes/news.js');
 const authRoutes        = require('./routes/auth');
 const userRoutes        = require('./routes/users');
 const portfolioRoutes   = require('./routes/portfolios');

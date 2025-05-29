@@ -1,6 +1,8 @@
 // server/routes/users.js
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcrypt');
+
 const db = require('../middleware/db');
 const auth = require('../middleware/auth');
 
@@ -9,14 +11,16 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
     try {
         const { username } = req.params;
 
-        // Verify user is accessing their own data or is an admin
-        if (req.user.username !== username && !req.user.isAdmin) {
-            return res.status(403).json({ error: 'Unauthorized access to user data' });
+        // Verify user is accessing their own profile or is admin
+        if (req.user.username !== username && !req.user.is_admin) {
+            return res.status(403).json({ error: 'Unauthorized access to user profile' });
         }
 
         // Get user data
         const [users] = await db.query(
-            'SELECT userID, username, email, dateCreated, lastLogin, activePortfolioID FROM users WHERE username = ?',
+            `SELECT id, username, email, date_created, last_login, 
+                    active_portfolio_id, is_demo_account, is_admin
+             FROM users WHERE username = ?`,
             [username]
         );
 
@@ -26,21 +30,29 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
 
         const user = users[0];
 
-        // Get user's active portfolio
-        const [portfolios] = await db.query(
-            'SELECT portfolioID, name, description, initialBalance, balance FROM portfolios WHERE portfolioID = ?',
-            [user.activePortfolioID]
+        // Get portfolio count
+        const [portfolioCount] = await db.query(
+            'SELECT COUNT(*) as count FROM portfolios WHERE user_id = ?',
+            [user.id]
         );
 
-        const portfolio = portfolios.length > 0 ? portfolios[0] : null;
+        // Get total transactions
+        const [transactionCount] = await db.query(
+            'SELECT COUNT(*) as count FROM transactions WHERE user_id = ?',
+            [user.id]
+        );
 
-        // Return user profile with portfolio
         res.json({
+            id: user.id,
             username: user.username,
             email: user.email,
-            dateCreated: user.dateCreated,
-            lastLogin: user.lastLogin,
-            portfolio: portfolio
+            dateCreated: user.date_created,
+            lastLogin: user.last_login,
+            activePortfolioId: user.active_portfolio_id,
+            isDemoAccount: Boolean(user.is_demo_account),
+            isAdmin: Boolean(user.is_admin),
+            portfolioCount: portfolioCount[0].count,
+            transactionCount: transactionCount[0].count
         });
     } catch (error) {
         console.error('Get user profile error:', error);
@@ -54,14 +66,230 @@ router.put('/:username', auth.verifyToken, async (req, res) => {
         const { username } = req.params;
         const { email, currentPassword, newPassword } = req.body;
 
-        // Verify user is updating their own data or is an admin
-        if (req.user.username !== username && !req.user.isAdmin) {
-            return res.status(403).json({ error: 'Unauthorized access to update user data' });
+        // Verify user is updating their own profile
+        if (req.user.username !== username) {
+            return res.status(403).json({ error: 'Unauthorized access to update profile' });
+        }
+
+        // Get current user data
+        const [users] = await db.query(
+            'SELECT id, email, password_hash FROM users WHERE username = ?',
+            [username]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const user = users[0];
+        const updates = {};
+
+        // Update email if provided
+        if (email && email !== user.email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({ error: 'Please enter a valid email address' });
+            }
+
+            // Check if email is already taken
+            const [existingUsers] = await db.query(
+                'SELECT id FROM users WHERE email = ? AND id != ?',
+                [email, user.id]
+            );
+
+            if (existingUsers.length > 0) {
+                return res.status(409).json({ error: 'Email already in use' });
+            }
+
+            updates.email = email;
+        }
+
+        // Update password if provided
+        if (newPassword) {
+            if (!currentPassword) {
+                return res.status(400).json({ error: 'Current password required to change password' });
+            }
+
+            // Verify current password
+            const passwordMatch = await bcrypt.compare(currentPassword, user.password_hash);
+            if (!passwordMatch) {
+                return res.status(401).json({ error: 'Current password is incorrect' });
+            }
+
+            // Validate new password
+            if (newPassword.length < 8) {
+                return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+            }
+
+            if (!/[A-Z]/.test(newPassword)) {
+                return res.status(400).json({ error: 'Password must include at least one uppercase letter' });
+            }
+
+            if (!/[a-z]/.test(newPassword)) {
+                return res.status(400).json({ error: 'Password must include at least one lowercase letter' });
+            }
+
+            if (!/\d/.test(newPassword)) {
+                return res.status(400).json({ error: 'Password must include at least one number' });
+            }
+
+            // Hash new password
+            const saltRounds = 10;
+            updates.password_hash = await bcrypt.hash(newPassword, saltRounds);
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ error: 'No valid update fields provided' });
+        }
+
+        // Update user
+        const updateFields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+        const updateValues = [...Object.values(updates), user.id];
+
+        await db.query(
+            `UPDATE users SET ${updateFields} WHERE id = ?`,
+            updateValues
+        );
+
+        res.json({ message: 'Profile updated successfully' });
+    } catch (error) {
+        console.error('Update user profile error:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
+
+// Set active portfolio
+router.put('/:username/active-portfolio', auth.verifyToken, async (req, res) => {
+    try {
+        const { username } = req.params;
+        const { portfolioId } = req.body;
+
+        // Verify user is updating their own profile
+        if (req.user.username !== username) {
+            return res.status(403).json({ error: 'Unauthorized access to update active portfolio' });
+        }
+
+        if (!portfolioId) {
+            return res.status(400).json({ error: 'Portfolio ID is required' });
+        }
+
+        // Verify portfolio belongs to user
+        const [portfolios] = await db.query(
+            `SELECT p.id FROM portfolios p
+             JOIN users u ON p.user_id = u.id
+             WHERE u.username = ? AND p.id = ?`,
+            [username, portfolioId]
+        );
+
+        if (portfolios.length === 0) {
+            return res.status(404).json({ error: 'Portfolio not found or does not belong to user' });
+        }
+
+        // Update active portfolio
+        await db.query(
+            'UPDATE users SET active_portfolio_id = ? WHERE username = ?',
+            [portfolioId, username]
+        );
+
+        res.json({ message: 'Active portfolio updated successfully' });
+    } catch (error) {
+        console.error('Set active portfolio error:', error);
+        res.status(500).json({ error: 'Failed to set active portfolio' });
+    }
+});
+
+// Get user dashboard/overview
+router.get('/:username/dashboard', auth.verifyToken, async (req, res) => {
+    try {
+        const { username } = req.params;
+
+        // Verify user is accessing their own dashboard
+        if (req.user.username !== username) {
+            return res.status(403).json({ error: 'Unauthorized access to user dashboard' });
+        }
+
+        // Get user ID
+        const [users] = await db.query(
+            'SELECT id, active_portfolio_id FROM users WHERE username = ?',
+            [username]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const userId = users[0].id;
+        const activePortfolioId = users[0].active_portfolio_id;
+
+        // Get portfolio summary
+        const [portfolios] = await db.query(
+            'SELECT COUNT(*) as count FROM portfolios WHERE user_id = ?',
+            [userId]
+        );
+
+        // Get total holdings value (if active portfolio exists)
+        let totalHoldingsValue = 0;
+        if (activePortfolioId) {
+            const [holdings] = await db.query(
+                `SELECT SUM(h.quantity * s.value) as total_value
+                 FROM holdings h
+                 JOIN stocks s ON h.stock_id = s.id
+                 WHERE h.portfolio_id = ?`,
+                [activePortfolioId]
+            );
+
+            totalHoldingsValue = holdings[0].total_value || 0;
+        }
+
+        // Get recent transactions (last 5)
+        const [recentTransactions] = await db.query(
+            `SELECT t.id, t.transaction_type, t.quantity, t.price_paid, 
+                    t.total_value, t.timestamp, s.symbol, s.company_name
+             FROM transactions t
+             JOIN stocks s ON t.stock_id = s.id
+             WHERE t.user_id = ?
+             ORDER BY t.timestamp DESC
+             LIMIT 5`,
+            [userId]
+        );
+
+        // Get simulation settings
+        const [settings] = await db.query(
+            'SELECT * FROM simulation_settings WHERE user_id = ?',
+            [userId]
+        );
+
+        res.json({
+            portfolioCount: portfolios[0].count,
+            activePortfolioId,
+            totalHoldingsValue,
+            recentTransactions,
+            simulationSettings: settings[0] || null
+        });
+    } catch (error) {
+        console.error('Get user dashboard error:', error);
+        res.status(500).json({ error: 'Failed to get user dashboard' });
+    }
+});
+
+// Delete user account
+router.delete('/:username', auth.verifyToken, async (req, res) => {
+    try {
+        const { username } = req.params;
+        const { password } = req.body;
+
+        // Verify user is deleting their own account
+        if (req.user.username !== username) {
+            return res.status(403).json({ error: 'Unauthorized access to delete account' });
+        }
+
+        if (!password) {
+            return res.status(400).json({ error: 'Password confirmation required' });
         }
 
         // Get user data
         const [users] = await db.query(
-            'SELECT userID, passwordHash FROM users WHERE username = ?',
+            'SELECT id, password_hash, is_demo_account FROM users WHERE username = ?',
             [username]
         );
 
@@ -71,110 +299,31 @@ router.put('/:username', auth.verifyToken, async (req, res) => {
 
         const user = users[0];
 
-        // If updating password, verify current password
-        if (newPassword) {
-            if (!currentPassword) {
-                return res.status(400).json({ error: 'Current password is required to set a new password' });
+        // Prevent deletion of demo account
+        if (user.is_demo_account) {
+            return res.status(400).json({ error: 'Demo account cannot be deleted' });
+        }
+
+        // Verify password
+        const passwordMatch = await bcrypt.compare(password, user.password_hash);
+        if (!passwordMatch) {
+            return res.status(401).json({ error: 'Password is incorrect' });
+        }
+
+        // Delete user (cascading deletes will handle related records)
+        await db.query('DELETE FROM users WHERE id = ?', [user.id]);
+
+        // Clear session
+        req.session.destroy(err => {
+            if (err) {
+                console.error('Session destruction error:', err);
             }
+        });
 
-            const bcrypt = require('bcrypt');
-            const passwordMatch = await bcrypt.compare(currentPassword, user.passwordHash);
-
-            if (!passwordMatch) {
-                return res.status(401).json({ error: 'Current password is incorrect' });
-            }
-
-            // Hash new password
-            const saltRounds = 10;
-            const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
-
-            // Update password
-            await db.query(
-                'UPDATE users SET passwordHash = ? WHERE userID = ?',
-                [newPasswordHash, user.userID]
-            );
-        }
-
-        // Update email if provided
-        if (email) {
-            await db.query(
-                'UPDATE users SET email = ? WHERE userID = ?',
-                [email, user.userID]
-            );
-        }
-
-        res.json({ message: 'User profile updated successfully' });
+        res.json({ message: 'Account deleted successfully' });
     } catch (error) {
-        console.error('Update user profile error:', error);
-        res.status(500).json({ error: 'Failed to update user profile' });
-    }
-});
-
-// Update active portfolio
-router.put('/:username/active-portfolio', auth.verifyToken, async (req, res) => {
-    try {
-        const { username } = req.params;
-        const { activePortfolioId } = req.body;
-
-        // Verify user is updating their own data
-        if (req.user.username !== username) {
-            return res.status(403).json({ error: 'Unauthorized access to update user data' });
-        }
-
-        // Verify portfolio exists and belongs to user
-        const [portfolios] = await db.query(
-            `SELECT p.portfolioID FROM portfolios p
-               JOIN users u ON p.userID = u.userID
-               WHERE u.username = ? AND p.portfolioID = ?`,
-            [username, activePortfolioId]
-        );
-
-        if (portfolios.length === 0) {
-            return res.status(404).json({ error: 'Portfolio not found or does not belong to user' });
-        }
-
-        // Update active portfolio
-        await db.query(
-            'UPDATE users SET activePortfolioID = ? WHERE username = ?',
-            [activePortfolioId, username]
-        );
-
-        res.json({ message: 'Active portfolio updated successfully' });
-    } catch (error) {
-        console.error('Update active portfolio error:', error);
-        res.status(500).json({ error: 'Failed to update active portfolio' });
-    }
-});
-
-// Delete user account
-router.delete('/:username', auth.verifyToken, async (req, res) => {
-    try {
-        const { username } = req.params;
-
-        // Verify user is deleting their own account or is an admin
-        if (req.user.username !== username && !req.user.isAdmin) {
-            return res.status(403).json({ error: 'Unauthorized access to delete user' });
-        }
-
-        // Delete user (cascading delete will remove portfolios, holdings, transactions, etc.)
-        const [result] = await db.query(
-            'DELETE FROM users WHERE username = ?',
-            [username]
-        );
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        // If user deleted their own account, destroy session
-        if (req.user.username === username) {
-            req.session.destroy();
-        }
-
-        res.json({ message: 'User account deleted successfully' });
-    } catch (error) {
-        console.error('Delete user error:', error);
-        res.status(500).json({ error: 'Failed to delete user account' });
+        console.error('Delete user account error:', error);
+        res.status(500).json({ error: 'Failed to delete account' });
     }
 });
 

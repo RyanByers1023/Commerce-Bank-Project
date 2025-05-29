@@ -1,6 +1,3 @@
-// ===== PROPER COST BASIS HOLDINGS STRUCTURE =====
-
-import DatabaseService from "../dbServices/databaseService";
 import Transaction from "./transaction.js";
 
 class Portfolio {
@@ -17,7 +14,6 @@ class Portfolio {
         this.totalAssetsValue = 0.00;
         this.transactionHistory = [];
         this.earnings = 0.0;
-        this.dbService = new DatabaseService();
     }
 
     generatePortfolioID() {
@@ -29,9 +25,7 @@ class Portfolio {
     }
 
 
-    // ===== FIXED: Buy Stock with Cost Basis Tracking =====
     buyStock(stock, quantity) {
-        // Validation
         if (!stock || !stock.symbol || !stock.marketPrice) {
             console.error('Invalid stock object');
             return false;
@@ -91,7 +85,6 @@ class Portfolio {
         }
     }
 
-    // ===== FIXED: Sell Stock with Cost Basis =====
     sellStock(stock, quantity) {
         const holding = this.holdingsMap[stock.symbol];
 
@@ -121,7 +114,6 @@ class Portfolio {
         return true;
     }
 
-    // ===== PROPER: Remove Stock with Proportional Cost Basis =====
     removeStockFromPortfolio(symbol, quantity) {
         const holding = this.holdingsMap[symbol];
         if (!holding) return;
@@ -143,7 +135,6 @@ class Portfolio {
         }
     }
 
-    // ===== CALCULATE PORTFOLIO VALUE (needs current stock prices) =====
     calculatePortfolioValue(stocksArray) {
         this.portfolioValue = 0;
 
@@ -162,7 +153,6 @@ class Portfolio {
         return this.portfolioValue;
     }
 
-    // ===== GET HOLDING WITH PROFIT/LOSS CALCULATION =====
     getHoldingDetails(symbol, currentStockPrice) {
         const holding = this.holdingsMap[symbol];
         if (!holding) return null;
@@ -213,7 +203,6 @@ class Portfolio {
         }
     }
 
-    // ===== CALCULATE TOTAL ASSETS VALUE =====
     calculateTotalAssetsValue(stocksArray) {
         this.calculatePortfolioValue(stocksArray);
         this.totalAssetsValue = this.balance + this.portfolioValue;
@@ -227,7 +216,6 @@ class Portfolio {
         return this.earnings;
     }
 
-    // ===== GET PORTFOLIO SUMMARY =====
     getPortfolioSummary(stocksArray) {
         this.setTotalStocksOwned();
         const totalAssets = this.calculateTotalAssetsValue(stocksArray);

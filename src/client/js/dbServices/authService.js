@@ -1,11 +1,11 @@
-import DatabaseService from './databaseService.js';
+import { databaseService } from './databaseService.js';
 
 /**
  * Service for handling authentication and user management
  */
 export default class AuthService {
     constructor() {
-        this.dbService = new DatabaseService();
+        this.dbService = databaseService;
         this.authStateChangedCallbacks = [];
 
         // Initialize auth state

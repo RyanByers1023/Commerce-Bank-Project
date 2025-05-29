@@ -1,4 +1,4 @@
-export default class AnimatedStockChart {
+class AnimatedStockChart {
     constructor(userProfile) {
         this.userProfile = userProfile;
         this.focusedStock = userProfile.stocksAddedToSim[0];
@@ -48,7 +48,7 @@ export default class AnimatedStockChart {
         }
 
         // Set up stock selection change listener
-        const selectStock = document.getElementById("selectStock");
+        const selectStock = document.getElementById("select-stock");
         if (selectStock) {
             selectStock.addEventListener('change', (e) => {
                 this.setFocusedStock(e.target.value);
@@ -143,18 +143,18 @@ export default class AnimatedStockChart {
         if (!this.focusedStock) return;
 
         // Update stock price display
-        const priceElement = document.getElementById("spanStockPrice");
+        const priceElement = document.getElementById("span-stock-market-price");
         if (priceElement) {
             priceElement.textContent = `$${this.focusedStock.marketPrice.toFixed(2)}`;
         }
 
         // Update buy/sell prices
-        const buyPriceElement = document.getElementById("spanStockBuyPrice");
+        const buyPriceElement = document.getElementById("span-buy-market-price");
         if (buyPriceElement) {
             buyPriceElement.textContent = `$${this.focusedStock.marketPrice.toFixed(2)}`;
         }
 
-        const sellPriceElement = document.getElementById("spanStockSellPrice");
+        const sellPriceElement = document.getElementById("span-sell-market-price");
         if (sellPriceElement) {
             sellPriceElement.textContent = `$${this.focusedStock.marketPrice.toFixed(2)}`;
         }
@@ -173,7 +173,7 @@ export default class AnimatedStockChart {
     }
 
     updatePriceChangeDisplay() {
-        const changeElement = document.getElementById("spanStockPriceChange");
+        const changeElement = document.getElementById("span-stock-price-change");
         if (!changeElement || !this.focusedStock) return;
 
         // Calculate change
@@ -193,7 +193,7 @@ export default class AnimatedStockChart {
     }
 
     drawPriceGraph() {
-        const canvas = document.getElementById("stockCanvas");
+        const canvas = document.getElementById("graph-stock");
         if (!canvas || !this.focusedStock) return;
 
         const ctx = canvas.getContext("2d");
@@ -292,8 +292,8 @@ export default class AnimatedStockChart {
         if (!this.focusedStock) return;
 
         // Update buy total
-        const buyQuantityInput = document.getElementById("inputStockBuyQuantity");
-        const buyTotalElement = document.getElementById("spanStockBuyPriceTotal");
+        const buyQuantityInput = document.getElementById("input-buy-quantity");
+        const buyTotalElement = document.getElementById("span-buy-total-price");
 
         if (buyQuantityInput && buyTotalElement) {
             const quantity = parseInt(buyQuantityInput.value) || 0;
@@ -301,8 +301,8 @@ export default class AnimatedStockChart {
         }
 
         // Update sell total
-        const sellQuantityInput = document.getElementById("inputStockSellQuantity");
-        const sellTotalElement = document.getElementById("spanStockSellPriceTotal");
+        const sellQuantityInput = document.getElementById("input-sell-quantity");
+        const sellTotalElement = document.getElementById("span-sell-total-price");
 
         if (sellQuantityInput && sellTotalElement) {
             const quantity = parseInt(sellQuantityInput.value) || 0;
@@ -333,12 +333,12 @@ export default class AnimatedStockChart {
         this.userProfile.portfolio.totalAssetsValue = portfolioValue + this.userProfile.portfolio.balance;
 
         // Update UI
-        const portfolioValueElement = document.getElementById("spanPortfolioValue");
+        const portfolioValueElement = document.getElementById("span-portfolio-value");
         if (portfolioValueElement) {
             portfolioValueElement.textContent = `$${portfolioValue.toFixed(2)}`;
         }
 
-        const totalAssetsElement = document.getElementById("spanPortfolioTotalAssets");
+        const totalAssetsElement = document.getElementById("span-total-assets-value");
         if (totalAssetsElement) {
             totalAssetsElement.textContent = `$${this.userProfile.portfolio.totalAssetsValue.toFixed(2)}`;
         }
@@ -352,3 +352,5 @@ export default class AnimatedStockChart {
         }
     }
 }
+
+export default AnimatedStockChart;

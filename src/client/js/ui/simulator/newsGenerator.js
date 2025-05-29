@@ -1,4 +1,4 @@
-export default class NewsGenerator {
+class NewsGenerator {
     constructor(userProfile) {
         this.userProfile  = userProfile;                         // holds stocksAddedToSim
         this.newsContainer = document.getElementById('table-container-news');
@@ -157,3 +157,5 @@ export default class NewsGenerator {
         }
     }
 }
+
+export default NewsGenerator;

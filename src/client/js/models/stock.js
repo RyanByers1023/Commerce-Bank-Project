@@ -1,6 +1,3 @@
-/**
- * Represents a stock in the simulation
- */
 class Stock {
     constructor(stockData) {
         // Initialize with data if provided, otherwise with defaults
@@ -20,9 +17,6 @@ class Stock {
         }
     }
 
-    /**
-     * Updates the stock price based on volatility and sentiment
-     */
     updatePrice() {
         const volatilityFactor = this.volatility || 0.015;
         const sentimentFactor = this.currentSentiment || 0;
@@ -50,10 +44,6 @@ class Stock {
         }
     }
 
-    /**
-     * Generates price history for the stock
-     * @param {number} days - Number of days to generate
-     */
     setSimulatedPriceHistory(days = 30, startPrice = null) {
         // Use provided start price or current market price
         const initialPrice = startPrice || this.marketPrice || 100;
@@ -88,10 +78,6 @@ class Stock {
         this.priceHistory.push(initialPrice);
     }
 
-    /**
-     * Get day change information
-     * @returns {Object} Day change info
-     */
     getDayChange() {
         const prevClose = this.previousClosePrice || (this.marketPrice * 0.99); // Fallback if no previous close
 
@@ -101,14 +87,9 @@ class Stock {
         };
     }
 
-    /**
-     * Get formatted price
-     * @returns {string} Formatted price
-     */
     getFormattedPrice() {
         return `$${this.marketPrice.toFixed(2)}`;
     }
 }
 
-// Export the class for use in modules
 export default Stock;

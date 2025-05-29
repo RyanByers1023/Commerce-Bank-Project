@@ -1,8 +1,9 @@
 import { authService } from './authService.js';
 import { stockService } from './stockService.js';
-import DatabaseService from './databaseService.js';
+import { databaseService } from './databaseService.js';
+import { simulationService } from "./simulationService";
+
 import Portfolio from '../models/portfolio.js';
-import {simulationService} from "./simulationService";
 
 /**
  * Central service for managing the user profile, portfolio, and stocks
@@ -11,7 +12,7 @@ import {simulationService} from "./simulationService";
  */
 export default class UserProfileService {
     constructor() {
-        this.dbService = new DatabaseService();
+        this.dbService = databaseService;
         this.username = null;
         this.email = null;
         this.stocksAddedToSim = [];

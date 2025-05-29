@@ -1,12 +1,12 @@
-import DatabaseService from './databaseService.js';
+import { databaseService } from './databaseService.js';
 import { getCurrentUser } from './authService.js';
 
 /**
  * Service for managing simulation settings and state
  */
-export default class SimulationService {
+class SimulationService {
     constructor() {
-        this.dbService = new DatabaseService();
+        this.dbService = databaseService;
 
         // Default settings
         this.settings = {

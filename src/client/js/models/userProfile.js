@@ -1,5 +1,5 @@
 import Portfolio from './portfolio.js';
-import DatabaseManager from '../services/databaseManager.js';
+import {databaseService} from '../dbServices/databaseService.js';
 
 class UserProfile {
     constructor(userData = null) {
@@ -9,7 +9,7 @@ class UserProfile {
         this.portfolio = null;
 
         // Initialize database manager
-        this.dbManager = new DatabaseManager();
+        this.dbService = databaseService;
 
         if (userData) {
             // Initialize from existing user data
@@ -31,18 +31,17 @@ class UserProfile {
 
         try {
             // Get user data
-            const userData = await this.dbManager.loadUserProfile(this.username);
+            const userData = await this.dbService.loadUserProfile(this.username);
 
             // Get stocks for simulation
-            const stocks = await this.dbManager.sendRequest(`stocks/${this.username}`);
+            const stocks = await this.dbService.sendRequest(`stocks/${this.username}`);
             this.stocksAddedToSim = stocks || [];
 
             // Get active portfolio
-            const portfolios = await this.dbManager.sendRequest(`portfolios/${this.username}`);
+            const portfolios = await this.dbService.sendRequest(`portfolios/${this.username}`);
             if (portfolios && portfolios.length > 0) {
                 // Find active portfolio
-                const activePortfolio = portfolios.find(p => p.id === userData.activePortfolioID) || portfolios[0];
-                this.portfolio = activePortfolio;
+                this.portfolio = portfolios.find(p => p.id === userData.activePortfolioID) || portfolios[0];
             } else {
                 // Create default portfolio if none exists
                 const multiPortfolioManager = new MultiPortfolioManager(this);
@@ -86,13 +85,13 @@ class UserProfile {
             };
 
             // Record transaction in database
-            await this.dbManager.recordTransaction(transaction);
+            await this.dbService.executeTransaction(transaction);
 
             // Update portfolio
             const portfolioUpdate = {
                 balance: this.portfolio.balance - totalCost
             };
-            await this.dbManager.sendRequest(`portfolios/${this.username}/${this.portfolio.id}`, 'PUT', portfolioUpdate);
+            await this.dbService.sendRequest(`portfolios/${this.username}/${this.portfolio.id}`, 'PUT', portfolioUpdate);
 
             // Update holdings
             const holding = this.portfolio.holdingsMap[stock.symbol];
@@ -111,7 +110,7 @@ class UserProfile {
             }
 
             // Update holdings in database
-            await this.dbManager.sendRequest(`holdings/${this.username}/${this.portfolio.id}/${stock.symbol}`, 'PUT', {
+            await this.dbService.sendRequest(`holdings/${this.username}/${this.portfolio.id}/${stock.symbol}`, 'PUT', {
                 quantity: newQuantity,
                 avgPrice: newAvgPrice
             });
@@ -174,20 +173,20 @@ class UserProfile {
             };
 
             // Record transaction in database
-            await this.dbManager.recordTransaction(transaction);
+            await this.dbService.recordTransaction(transaction);
 
             // Update portfolio
             const portfolioUpdate = {
                 balance: this.portfolio.balance + totalValue
             };
-            await this.dbManager.sendRequest(`portfolios/${this.username}/${this.portfolio.id}`, 'PUT', portfolioUpdate);
+            await this.dbService.sendRequest(`portfolios/${this.username}/${this.portfolio.id}`, 'PUT', portfolioUpdate);
 
             // Update holdings
             const newQuantity = holding.quantity - quantity;
 
             if (newQuantity > 0) {
                 // Update existing holding
-                await this.dbManager.sendRequest(`holdings/${this.username}/${this.portfolio.id}/${stock.symbol}`, 'PUT', {
+                await this.dbService.sendRequest(`holdings/${this.username}/${this.portfolio.id}/${stock.symbol}`, 'PUT', {
                     quantity: newQuantity
                 });
 
@@ -195,7 +194,7 @@ class UserProfile {
                 holding.quantity = newQuantity;
             } else {
                 // Remove holding
-                await this.dbManager.sendRequest(`holdings/${this.username}/${this.portfolio.id}/${stock.symbol}`, 'DELETE');
+                await this.dbService.sendRequest(`holdings/${this.username}/${this.portfolio.id}/${stock.symbol}`, 'DELETE');
 
                 // Update local state
                 delete this.portfolio.holdingsMap[stock.symbol];
@@ -226,7 +225,7 @@ class UserProfile {
             }
 
             // Add to database
-            await this.dbManager.sendRequest(`user-stocks/${this.username}`, 'POST', {
+            await this.dbService.sendRequest(`user-stocks/${this.username}`, 'POST', {
                 symbol: stock.symbol
             });
 

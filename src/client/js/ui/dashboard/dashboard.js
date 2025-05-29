@@ -1,307 +1,232 @@
-import {authService} from '../../dbServices/authService.js';
-import {userProfileService} from '../../dbServices/userProfileService.js';
-
-import DatabaseService from '../../dbServices/databaseService.js';
-import NotificationSystem from './notificationSystem.js';
-
-// Initialize components
-const notifications = new NotificationSystem();
-const dbService = new DatabaseService();
-let portfolioMetrics = null;
-let currentUserProfile = null;
-
-// Initialize the dashboard
-async function initDashboard() {
-    try {
-        // Check authentication first
-        const isAuthenticated = await authService.checkAuthStatus();
-
-        if (!isAuthenticated) {
-            // Redirect to login if not logged in
-            window.location.href = 'login.html';
-            return;
-        }
-
-        // Initialize user profile service
-        currentUserProfile = await userProfileService.initialize();
-
-        if (!currentUserProfile || !currentUserProfile.portfolio) {
-            notifications.error('Failed to load portfolio data');
-            return;
-        }
-
-        // Initialize portfolio metrics
-        portfolioMetrics = new PortfolioMetricsController(currentUserProfile);
-
-        // Update dashboard data
-        await updateDashboardData(currentUserProfile);
-
-        // Set up refresh button
-        const refreshBtn = document.getElementById('refresh-btn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
-                refreshDashboard();
-            });
-        }
-
-        // Set up auto-refresh every 30 seconds
-        setInterval(() => refreshDashboard(), 30000);
-
-        console.log('Dashboard initialized successfully');
-
-    } catch (error) {
-        console.error('Failed to initialize dashboard:', error);
-        notifications.error('Failed to load dashboard. Please try again later.');
+// js/dashboard.js
+class Dashboard {
+    constructor() {
+        this.currentUser = null;
+        this.portfolioData = null;
+        this.init();
     }
-}
 
-// Refresh dashboard data
-async function refreshDashboard() {
-    try {
-        if (!currentUserProfile) {
-            console.warn('No user profile available for refresh');
-            return;
+    async init() {
+        try {
+            // Check if user is authenticated
+            const authCheck = await fetch('/api/auth/check');
+            const authData = await authCheck.json();
+
+            if (!authData.authenticated) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // Get current user data
+            await this.loadCurrentUser();
+
+            // Load dashboard data
+            await this.loadDashboardData();
+
+            // Set up event listeners
+            this.setupEventListeners();
+
+        } catch (error) {
+            console.error('Dashboard initialization error:', error);
+            this.showError('Failed to load dashboard');
         }
-
-        // Reload user profile data
-        await currentUserProfile.loadUserProfile();
-
-        // Update dashboard displays
-        await updateDashboardData(currentUserProfile);
-
-        console.log('Dashboard refreshed');
-
-    } catch (error) {
-        console.error('Failed to refresh dashboard:', error);
-        notifications.error('Failed to refresh data');
     }
-}
 
-// Update dashboard data with user profile
-async function updateDashboardData(userProfile) {
-    try {
-        if (!userProfile || !userProfile.portfolio) {
-            console.error('Invalid user profile data');
-            return;
+    async loadCurrentUser() {
+        try {
+            const response = await fetch('/api/auth/current-user');
+            if (!response.ok) throw new Error('Failed to get user data');
+
+            this.currentUser = await response.json();
+        } catch (error) {
+            console.error('Error loading user:', error);
+            throw error;
         }
+    }
+
+    async loadDashboardData() {
+        try {
+            if (!this.currentUser.activePortfolioId) {
+                this.showNoPortfolioMessage();
+                return;
+            }
+
+            // Get portfolio data
+            const portfolioResponse = await fetch(`/api/portfolios/${this.currentUser.username}/${this.currentUser.activePortfolioId}`);
+            if (!portfolioResponse.ok) throw new Error('Failed to get portfolio data');
+
+            this.portfolioData = await portfolioResponse.json();
+
+            // Get recent transactions
+            const transactionsResponse = await fetch(`/api/transactions/${this.currentUser.username}/${this.currentUser.activePortfolioId}`);
+            const transactions = transactionsResponse.ok ? await transactionsResponse.json() : [];
+
+            // Populate dashboard
+            this.populateOverviewCards();
+            this.populateHoldingsTable();
+            this.populateTransactionsTable(transactions.slice(0, 10)); // Show last 10 transactions
+
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+            this.showError('Failed to load portfolio data');
+        }
+    }
+
+    populateOverviewCards() {
+        const portfolioValue = this.portfolioData.portfolioValue || 0;
+        const holdingsCount = Object.keys(this.portfolioData.holdingsMap || {}).length;
+
+        // Assume cash balance (you may need to add this to your schema)
+        const availableCash = 1000; // Placeholder - implement cash tracking
+        const totalAssets = portfolioValue + availableCash;
 
         // Update overview cards
-        updateOverviewCards(userProfile);
+        document.getElementById('portfolio-value').textContent = this.formatCurrency(portfolioValue);
+        document.getElementById('available-cash').textContent = this.formatCurrency(availableCash);
+        document.getElementById('total-assets').textContent = this.formatCurrency(totalAssets);
+        document.getElementById('holdings-count').textContent = holdingsCount.toString();
 
-        // Update holdings table
-        updateHoldingsTable(userProfile);
-
-        // Update recent transactions
-        await updateRecentTransactions(userProfile);
-
-        // Update portfolio metrics if available
-        if (portfolioMetrics) {
-            portfolioMetrics.updateCharts();
-        }
-
-    } catch (error) {
-        console.error('Error updating dashboard data:', error);
-        notifications.error('Error updating dashboard data');
+        // Calculate and show portfolio change (placeholder logic)
+        this.updatePortfolioChange(portfolioValue);
     }
-}
 
-// Update overview cards with latest data
-function updateOverviewCards(userProfile) {
-    try {
-        const portfolio = userProfile.portfolio;
-
-        // Update portfolio value
-        const portfolioValue = document.getElementById('portfolio-value');
-        if (portfolioValue) {
-            portfolioValue.textContent = `$${(portfolio.portfolioValue || 0).toFixed(2)}`;
-        }
-
-        // Update portfolio change
-        const portfolioChange = document.getElementById('portfolio-change');
-        if (portfolioChange) {
-            const initialInvestment = portfolio.initialBalance || 0;
-            const currentValue = portfolio.totalAssetsValue || portfolio.balance || 0;
-            const change = currentValue - initialInvestment;
-            const percentChange = initialInvestment > 0 ? (change / initialInvestment) * 100 : 0;
-
-            portfolioChange.className = `text-sm ${change >= 0 ? 'text-green-600' : 'text-red-600'}`;
-            portfolioChange.textContent = `${change >= 0 ? '+' : ''}$${change.toFixed(2)} (${percentChange.toFixed(2)}%)`;
-        }
-
-        // Update available cash
-        const availableCash = document.getElementById('available-cash');
-        if (availableCash) {
-            availableCash.textContent = `$${(portfolio.balance || 0).toFixed(2)}`;
-        }
-
-        // Update total assets
-        const totalAssets = document.getElementById('total-assets');
-        if (totalAssets) {
-            const totalValue = (portfolio.portfolioValue || 0) + (portfolio.balance || 0);
-            totalAssets.textContent = `$${totalValue.toFixed(2)}`;
-        }
-
-        // Update holdings count
-        const holdingsCount = document.getElementById('holdings-count');
-        if (holdingsCount) {
-            const holdings = portfolio.holdingsMap || {};
-            holdingsCount.textContent = Object.keys(holdings).length;
-        }
-
-    } catch (error) {
-        console.error('Error updating overview cards:', error);
+    updatePortfolioChange(currentValue) {
+        // This would require historical data to calculate actual change
+        // For now, show placeholder
+        const changeElement = document.getElementById('portfolio-change');
+        changeElement.innerHTML = '<span class="text-gray-500">Change tracking coming soon</span>';
     }
-}
 
-// Update holdings table with latest data
-function updateHoldingsTable(userProfile) {
-    try {
-        const tableBody = document.getElementById('holdings-table-body');
-        if (!tableBody) {
-            console.warn('Holdings table body not found');
+    populateHoldingsTable() {
+        const tbody = document.getElementById('holdings-table-body');
+        const holdings = this.portfolioData.holdingsMap || {};
+
+        if (Object.keys(holdings).length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No holdings to display</td></tr>';
             return;
         }
 
-        const holdings = userProfile.portfolio?.holdingsMap || {};
+        tbody.innerHTML = '';
 
-        // Clear existing content
-        tableBody.innerHTML = '';
-
-        if (!holdings || Object.keys(holdings).length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No holdings to display</td></tr>';
-            return;
-        }
-
-        // Add each holding to the table
         Object.values(holdings).forEach(holding => {
-            try {
-                const stock = holding.stock;
-                if (!stock) {
-                    console.warn('Invalid holding data:', holding);
-                    return;
-                }
+            const profitLoss = holding.profitLoss || 0;
+            const profitLossClass = profitLoss >= 0 ? 'text-green-600' : 'text-red-600';
+            const profitLossSign = profitLoss >= 0 ? '+' : '';
 
-                const currentPrice = stock.marketPrice || 0;
-                const avgPrice = holding.avgPrice || 0;
-                const quantity = holding.quantity || 0;
-                const value = currentPrice * quantity;
-                const profitLoss = (currentPrice - avgPrice) * quantity;
-                const percentChange = avgPrice > 0 ? ((currentPrice - avgPrice) / avgPrice) * 100 : 0;
-
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50';
-
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            <div>
-                                <div class="text-sm font-medium text-gray-900">${stock.symbol || 'N/A'}</div>
-                                <div class="text-sm text-gray-500">${stock.companyName || 'Unknown Company'}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${quantity}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$${avgPrice.toFixed(2)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$${currentPrice.toFixed(2)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$${value.toFixed(2)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="text-sm ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}">
-                            ${profitLoss >= 0 ? '+' : ''}$${profitLoss.toFixed(2)} (${percentChange.toFixed(2)}%)
-                        </span>
-                    </td>
-                `;
-
-                tableBody.appendChild(row);
-
-            } catch (error) {
-                console.error('Error processing holding:', error, holding);
-            }
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${holding.symbol}</div>
+                    <div class="text-sm text-gray-500">${holding.companyName}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${holding.quantity}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.avgPrice)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.currentPrice)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.value)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm ${profitLossClass}">
+                    ${profitLossSign}${this.formatCurrency(Math.abs(profitLoss))}
+                    <div class="text-xs">(${profitLossSign}${holding.percentChange?.toFixed(2) || '0.00'}%)</div>
+                </td>
+            `;
+            tbody.appendChild(row);
         });
-
-    } catch (error) {
-        console.error('Error updating holdings table:', error);
     }
-}
 
-// Update recent transactions
-async function updateRecentTransactions(userProfile) {
-    try {
-        const tableBody = document.getElementById('transactions-table-body');
-        if (!tableBody) {
-            console.warn('Transactions table body not found');
-            return;
-        }
-
-        // Get transaction history from portfolio or API
-        let transactions = [];
-
-        if (userProfile.portfolio?.transactionHistory) {
-            transactions = userProfile.portfolio.transactionHistory;
-        } else if (userProfile.username && userProfile.username !== 'demo_user') {
-            // For authenticated users, try to get from API
-            try {
-                const currentUser = await authService.getCurrentUser();
-                if (currentUser?.activePortfolioID) {
-                    transactions = await dbService.getPortfolioTransactions(userProfile.username, currentUser.activePortfolioID);
-                }
-            } catch (error) {
-                console.warn('Could not load transactions from API:', error);
-            }
-        }
-
-        // Clear existing content
-        tableBody.innerHTML = '';
+    populateTransactionsTable(transactions) {
+        const tbody = document.getElementById('transactions-table-body');
 
         if (!transactions || transactions.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No transactions to display</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No transactions to display</td></tr>';
             return;
         }
 
-        // Show last 10 transactions
-        const recentTransactions = transactions.slice(-10).reverse();
+        tbody.innerHTML = '';
 
-        recentTransactions.forEach(transaction => {
-            try {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50';
+        transactions.forEach(transaction => {
+            const typeClass = transaction.transaction_type === 'BUY' ? 'text-green-600' : 'text-red-600';
+            const date = new Date(transaction.timestamp).toLocaleDateString();
 
-                const date = new Date(transaction.timestamp || transaction.createdAt || Date.now());
-                const formattedDate = date.toLocaleDateString();
-
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formattedDate}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    (transaction.transactionType || transaction.type) === 'BUY'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                }">
-                            ${transaction.transactionType || transaction.type || 'N/A'}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${transaction.symbol || 'N/A'}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${transaction.quantity || 0}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$${(transaction.pricePaid || transaction.price || 0).toFixed(2)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$${(transaction.totalValue || transaction.totalTransactionValue || 0).toFixed(2)}</td>
-                `;
-
-                tableBody.appendChild(row);
-
-            } catch (error) {
-                console.error('Error processing transaction:', error, transaction);
-            }
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${date}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${typeClass === 'text-green-600' ? 'bg-green-100' : 'bg-red-100'} ${typeClass}">
+                        ${transaction.transaction_type}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${transaction.symbol}</div>
+                    <div class="text-sm text-gray-500">${transaction.company_name}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${transaction.quantity}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(transaction.price_paid)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(transaction.total_value)}</td>
+            `;
+            tbody.appendChild(row);
         });
+    }
 
-    } catch (error) {
-        console.error('Error updating transactions table:', error);
+    setupEventListeners() {
+        // Refresh button
+        document.getElementById('refresh-btn').addEventListener('click', () => {
+            this.refreshDashboard();
+        });
+    }
+
+    async refreshDashboard() {
+        const refreshBtn = document.getElementById('refresh-btn');
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<svg class="w-4 h-4 inline-block mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>Refreshing...';
+
+        try {
+            await this.loadDashboardData();
+        } catch (error) {
+            console.error('Refresh error:', error);
+            this.showError('Failed to refresh data');
+        } finally {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = '<svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>Refresh';
+        }
+    }
+
+    showNoPortfolioMessage() {
+        const container = document.querySelector('.container');
+        container.innerHTML = `
+            <div class="text-center py-12">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">No Active Portfolio</h2>
+                <p class="text-gray-600 mb-6">You don't have an active portfolio set up yet.</p>            
+            </div>
+        `;
+    }
+
+    showError(message) {
+        // Create error notification
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4';
+        errorDiv.innerHTML = `
+            <strong class="font-bold">Error:</strong>
+            <span class="block sm:inline">${message}</span>
+        `;
+
+        // Insert at top of container
+        const container = document.querySelector('.container');
+        container.insertBefore(errorDiv, container.firstChild);
+
+        // Remove after 5 seconds
+        setTimeout(() => {
+            errorDiv.remove();
+        }, 5000);
+    }
+
+    formatCurrency(amount) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+        }).format(amount || 0);
     }
 }
 
-// Initialize dashboard when DOM is loaded
-document.addEventListener('DOMContentLoaded', initDashboard);
-
-// Export for external use
-window.dashboardController = {
-    refresh: refreshDashboard,
-    updateData: updateDashboardData
-};
+// Initialize dashboard when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    new Dashboard();
+});

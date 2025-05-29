@@ -1,4 +1,4 @@
-import DatabaseService from './databaseService.js';
+import { databaseService } from './databaseService.js';
 import { getCurrentUser } from './authService.js';
 
 /**
@@ -6,7 +6,7 @@ import { getCurrentUser } from './authService.js';
  */
 export default class StockService {
     constructor() {
-        this.dbService = new DatabaseService();
+        this.dbService = databaseService;
         this.stocks = [];
         this.stockCache = new Map(); // Cache for detailed stock data
         this.lastUpdateTime = 0;

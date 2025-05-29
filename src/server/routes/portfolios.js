@@ -2,7 +2,6 @@
 const express = require('express');
 const router = express.Router();
 
-//get middleware:
 const db = require('../middleware/db');
 const auth = require('../middleware/auth');
 
@@ -12,18 +11,17 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
         const { username } = req.params;
 
         // Verify user is accessing their own data or is an admin
-        if (req.user.username !== username && !req.user.isAdmin) {
+        if (req.user.username !== username && !req.user.is_admin) {
             return res.status(403).json({ error: 'Unauthorized access to portfolio data' });
         }
 
         // Get user's portfolios
         const [portfolios] = await db.query(
-            `SELECT p.portfolioID, p.name, p.description, p.initialBalance, p.balance, 
-                 p.createdAt, p.updatedAt
-               FROM portfolios p
-               JOIN users u ON p.userID = u.userID
-               WHERE u.username = ?
-               ORDER BY p.createdAt`,
+            `SELECT p.id, p.user_id, p.created_at, p.updated_at
+             FROM portfolios p
+             JOIN users u ON p.user_id = u.id
+             WHERE u.username = ?
+             ORDER BY p.created_at`,
             [username]
         );
 
@@ -33,23 +31,22 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
 
         // For each portfolio, get total value of holdings
         for (const portfolio of portfolios) {
-            // Get holdings
+            // Get holdings with stock prices
             const [holdingsResult] = await db.query(
-                `SELECT h.quantity, h.avgPrice, s.symbol, s.marketPrice
-                     FROM holdings h
-                     JOIN stocks s ON h.stockID = s.stockID
-                     WHERE h.portfolioID = ?`,
-                [portfolio.portfolioID]
+                `SELECT h.quantity, h.avg_price_paid, s.symbol, s.value as current_price
+                 FROM holdings h
+                 JOIN stocks s ON h.stock_id = s.id
+                 WHERE h.portfolio_id = ?`,
+                [portfolio.id]
             );
 
             // Calculate portfolio value
             let portfolioValue = 0;
             for (const holding of holdingsResult) {
-                portfolioValue += holding.quantity * holding.marketPrice;
+                portfolioValue += holding.quantity * holding.current_price;
             }
 
             portfolio.portfolioValue = portfolioValue;
-            portfolio.totalAssetsValue = portfolioValue + portfolio.balance;
             portfolio.holdingsCount = holdingsResult.length;
         }
 
@@ -66,17 +63,16 @@ router.get('/:username/:portfolioId', auth.verifyToken, async (req, res) => {
         const { username, portfolioId } = req.params;
 
         // Verify user is accessing their own data or is an admin
-        if (req.user.username !== username && !req.user.isAdmin) {
+        if (req.user.username !== username && !req.user.is_admin) {
             return res.status(403).json({ error: 'Unauthorized access to portfolio data' });
         }
 
         // Get portfolio
         const [portfolios] = await db.query(
-            `SELECT p.portfolioID, p.name, p.description, p.initialBalance, p.balance, 
-              p.createdAt, p.updatedAt
-                   FROM portfolios p
-                   JOIN users u ON p.userID = u.userID
-                   WHERE u.username = ? AND p.portfolioID = ?`,
+            `SELECT p.id, p.user_id, p.created_at, p.updated_at
+             FROM portfolios p
+             JOIN users u ON p.user_id = u.id
+             WHERE u.username = ? AND p.id = ?`,
             [username, portfolioId]
         );
 
@@ -88,11 +84,11 @@ router.get('/:username/:portfolioId', auth.verifyToken, async (req, res) => {
 
         // Get holdings
         const [holdings] = await db.query(
-            `SELECT h.quantity, h.avgPrice, s.stockID, s.symbol, s.companyName, 
-              s.sector, s.marketPrice
-       FROM holdings h
-       JOIN stocks s ON h.stockID = s.stockID
-       WHERE h.portfolioID = ?`,
+            `SELECT h.quantity, h.avg_price_paid, h.price_paid, s.id as stock_id, s.symbol, 
+                    s.company_name, s.sector, s.value as current_price
+             FROM holdings h
+             JOIN stocks s ON h.stock_id = s.id
+             WHERE h.portfolio_id = ?`,
             [portfolioId]
         );
 
@@ -101,26 +97,24 @@ router.get('/:username/:portfolioId', auth.verifyToken, async (req, res) => {
         let portfolioValue = 0;
 
         for (const holding of holdings) {
-            const value = holding.quantity * holding.marketPrice;
+            const value = holding.quantity * holding.current_price;
             portfolioValue += value;
 
             holdingsMap[holding.symbol] = {
-                stockID: holding.stockID,
+                stockId: holding.stock_id,
                 symbol: holding.symbol,
-                companyName: holding.companyName,
+                companyName: holding.company_name,
                 sector: holding.sector,
                 quantity: holding.quantity,
-                avgPrice: holding.avgPrice,
-                currentPrice: holding.marketPrice,
+                avgPrice: holding.avg_price,
+                currentPrice: holding.current_price,
                 value: value,
-                profitLoss: (holding.marketPrice - holding.avgPrice) * holding.quantity,
-                percentChange: ((holding.marketPrice - holding.avgPrice) / holding.avgPrice) * 100
+                profitLoss: (holding.current_price - holding.avg_price) * holding.quantity,
+                percentChange: ((holding.current_price - holding.avg_price) / holding.avg_price) * 100
             };
         }
 
-        // Calculate portfolio value
         portfolio.portfolioValue = portfolioValue;
-        portfolio.totalAssetsValue = portfolioValue + portfolio.balance;
         portfolio.holdingsMap = holdingsMap;
 
         res.json(portfolio);
@@ -134,12 +128,6 @@ router.get('/:username/:portfolioId', auth.verifyToken, async (req, res) => {
 router.post('/:username', auth.verifyToken, async (req, res) => {
     try {
         const { username } = req.params;
-        const { name, description, initialBalance = 500 } = req.body;
-
-        // Validate input
-        if (!name) {
-            return res.status(400).json({ error: 'Portfolio name is required' });
-        }
 
         // Verify user is creating a portfolio for themselves
         if (req.user.username !== username) {
@@ -148,7 +136,7 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
 
         // Get user ID
         const [users] = await db.query(
-            'SELECT userID FROM users WHERE username = ?',
+            'SELECT id FROM users WHERE username = ?',
             [username]
         );
 
@@ -156,22 +144,21 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const userID = users[0].userID;
+        const userId = users[0].id;
 
         // Create portfolio ID
-        const portfolioID = `portfolio-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        const portfolioId = `portfolio-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
         // Create portfolio
         await db.query(
-            `INSERT INTO portfolios (portfolioID, userID, name, description, initialBalance, balance)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-            [portfolioID, userID, name, description || '', initialBalance, initialBalance]
+            'INSERT INTO portfolios (id, user_id) VALUES (?, ?)',
+            [portfolioId, userId]
         );
 
         // Get created portfolio
         const [portfolios] = await db.query(
-            'SELECT * FROM portfolios WHERE portfolioID = ?',
-            [portfolioID]
+            'SELECT * FROM portfolios WHERE id = ?',
+            [portfolioId]
         );
 
         if (portfolios.length === 0) {
@@ -180,17 +167,12 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
 
         const portfolio = portfolios[0];
 
-        // Return the created portfolio
         res.status(201).json({
-            portfolioID: portfolio.portfolioID,
-            name: portfolio.name,
-            description: portfolio.description,
-            initialBalance: portfolio.initialBalance,
-            balance: portfolio.balance,
-            createdAt: portfolio.createdAt,
-            updatedAt: portfolio.updatedAt,
+            id: portfolio.id,
+            userId: portfolio.user_id,
+            createdAt: portfolio.created_at,
+            updatedAt: portfolio.updated_at,
             portfolioValue: 0,
-            totalAssetsValue: portfolio.balance,
             holdingsMap: {}
         });
     } catch (error) {
@@ -199,67 +181,10 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
     }
 });
 
-// Update a portfolio
-router.put('/:username/:portfolioId', auth.verifyToken, async (req, res) => {
-    try {
-        const { username, portfolioId } = req.params;
-        const { name, description } = req.body;
-
-        // Verify user is updating their own portfolio
-        if (req.user.username !== username) {
-            return res.status(403).json({ error: 'Unauthorized access to update portfolio' });
-        }
-
-        // Check if portfolio exists and belongs to user
-        const [portfolios] = await db.query(
-            `SELECT p.portfolioID FROM portfolios p
-       JOIN users u ON p.userID = u.userID
-       WHERE u.username = ? AND p.portfolioID = ?`,
-            [username, portfolioId]
-        );
-
-        if (portfolios.length === 0) {
-            return res.status(404).json({ error: 'Portfolio not found or does not belong to user' });
-        }
-
-        // Update portfolio
-        const updateFields = [];
-        const updateValues = [];
-
-        if (name) {
-            updateFields.push('name = ?');
-            updateValues.push(name);
-        }
-
-        if (description !== undefined) {
-            updateFields.push('description = ?');
-            updateValues.push(description);
-        }
-
-        if (updateFields.length === 0) {
-            return res.status(400).json({ error: 'No update fields provided' });
-        }
-
-        // Add portfolio ID to values
-        updateValues.push(portfolioId);
-
-        await db.query(
-            `UPDATE portfolios SET ${updateFields.join(', ')}, updatedAt = NOW() WHERE portfolioID = ?`,
-            updateValues
-        );
-
-        res.json({ message: 'Portfolio updated successfully' });
-    } catch (error) {
-        console.error('Update portfolio error:', error);
-        res.status(500).json({ error: 'Failed to update portfolio' });
-    }
-});
-
-// Reset a portfolio
+// Reset a portfolio (clear all holdings and transactions)
 router.post('/:username/:portfolioId/reset', auth.verifyToken, async (req, res) => {
     try {
         const { username, portfolioId } = req.params;
-        const { initialBalance } = req.body;
 
         // Verify user is resetting their own portfolio
         if (req.user.username !== username) {
@@ -271,9 +196,9 @@ router.post('/:username/:portfolioId/reset', auth.verifyToken, async (req, res) 
 
         // Check if portfolio exists and belongs to user
         const [portfolios] = await db.query(
-            `SELECT p.portfolioID, p.initialBalance FROM portfolios p
-       JOIN users u ON p.userID = u.userID
-       WHERE u.username = ? AND p.portfolioID = ?`,
+            `SELECT p.id FROM portfolios p
+             JOIN users u ON p.user_id = u.id
+             WHERE u.username = ? AND p.id = ?`,
             [username, portfolioId]
         );
 
@@ -282,36 +207,23 @@ router.post('/:username/:portfolioId/reset', auth.verifyToken, async (req, res) 
             return res.status(404).json({ error: 'Portfolio not found or does not belong to user' });
         }
 
-        const portfolio = portfolios[0];
-
-        // Use provided initial balance or the existing one
-        const newBalance = initialBalance || portfolio.initialBalance;
-
         // Delete all holdings for this portfolio
         await db.query(
-            'DELETE FROM holdings WHERE portfolioID = ?',
+            'DELETE FROM holdings WHERE portfolio_id = ?',
             [portfolioId]
         );
 
         // Delete all transactions for this portfolio
         await db.query(
-            'DELETE FROM transactions WHERE portfolioID = ?',
+            'DELETE FROM transactions WHERE portfolio_id = ?',
             [portfolioId]
-        );
-
-        // Update portfolio balance and initial balance
-        await db.query(
-            'UPDATE portfolios SET balance = ?, initialBalance = ?, updatedAt = NOW() WHERE portfolioID = ?',
-            [newBalance, newBalance, portfolioId]
         );
 
         // Commit transaction
         await db.query('COMMIT');
 
         res.json({
-            message: 'Portfolio reset successfully',
-            initialBalance: newBalance,
-            balance: newBalance
+            message: 'Portfolio reset successfully'
         });
     } catch (error) {
         await db.query('ROLLBACK');
@@ -332,9 +244,9 @@ router.delete('/:username/:portfolioId', auth.verifyToken, async (req, res) => {
 
         // Check if portfolio exists and belongs to user
         const [portfolios] = await db.query(
-            `SELECT p.portfolioID FROM portfolios p
-       JOIN users u ON p.userID = u.userID
-       WHERE u.username = ? AND p.portfolioID = ?`,
+            `SELECT p.id FROM portfolios p
+             JOIN users u ON p.user_id = u.id
+             WHERE u.username = ? AND p.id = ?`,
             [username, portfolioId]
         );
 
@@ -344,46 +256,46 @@ router.delete('/:username/:portfolioId', auth.verifyToken, async (req, res) => {
 
         // Check if it's the only portfolio
         const [countResult] = await db.query(
-            `SELECT COUNT(*) as portfolioCount FROM portfolios p
-       JOIN users u ON p.userID = u.userID
-       WHERE u.username = ?`,
+            `SELECT COUNT(*) as portfolio_count FROM portfolios p
+             JOIN users u ON p.user_id = u.id
+             WHERE u.username = ?`,
             [username]
         );
 
-        if (countResult[0].portfolioCount <= 1) {
+        if (countResult[0].portfolio_count <= 1) {
             return res.status(400).json({ error: 'Cannot delete the only portfolio' });
         }
 
         // Check if it's the active portfolio
         const [userResult] = await db.query(
-            'SELECT activePortfolioID FROM users WHERE username = ?',
+            'SELECT active_portfolio_id FROM users WHERE username = ?',
             [username]
         );
 
-        const isActivePortfolio = userResult[0].activePortfolioID === portfolioId;
+        const isActivePortfolio = userResult[0].active_portfolio_id === portfolioId;
 
         // Begin transaction
         await db.query('START TRANSACTION');
 
         // Delete portfolio (cascading delete will remove holdings and transactions)
         await db.query(
-            'DELETE FROM portfolios WHERE portfolioID = ?',
+            'DELETE FROM portfolios WHERE id = ?',
             [portfolioId]
         );
 
         // If it was the active portfolio, set another portfolio as active
         if (isActivePortfolio) {
             const [remainingPortfolios] = await db.query(
-                `SELECT portfolioID FROM portfolios p
-         JOIN users u ON p.userID = u.userID
-         WHERE u.username = ? LIMIT 1`,
+                `SELECT id FROM portfolios p
+                 JOIN users u ON p.user_id = u.id
+                 WHERE u.username = ? LIMIT 1`,
                 [username]
             );
 
             if (remainingPortfolios.length > 0) {
                 await db.query(
-                    'UPDATE users SET activePortfolioID = ? WHERE username = ?',
-                    [remainingPortfolios[0].portfolioID, username]
+                    'UPDATE users SET active_portfolio_id = ? WHERE username = ?',
+                    [remainingPortfolios[0].id, username]
                 );
             }
         }

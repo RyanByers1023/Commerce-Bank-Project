@@ -2,9 +2,9 @@
 const express = require('express');
 const router = express.Router();
 
-//get middleware:
 const db = require('../middleware/db');
 const auth = require('../middleware/auth');
+
 // Get simulation settings for a user
 router.get('/:username', auth.verifyToken, async (req, res) => {
     try {
@@ -17,7 +17,7 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
 
         // Get user ID
         const [users] = await db.query(
-            'SELECT userID FROM users WHERE username = ?',
+            'SELECT id FROM users WHERE username = ?',
             [username]
         );
 
@@ -25,22 +25,22 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const userID = users[0].userID;
+        const userId = users[0].id;
 
         // Get settings
         const [settings] = await db.query(
-            'SELECT * FROM simulation_settings WHERE userID = ?',
-            [userID]
+            'SELECT * FROM simulation_settings WHERE user_id = ?',
+            [userId]
         );
 
         // If no settings found, return defaults
         if (settings.length === 0) {
             return res.json({
-                simulationSpeed: 1,
-                marketVolatility: 'medium',
-                eventFrequency: 'medium',
-                startingCash: 500.00,
-                updatedAt: new Date()
+                sim_speed: 1,
+                market_volatility: 'medium',
+                event_frequency: 'medium',
+                initial_balance: 500.00,
+                updated_at: new Date()
             });
         }
 
@@ -55,7 +55,7 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
 router.put('/:username', auth.verifyToken, async (req, res) => {
     try {
         const { username } = req.params;
-        const { simulationSpeed, marketVolatility, eventFrequency, startingCash } = req.body;
+        const { sim_speed, market_volatility, event_frequency, initial_balance } = req.body;
 
         // Verify user is updating their own settings
         if (req.user.username !== username) {
@@ -63,25 +63,25 @@ router.put('/:username', auth.verifyToken, async (req, res) => {
         }
 
         // Validate inputs
-        if (simulationSpeed !== undefined && (!Number.isInteger(simulationSpeed) || simulationSpeed < 1 || simulationSpeed > 40)) {
+        if (sim_speed !== undefined && (!Number.isInteger(sim_speed) || sim_speed < 1 || sim_speed > 40)) {
             return res.status(400).json({ error: 'Simulation speed must be an integer between 1 and 40' });
         }
 
-        if (marketVolatility !== undefined && !['low', 'medium', 'high'].includes(marketVolatility)) {
+        if (market_volatility !== undefined && !['low', 'medium', 'high'].includes(market_volatility)) {
             return res.status(400).json({ error: 'Market volatility must be "low", "medium", or "high"' });
         }
 
-        if (eventFrequency !== undefined && !['none', 'low', 'medium', 'high'].includes(eventFrequency)) {
+        if (event_frequency !== undefined && !['none', 'low', 'medium', 'high'].includes(event_frequency)) {
             return res.status(400).json({ error: 'Event frequency must be "none", "low", "medium", or "high"' });
         }
 
-        if (startingCash !== undefined && (typeof startingCash !== 'number' || startingCash < 100 || startingCash > 10000)) {
-            return res.status(400).json({ error: 'Starting cash must be a number between 100 and 10000' });
+        if (initial_balance !== undefined && (typeof initial_balance !== 'number' || initial_balance < 100 || initial_balance > 10000)) {
+            return res.status(400).json({ error: 'Initial balance must be a number between 100 and 10000' });
         }
 
         // Get user ID
         const [users] = await db.query(
-            'SELECT userID FROM users WHERE username = ?',
+            'SELECT id FROM users WHERE username = ?',
             [username]
         );
 
@@ -89,20 +89,20 @@ router.put('/:username', auth.verifyToken, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const userID = users[0].userID;
+        const userId = users[0].id;
 
         // Check if settings exist
         const [settings] = await db.query(
-            'SELECT settingsID FROM simulation_settings WHERE userID = ?',
-            [userID]
+            'SELECT id FROM simulation_settings WHERE user_id = ?',
+            [userId]
         );
 
         // Build update object
         const updates = {};
-        if (simulationSpeed !== undefined) updates.simulationSpeed = simulationSpeed;
-        if (marketVolatility !== undefined) updates.marketVolatility = marketVolatility;
-        if (eventFrequency !== undefined) updates.eventFrequency = eventFrequency;
-        if (startingCash !== undefined) updates.startingCash = startingCash;
+        if (sim_speed !== undefined) updates.sim_speed = sim_speed;
+        if (market_volatility !== undefined) updates.market_volatility = market_volatility;
+        if (event_frequency !== undefined) updates.event_frequency = event_frequency;
+        if (initial_balance !== undefined) updates.initial_balance = initial_balance;
 
         if (Object.keys(updates).length === 0) {
             return res.status(400).json({ error: 'No valid update fields provided' });
@@ -110,21 +110,21 @@ router.put('/:username', auth.verifyToken, async (req, res) => {
 
         if (settings.length > 0) {
             // Update existing settings
-            const updateFields = Object.entries(updates).map(([key, _]) => `${key} = ?`).join(', ');
-            const updateValues = [...Object.values(updates), userID];
+            const updateFields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+            const updateValues = [...Object.values(updates), userId];
 
             await db.query(
-                `UPDATE simulation_settings SET ${updateFields}, updatedAt = NOW() WHERE userID = ?`,
+                `UPDATE simulation_settings SET ${updateFields}, updated_at = NOW() WHERE user_id = ?`,
                 updateValues
             );
         } else {
             // Create new settings
             const settingsObj = {
-                simulationSpeed: updates.simulationSpeed || 1,
-                marketVolatility: updates.marketVolatility || 'medium',
-                eventFrequency: updates.eventFrequency || 'medium',
-                startingCash: updates.startingCash || 500.00,
-                userID
+                sim_speed: updates.sim_speed || 1,
+                market_volatility: updates.market_volatility || 'medium',
+                event_frequency: updates.event_frequency || 'medium',
+                initial_balance: updates.initial_balance || 500.00,
+                user_id: userId
             };
 
             const fields = Object.keys(settingsObj).join(', ');
@@ -139,8 +139,8 @@ router.put('/:username', auth.verifyToken, async (req, res) => {
 
         // Get updated settings
         const [updatedSettings] = await db.query(
-            'SELECT * FROM simulation_settings WHERE userID = ?',
-            [userID]
+            'SELECT * FROM simulation_settings WHERE user_id = ?',
+            [userId]
         );
 
         res.json(updatedSettings[0]);
@@ -162,7 +162,7 @@ router.post('/:username/reset', auth.verifyToken, async (req, res) => {
 
         // Get user ID
         const [users] = await db.query(
-            'SELECT userID FROM users WHERE username = ?',
+            'SELECT id FROM users WHERE username = ?',
             [username]
         );
 
@@ -170,57 +170,60 @@ router.post('/:username/reset', auth.verifyToken, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const userID = users[0].userID;
+        const userId = users[0].id;
 
         // Default settings
         const defaultSettings = {
-            simulationSpeed: 1,
-            marketVolatility: 'medium',
-            eventFrequency: 'medium',
-            startingCash: 500.00,
-            userID
+            sim_speed: 1,
+            market_volatility: 'medium',
+            event_frequency: 'medium',
+            initial_balance: 500.00
         };
 
         // Check if settings exist
         const [settings] = await db.query(
-            'SELECT settingsID FROM simulation_settings WHERE userID = ?',
-            [userID]
+            'SELECT id FROM simulation_settings WHERE user_id = ?',
+            [userId]
         );
 
         if (settings.length > 0) {
             // Update to defaults
             await db.query(
                 `UPDATE simulation_settings 
-         SET simulationSpeed = ?, marketVolatility = ?, eventFrequency = ?, 
-             startingCash = ?, updatedAt = NOW()
-         WHERE userID = ?`,
+                 SET sim_speed = ?, market_volatility = ?, event_frequency = ?, 
+                     initial_balance = ?, updated_at = NOW()
+                 WHERE user_id = ?`,
                 [
-                    defaultSettings.simulationSpeed,
-                    defaultSettings.marketVolatility,
-                    defaultSettings.eventFrequency,
-                    defaultSettings.startingCash,
-                    userID
+                    defaultSettings.sim_speed,
+                    defaultSettings.market_volatility,
+                    defaultSettings.event_frequency,
+                    defaultSettings.initial_balance,
+                    userId
                 ]
             );
         } else {
             // Create with defaults
             await db.query(
                 `INSERT INTO simulation_settings 
-         (simulationSpeed, marketVolatility, eventFrequency, startingCash, userID)
-         VALUES (?, ?, ?, ?, ?)`,
+                 (sim_speed, market_volatility, event_frequency, initial_balance, user_id)
+                 VALUES (?, ?, ?, ?, ?)`,
                 [
-                    defaultSettings.simulationSpeed,
-                    defaultSettings.marketVolatility,
-                    defaultSettings.eventFrequency,
-                    defaultSettings.startingCash,
-                    userID
+                    defaultSettings.sim_speed,
+                    defaultSettings.market_volatility,
+                    defaultSettings.event_frequency,
+                    defaultSettings.initial_balance,
+                    userId
                 ]
             );
         }
 
-        // Return default settings
-        defaultSettings.updatedAt = new Date();
-        res.json(defaultSettings);
+        // Get updated settings
+        const [updatedSettings] = await db.query(
+            'SELECT * FROM simulation_settings WHERE user_id = ?',
+            [userId]
+        );
+
+        res.json(updatedSettings[0]);
     } catch (error) {
         console.error('Reset settings error:', error);
         res.status(500).json({ error: 'Failed to reset simulation settings' });

@@ -117,7 +117,6 @@ class PortfolioUIController {
             document.getElementById("span-stock-market-price"),
             document.getElementById("span-buy-market-price"),
             document.getElementById("span-sell-market-price"),
-            document.getElementById("currentPrice")
         ];
 
         elements.forEach(element => {

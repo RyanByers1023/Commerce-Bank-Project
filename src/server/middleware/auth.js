@@ -15,7 +15,7 @@ exports.verifyToken = async (req, res, next) => {
         // Check if session is still valid in database
         if (req.session.sessionID) {
             const [sessions] = await db.query(
-                'SELECT * FROM sessions WHERE sessionID = ? AND expiresAt > NOW()',
+                'SELECT * FROM sessions WHERE id = ? AND expires_at > NOW()',
                 [req.session.sessionID]
             );
 
@@ -96,7 +96,7 @@ exports.extendSession = async (req, res, next) => {
             expiresAt.setDate(expiresAt.getDate() + 1); // Extend by 24 hours
 
             await db.query(
-                'UPDATE sessions SET expiresAt = ? WHERE sessionID = ?',
+                'UPDATE sessions SET expires_at = ? WHERE id = ?',
                 [expiresAt, req.session.sessionID]
             );
         }
@@ -121,7 +121,7 @@ exports.checkDemoAccount = async (req, res, next) => {
 
         // Check if user is a demo account
         const [users] = await db.query(
-            'SELECT isDemoAccount FROM users WHERE userID = ?',
+            'SELECT is_demo_account FROM users WHERE id = ?',
             [req.user.userID]
         );
 
