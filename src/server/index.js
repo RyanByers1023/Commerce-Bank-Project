@@ -55,7 +55,7 @@ app.use('/api/portfolios',  portfolioRoutes);
 app.use('/api/stocks',      stockRoutes);
 app.use('/api/transactions',transactionRoutes);
 app.use('/api/settings',    settingsRoutes);
-app.use('/api/news', newsRoutes);      //  →  POST /api/news/generate
+//app.use('/api/news', newsRoutes);
 
 // Simple liveness check
 app.get('/api/test', (_, res) => res.json({ message: 'Server is running!' }));

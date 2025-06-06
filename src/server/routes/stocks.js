@@ -18,7 +18,7 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
 
         // Get user ID
         const [users] = await db.query(
-            'SELECT id FROM users WHERE username = ?',
+            'SELECT id FROM user WHERE username = ?',
             [username]
         );
 
@@ -35,7 +35,7 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
               (SELECT closePrice FROM stock_data 
                WHERE id = s.id 
                ORDER BY dataDate DESC LIMIT 1) as marketPrice
-       FROM stocks s
+       FROM stock s
        LEFT JOIN stock_data sd ON s.id = sd.stockID AND sd.dataDate = CURDATE()
        WHERE s.user_id IS NULL OR s.user_id = ?
        ORDER BY s.symbol`,
@@ -106,7 +106,7 @@ router.get('/:username/:symbol', auth.verifyToken, async (req, res) => {
 
         // Get user ID
         const [users] = await db.query(
-            'SELECT id FROM users WHERE username = ?',
+            'SELECT id FROM user WHERE username = ?',
             [username]
         );
 
@@ -123,7 +123,7 @@ router.get('/:username/:symbol', auth.verifyToken, async (req, res) => {
               (SELECT closePrice FROM stock_data 
                WHERE id = s.id 
                ORDER BY dataDate DESC LIMIT 1) as marketPrice
-       FROM stocks s
+       FROM stock s
        LEFT JOIN stock_data sd ON s.id = sd.stockID AND sd.dataDate = CURDATE()
        WHERE (s.user_id IS NULL OR s.user_id = ?) AND s.symbol = ?`,
             [userID, symbol]
@@ -221,7 +221,7 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
 
         // Get user ID
         const [users] = await db.query(
-            'SELECT id FROM users WHERE username = ?',
+            'SELECT id FROM user WHERE username = ?',
             [username]
         );
 
@@ -233,7 +233,7 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
 
         // Check if symbol already exists in the system stocks or user's custom stocks
         const [existingStocks] = await db.query(
-            `SELECT * FROM stocks 
+            `SELECT * FROM stock 
        WHERE symbol = ? AND (user_id IS NULL OR user_id = ?)`,
             [symbol, userID]
         );
@@ -247,7 +247,7 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
 
         // Add custom stock
         const [result] = await db.query(
-            `INSERT INTO stocks (symbol, company_name, sector, isCustom, user_id)
+            `INSERT INTO stock (symbol, company_name, sector, isCustom, user_id)
        VALUES (?, ?, ?, TRUE, ?)`,
             [symbol, companyName, sector || 'Custom', userID]
         );
@@ -303,7 +303,7 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
         const [createdStocks] = await db.query(
             `SELECT s.id, s.symbol, s.company_name, s.sector, s.isCustom, 
               ? as marketPrice, ? as openPrice
-       FROM stocks s
+       FROM stock s
        WHERE s.id = ?`,
             [initialPrice, openPrice, stockID]
         );
@@ -347,7 +347,7 @@ router.delete('/:username/:symbol', auth.verifyToken, async (req, res) => {
 
         // Get user ID
         const [users] = await db.query(
-            'SELECT id FROM users WHERE username = ?',
+            'SELECT id FROM user WHERE username = ?',
             [username]
         );
 
@@ -359,7 +359,7 @@ router.delete('/:username/:symbol', auth.verifyToken, async (req, res) => {
 
         // Check if stock exists and is a custom stock owned by the user
         const [stocks] = await db.query(
-            `SELECT s.id, s.isCustom FROM stocks s
+            `SELECT s.id, s.isCustom FROM stock s
        WHERE s.symbol = ? AND s.user_id = ?`,
             [symbol, userID]
         );
@@ -376,9 +376,9 @@ router.delete('/:username/:symbol', auth.verifyToken, async (req, res) => {
 
         // Check if user owns any shares of this stock
         const [holdings] = await db.query(
-            `SELECT h.id FROM holdings h
-       JOIN portfolios p ON h.portfolio_id = p.id
-       JOIN stocks s ON h.stockID = s.id
+            `SELECT h.id FROM holding h
+       JOIN portfolio p ON h.portfolio_id = p.id
+       JOIN stock s ON h.stockID = s.id
        WHERE p.user_id = ? AND s.symbol = ? AND h.quantity > 0`,
             [userID, symbol]
         );
@@ -389,7 +389,7 @@ router.delete('/:username/:symbol', auth.verifyToken, async (req, res) => {
 
         // Delete stock (will cascade to stock_data)
         await db.query(
-            'DELETE FROM stocks WHERE id = ?',
+            'DELETE FROM stock WHERE id = ?',
             [stock.stockID]
         );
 

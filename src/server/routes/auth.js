@@ -61,7 +61,7 @@ router.post('/login', async (req, res) => {
 
         // Get user by email
         const [users] = await db.query(
-            'SELECT id, username, email, password_hash FROM users WHERE email = ?',
+            'SELECT id, username, email, password_hash FROM user WHERE email = ?',
             [email]
         );
 
@@ -87,13 +87,13 @@ router.post('/login', async (req, res) => {
         }
 
         await db.query(
-            'INSERT INTO sessions (user_id, expires_at) VALUES (?, ?)',
+            'INSERT INTO session (user_id, expires_at) VALUES (?, ?)',
             [user.id, expiresAt]
         );
 
         // Update last login
         await db.query(
-            'UPDATE users SET last_login = NOW() WHERE id = ?',
+            'UPDATE user SET last_login = NOW() WHERE id = ?',
             [user.id]
         );
 
@@ -143,7 +143,7 @@ router.post('/register', async (req, res) => {
 
         // Check if username or email already exists
         const [existingUsers] = await db.query(
-            'SELECT * FROM users WHERE username = ? OR email = ?',
+            'SELECT * FROM user WHERE username = ? OR email = ?',
             [username, email]
         );
 
@@ -165,24 +165,21 @@ router.post('/register', async (req, res) => {
 
         // Create user
         const [userResult] = await db.query(
-            'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
+            'INSERT INTO user (username, email, password_hash) VALUES (?, ?, ?)',
             [username, email, passwordHash]
         );
 
         const userId = userResult.insertId;
 
-        // Create initial portfolio
-        const portfolioId = `portfolio-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-
         await db.query(
-            'INSERT INTO portfolios (id, user_id) VALUES (?, ?)',
-            [portfolioId, userId]
+            'INSERT INTO portfolio (user_id) VALUE (?)',
+            [userId]
         );
 
         // Set active portfolio
         await db.query(
-            'UPDATE users SET active_portfolio_id = ? WHERE id = ?',
-            [portfolioId, userId]
+            'INSERT INTO user (active_portfolio_id) SELECT id FROM portfolio WHERE user_id = ?',
+            [userId]
         );
 
         // Create simulation settings with defaults
@@ -196,7 +193,7 @@ router.post('/register', async (req, res) => {
         expiresAt.setDate(expiresAt.getDate() + 1);
 
         await db.query(
-            'INSERT INTO sessions (user_id, expires_at) VALUES (?, ?)',
+            'INSERT INTO session (user_id, expires_at) VALUES (?, ?)',
             [userId, expiresAt]
         );
 
@@ -221,12 +218,12 @@ router.post('/register', async (req, res) => {
 });
 
 // Logout route
-router.post('/logout', auth.verifyToken, async (req, res) => {
+router.post('/logout', async (req, res) => {
     try {
         // Delete session from database
         if (req.session.userId) {
             await db.query(
-                'DELETE FROM sessions WHERE user_id = ?',
+                'DELETE FROM session WHERE user_id = ?',
                 [req.session.userId]
             );
         }
@@ -256,13 +253,13 @@ router.get('/check', (req, res) => {
 });
 
 // Get current user profile
-router.get('/current-user', auth.verifyToken, async (req, res) => {
+router.get('/current-user', async (req, res) => {
     try {
         const userId = req.session.userId;
 
         // Get user data
         const [users] = await db.query(
-            'SELECT id, username, email, date_created, last_login, active_portfolio_id FROM users WHERE id = ?',
+            'SELECT id, username, email, date_created, last_login, active_portfolio_id FROM user WHERE id = ?',
             [userId]
         );
 
@@ -274,17 +271,19 @@ router.get('/current-user', auth.verifyToken, async (req, res) => {
 
         // Get active portfolio
         const [portfolios] = await db.query(
-            'SELECT id FROM portfolios WHERE id = ?',
+            'SELECT id FROM portfolio WHERE id = ?',
             [user.active_portfolio_id]
         );
 
         res.json({
+            userId: user.id,
             username: user.username,
             email: user.email,
             dateCreated: user.date_created,
             lastLogin: user.last_login,
             activePortfolioId: user.active_portfolio_id,
-            portfolio: portfolios.length > 0 ? portfolios[0] : null
+            isDemoAccount: user.is_demo_account,
+            isAdmin: user.is_admin
         });
     } catch (error) {
         console.error('Get current user error:', error);
@@ -301,7 +300,7 @@ router.post('/demo-login', async (req, res) => {
 
         // Check if demo user exists
         const [demoUsers] = await db.query(
-            'SELECT id, username, email FROM users WHERE email = ?',
+            'SELECT id, username, email FROM user WHERE email = ?',
             [demoEmail]
         );
 
@@ -315,7 +314,7 @@ router.post('/demo-login', async (req, res) => {
             const passwordHash = await bcrypt.hash(demoPassword, saltRounds);
 
             const [userResult] = await db.query(
-                'INSERT INTO users (username, email, password_hash, is_demo_account) VALUES (?, ?, ?, 1)',
+                'INSERT INTO user (username, email, password_hash, is_demo_account) VALUES (?, ?, ?, 1)',
                 [demoUsername, demoEmail, passwordHash]
             );
 
@@ -331,7 +330,7 @@ router.post('/demo-login', async (req, res) => {
 
             // Set active portfolio
             await db.query(
-                'UPDATE users SET active_portfolio_id = ? WHERE id = ?',
+                'UPDATE user SET active_portfolio_id = ? WHERE id = ?',
                 [portfolioId, userId]
             );
 
@@ -349,13 +348,13 @@ router.post('/demo-login', async (req, res) => {
         expiresAt.setDate(expiresAt.getDate() + 1);
 
         await db.query(
-            'INSERT INTO sessions (user_id, expires_at) VALUES (?, ?)',
+            'INSERT INTO session (user_id, expires_at) VALUES (?, ?)',
             [userId, expiresAt]
         );
 
         // Update last login
         await db.query(
-            'UPDATE users SET last_login = NOW() WHERE id = ?',
+            'UPDATE user SET last_login = NOW() WHERE id = ?',
             [userId]
         );
 
@@ -391,7 +390,7 @@ router.post('/forgot-password', async (req, res) => {
 
         // Check if email exists
         const [users] = await db.query(
-            'SELECT id, username FROM users WHERE email = ?',
+            'SELECT id, username FROM user WHERE email = ?',
             [email]
         );
 
@@ -462,7 +461,7 @@ router.post('/reset-password', async (req, res) => {
 
         // Update user's password
         await db.query(
-            'UPDATE users SET password_hash = ? WHERE id = ?',
+            'UPDATE user SET password_hash = ? WHERE id = ?',
             [passwordHash, resetToken.user_id]
         );
 

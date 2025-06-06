@@ -48,7 +48,7 @@ export default class PortfolioService {
             }
 
             // Find active portfolio
-            const activePortfolioId = user.activePortfolioID;
+            const activePortfolioId = user.active_portfolio_id;
 
             if (!activePortfolioId) {
                 // No active portfolio set, use the first one if available

@@ -130,13 +130,9 @@ class DatabaseService {
         }
     }
 
-    /**
-     * Get user profile by username
-     * @param {string} username - Username to fetch
-     */
-    async getUserProfile(username) {
+    async getUserProfile(user_id) {
         try {
-            return await this.sendRequest(`users/${username}`, 'GET');
+            return await this.sendRequest(`users/${user_id}`, 'GET');
         } catch (error) {
             console.error('Failed to get user profile:', error);
             throw error;
@@ -145,11 +141,11 @@ class DatabaseService {
 
     /**
      * Get all portfolios for a user
-     * @param {string} username - Username
+     * @param {string} user_id - user_id
      */
-    async getPortfolios(username) {
+    async getPortfolios(user_id) {
         try {
-            return await this.sendRequest(`portfolios/${username}`, 'GET');
+            return await this.sendRequest(`portfolio/${user_id}`, 'GET');
         } catch (error) {
             console.error('Failed to get portfolios:', error);
             throw error;
@@ -158,12 +154,12 @@ class DatabaseService {
 
     /**
      * Get a specific portfolio
-     * @param {string} username - Username
-     * @param {string} portfolioId - Portfolio ID
+     * @param {string} user_id - user_id
+     * @param {string} portfolio_id - Portfolio ID
      */
-    async getPortfolio(username, portfolioId) {
+    async getPortfolio(user_id, portfolio_id) {
         try {
-            return await this.sendRequest(`portfolios/${username}/${portfolioId}`, 'GET');
+            return await this.sendRequest(`portfolio/${user_id}/${portfolio_id}`, 'GET');
         } catch (error) {
             console.error('Failed to get portfolio:', error);
             throw error;
@@ -172,12 +168,12 @@ class DatabaseService {
 
     /**
      * Create a new portfolio
-     * @param {string} username - Username
+     * @param {string} user_id - user_id
      * @param {object} portfolioData - Portfolio data (name, description, initialBalance)
      */
-    async createPortfolio(username, portfolioData) {
+    async createPortfolio(user_id, portfolioData) {
         try {
-            return await this.sendRequest(`portfolios/${username}`, 'POST', portfolioData);
+            return await this.sendRequest(`portfolio/${user_id}`, 'POST', portfolioData);
         } catch (error) {
             console.error('Failed to create portfolio:', error);
             throw error;
@@ -186,13 +182,13 @@ class DatabaseService {
 
     /**
      * Reset a portfolio to initial state
-     * @param {string} username - Username
-     * @param {string} portfolioId - Portfolio ID
+     * @param {string} user_id - user_id
+     * @param {string} portfolio_id - Portfolio ID
      * @param {number} initialBalance - New initial balance (optional)
      */
-    async resetPortfolio(username, portfolioId, initialBalance) {
+    async resetPortfolio(user_id, portfolio_id, initialBalance) {
         try {
-            return await this.sendRequest(`portfolios/${username}/${portfolioId}/reset`, 'POST', {
+            return await this.sendRequest(`portfolio/${user_id}/${portfolio_id}/reset`, 'POST', {
                 initialBalance
             });
         } catch (error) {
@@ -203,12 +199,12 @@ class DatabaseService {
 
     /**
      * Delete a portfolio
-     * @param {string} username - Username
-     * @param {string} portfolioId - Portfolio ID
+     * @param {string} user_id - user_id
+     * @param {string} portfolio_id - Portfolio ID
      */
-    async deletePortfolio(username, portfolioId) {
+    async deletePortfolio(user_id, portfolio_id) {
         try {
-            return await this.sendRequest(`portfolios/${username}/${portfolioId}`, 'DELETE');
+            return await this.sendRequest(`portfolio/${user_id}/${portfolio_id}`, 'DELETE');
         } catch (error) {
             console.error('Failed to delete portfolio:', error);
             throw error;
@@ -217,15 +213,15 @@ class DatabaseService {
 
     /**
      * Set active portfolio
-     * @param {string} username - Username
-     * @param {string} portfolioId - Portfolio ID to set as active
+     * @param {string} user_id - user_id
+     * @param {string} portfolio_id - Portfolio ID to set as active
      */
-    async setActivePortfolio(username, portfolioId) {
+    async setActivePortfolio(user_id, portfolio_id) {
         this.currentUser.setEarnings();
         this.currentUser.setTotalStocksOwned();
         try {
-            return await this.sendRequest(`users/${username}/active-portfolio`, 'PUT', {
-                activePortfolioId: portfolioId
+            return await this.sendRequest(`users/${user_id}/active-portfolio`, 'PUT', {
+                activeportfolio_id: portfolio_id
             });
         } catch (error) {
             console.error('Failed to set active portfolio:', error);
@@ -233,21 +229,21 @@ class DatabaseService {
         }
     }
 
-    async updatePortfolio(username, portfolioId, portfolioData) {
+    async updatePortfolio(user_id, portfolio_id, portfolioData) {
         try {
-            return await this.sendRequest(`portfolios/${username}/${portfolioId}`, 'PUT', portfolioData);
+            return await this.sendRequest(`portfolio/${user_id}/${portfolio_id}`, 'PUT', portfolioData);
         } catch (error) {
             console.error('Failed to update portfolio data:', error);
             throw error;
         }
     }
 
-    async saveTransaction(portfolioId, txnOrList) {
+    async saveTransaction(portfolio_id, txnOrList) {
         const payload = Array.isArray(txnOrList) ? txnOrList : [txnOrList];
 
         try {
             return await this.sendRequest(
-                `portfolios/${portfolioId}/transactions`,   // ← note: removed stray space
+                `portfolio/${portfolio_id}/transactions`,   // ← note: removed stray space
                 'POST',
                 { transactions: payload }
             );
@@ -282,12 +278,12 @@ class DatabaseService {
 
     /**
      * Add a custom stock
-     * @param {string} username - Username
+     * @param {string} user_id - user_id
      * @param {object} stockData - Stock data (symbol, companyName, sector, initialPrice, volatility)
      */
-    async addCustomStock(username, stockData) {
+    async addCustomStock(user_id, stockData) {
         try {
-            return await this.sendRequest(`stocks/${username}`, 'POST', stockData);
+            return await this.sendRequest(`stocks/${user_id}`, 'POST', stockData);
         } catch (error) {
             console.error('Failed to add custom stock:', error);
             throw error;
@@ -296,12 +292,12 @@ class DatabaseService {
 
     /**
      * Delete a custom stock
-     * @param {string} username - Username
+     * @param {string} user_id - user_id
      * @param {string} symbol - Stock symbol
      */
-    async deleteCustomStock(username, symbol) {
+    async deleteCustomStock(user_id, symbol) {
         try {
-            return await this.sendRequest(`stocks/${username}/${symbol}`, 'DELETE');
+            return await this.sendRequest(`stocks/${user_id}/${symbol}`, 'DELETE');
         } catch (error) {
             console.error('Failed to delete custom stock:', error);
             throw error;
@@ -310,11 +306,11 @@ class DatabaseService {
 
     /**
      * Get all transactions for a user
-     * @param {string} username - Username
+     * @param {string} user_id - user_id
      */
-    async getTransactions(username) {
+    async getTransactions(user_id) {
         try {
-            return await this.sendRequest(`transactions/${username}`, 'GET');
+            return await this.sendRequest(`transactions/${user_id}`, 'GET');
         } catch (error) {
             console.error('Failed to get transactions:', error);
             throw error;
@@ -323,12 +319,12 @@ class DatabaseService {
 
     /**
      * Get transactions for a specific portfolio
-     * @param {string} username - Username
-     * @param {string} portfolioId - Portfolio ID
+     * @param {string} user_id - user_id
+     * @param {string} portfolio_id - Portfolio ID
      */
-    async getPortfolioTransactions(username, portfolioId) {
+    async getPortfolioTransactions(user_id, portfolio_id) {
         try {
-            return await this.sendRequest(`transactions/${username}/${portfolioId}`, 'GET');
+            return await this.sendRequest(`transactions/${user_id}/${portfolio_id}`, 'GET');
         } catch (error) {
             console.error('Failed to get portfolio transactions:', error);
             throw error;
@@ -345,36 +341,36 @@ class DatabaseService {
         }
     }
 
-    async getTransactionStats(username) {
+    async getTransactionStats(user_id) {
         try {
-            return await this.sendRequest(`transactions/${username}/stats`, 'GET');
+            return await this.sendRequest(`transactions/${user_id}/stats`, 'GET');
         } catch (error) {
             console.error('Failed to get transaction stats:', error);
             throw error;
         }
     }
 
-    async getSimulationSettings(username) {
+    async getSimulationSettings(user_id) {
         try {
-            return await this.sendRequest(`settings/${username}`, 'GET');
+            return await this.sendRequest(`settings/${user_id}`, 'GET');
         } catch (error) {
             console.error('Failed to get simulation settings:', error);
             throw error;
         }
     }
 
-    async saveSimulationSettings(username, settings) {
+    async saveSimulationSettings(user_id, settings) {
         try {
-            return await this.sendRequest(`settings/${username}`, 'PUT', settings);
+            return await this.sendRequest(`settings/${user_id}`, 'PUT', settings);
         } catch (error) {
             console.error('Failed to save simulation settings:', error);
             throw error;
         }
     }
 
-    async resetSimulationSettings(username) {
+    async resetSimulationSettings(user_id) {
         try {
-            return await this.sendRequest(`settings/${username}/reset`, 'POST');
+            return await this.sendRequest(`settings/${user_id}/reset`, 'POST');
         } catch (error) {
             console.error('Failed to reset simulation settings:', error);
             throw error;

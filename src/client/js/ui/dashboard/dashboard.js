@@ -52,13 +52,13 @@ class Dashboard {
             }
 
             // Get portfolio data
-            const portfolioResponse = await fetch(`/api/portfolios/${this.currentUser.username}/${this.currentUser.activePortfolioId}`);
+            const portfolioResponse = await fetch(`/api/portfolios/${this.currentUser.userId}/${this.currentUser.activePortfolioId}`);
             if (!portfolioResponse.ok) throw new Error('Failed to get portfolio data');
 
             this.portfolioData = await portfolioResponse.json();
 
             // Get recent transactions
-            const transactionsResponse = await fetch(`/api/transactions/${this.currentUser.username}/${this.currentUser.activePortfolioId}`);
+            const transactionsResponse = await fetch(`/api/transactions/${this.currentUser.userId}/${this.currentUser.activePortfolioId}`);
             const transactions = transactionsResponse.ok ? await transactionsResponse.json() : [];
 
             // Populate dashboard
@@ -117,11 +117,11 @@ class Dashboard {
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm font-medium text-gray-900">${holding.symbol}</div>
-                    <div class="text-sm text-gray-500">${holding.companyName}</div>
+                    <div class="text-sm text-gray-500">${holding.stock_id}</div> <!--TODO: change this to show the stock company name-->
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${holding.quantity}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.avgPrice)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.currentPrice)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.avg_price_paid)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.price_paid)}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.value)}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm ${profitLossClass}">
                     ${profitLossSign}${this.formatCurrency(Math.abs(profitLoss))}

@@ -1,12 +1,11 @@
-import Transaction from "./transaction.js";
+import {portfolioService} from '../dbServices/portfolioService.js';
 
 class Portfolio {
     constructor(initialBalance = 500.0) {
         this.initialBalance = initialBalance;
         this.balance = initialBalance;
-        this.portfolioID = this.generatePortfolioID();
 
-        // Holdings structure: symbol => { quantity, avgPricePaid, transactions: [] }
+        // Holdings structure: symbol => { quantity, avgPricePaid, totalCostBasis, transactions: [] }
         this.holdingsMap = {};
 
         this.totalStocksOwned = 0;
@@ -14,15 +13,27 @@ class Portfolio {
         this.totalAssetsValue = 0.00;
         this.transactionHistory = [];
         this.earnings = 0.0;
+
+        // Initialize database manager
+        this.portfolioService = portfolioService;
     }
 
-    generatePortfolioID() {
-        return `port-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    createTransaction(symbol, transactionType, quantity) {
+        return new Transaction(symbol, transactionType, quantity, this.portfolioID);
     }
 
-    createTransaction(stock, transactionType, quantity) {
-        return new Transaction(stock, transactionType, quantity, this.portfolioID);
+    async loadUserData(user_id) {
+        try {
+            // Get user data
+            const portfolioData = await this.portfolioService.loadActivePortfolio();
+
+            return this;
+        } catch (error) {
+            console.error('Failed to load user data:', error);
+            throw error;
+        }
     }
+
 
 
     buyStock(stock, quantity) {
@@ -56,7 +67,7 @@ class Portfolio {
     addStockToPortfolio(symbol, quantity, pricePaid) {
         const holding = this.holdingsMap[symbol];
 
-        const newTransaction = this.createTransaction(stock, "BUY", quantity);
+        const newTransaction = this.createTransaction(symbol, "BUY", quantity);
 
         if (holding) {
             // Update existing holding with weighted average

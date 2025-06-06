@@ -8,15 +8,15 @@ const db = require('./db');
 exports.verifyToken = async (req, res, next) => {
     try {
         // Check if session exists
-        if (!req.session || !req.session.userID) {
+        if (!req.session || !req.session.user_id) {
             return res.status(401).json({ error: 'Not authenticated' });
         }
 
         // Check if session is still valid in database
-        if (req.session.sessionID) {
+        if (req.session.id) {
             const [sessions] = await db.query(
-                'SELECT * FROM sessions WHERE id = ? AND expires_at > NOW()',
-                [req.session.sessionID]
+                'SELECT * FROM session WHERE id = ? AND expires_at > NOW()',
+                [req.session.id]
             );
 
             if (sessions.length === 0) {
@@ -29,12 +29,12 @@ exports.verifyToken = async (req, res, next) => {
         // Get user information
         const [users] = await db.query(
             'SELECT ' +
-                'userID, username, email ' +
+                'username, email ' +
             'FROM ' +
                 'users ' +
             'WHERE ' +
-                'userID = ?',
-            [req.session.userID]
+                'id = ?',
+            [req.session.user_id]
         );
 
         if (users.length === 0) {
@@ -96,7 +96,7 @@ exports.extendSession = async (req, res, next) => {
             expiresAt.setDate(expiresAt.getDate() + 1); // Extend by 24 hours
 
             await db.query(
-                'UPDATE sessions SET expires_at = ? WHERE id = ?',
+                'UPDATE session SET expires_at = ? WHERE id = ?',
                 [expiresAt, req.session.sessionID]
             );
         }
@@ -121,8 +121,8 @@ exports.checkDemoAccount = async (req, res, next) => {
 
         // Check if user is a demo account
         const [users] = await db.query(
-            'SELECT is_demo_account FROM users WHERE id = ?',
-            [req.user.userID]
+            'SELECT is_demo_account FROM user WHERE id = ?',
+            [req.user.user_id]
         );
 
         if (users.length > 0 && users[0].isDemoAccount) {

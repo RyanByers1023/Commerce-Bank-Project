@@ -17,7 +17,7 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
 
         // Get user ID
         const [users] = await db.query(
-            'SELECT id FROM users WHERE username = ?',
+            'SELECT id FROM user WHERE username = ?',
             [username]
         );
 
@@ -81,7 +81,7 @@ router.put('/:username', auth.verifyToken, async (req, res) => {
 
         // Get user ID
         const [users] = await db.query(
-            'SELECT id FROM users WHERE username = ?',
+            'SELECT id FROM user WHERE username = ?',
             [username]
         );
 
@@ -162,7 +162,7 @@ router.post('/:username/reset', auth.verifyToken, async (req, res) => {
 
         // Get user ID
         const [users] = await db.query(
-            'SELECT id FROM users WHERE username = ?',
+            'SELECT id FROM user WHERE username = ?',
             [username]
         );
 
