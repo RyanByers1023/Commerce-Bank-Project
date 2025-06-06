@@ -1,20 +1,58 @@
+// Fixed portfolioUIController.js
+import { authService } from './dbServices/authService.js';
+import { stockService } from './dbServices/stockService.js';
+import { portfolioService } from './dbServices/portfolioService.js';
+import { databaseService } from './dbServices/databaseService.js';
+
 class PortfolioUIController {
-    constructor(userProfile) {
-        this.userProfile = userProfile;
+    constructor() {
+        this.currentUser = null;
+        this.currentPortfolio = null;
+        this.availableStocks = [];
         this.initializeUI();
     }
 
-    initializeUI() {
+    async initializeUI() {
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.setupUIAfterLoad());
         } else {
-            this.setupUIAfterLoad();
+            await this.setupUIAfterLoad();
         }
     }
 
-    setupUIAfterLoad() {
-        this.initializeUIElements();
-        this.initializeUIListeners();
+    async setupUIAfterLoad() {
+        try {
+            // Load user data and portfolio
+            await this.loadUserData();
+
+            // Initialize UI elements
+            await this.initializeUIElements();
+
+            // Set up event listeners
+            this.initializeUIListeners();
+        } catch (error) {
+            console.error('Failed to setup UI:', error);
+            this.showError('Failed to load portfolio data');
+        }
+    }
+
+    async loadUserData() {
+        try {
+            // Get current user
+            this.currentUser = await authService.getCurrentUser();
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            // Load available stocks
+            this.availableStocks = await stockService.loadStocks();
+
+            // Load current portfolio
+            this.currentPortfolio = await portfolioService.loadActivePortfolio();
+        } catch (error) {
+            console.error('Failed to load user data:', error);
+            throw error;
+        }
     }
 
     initializeUIListeners() {
@@ -25,36 +63,36 @@ class PortfolioUIController {
         this.setSellButtonListener();
     }
 
-    initializeUIElements() {
+    async initializeUIElements() {
         this.populateDropdown();
         this.setGreetingMessage();
         this.updateCashDisplay();
         this.updatePortfolioDisplay();
         this.updateHoldingsTable();
 
-        const selectElement = document.getElementById("select-stock")
+        const selectElement = document.getElementById("select-stock");
         if (selectElement && selectElement.value) {
             const selectedStock = this.getSelectedStock(selectElement.value);
             if (selectedStock) {
-                this.updateStockPriceTickers(selectedStock.marketPrice);
+                this.updateStockPriceTickers(selectedStock.marketPrice || selectedStock.value);
             }
         }
     }
 
     getSelectedStock(symbol) {
-        return this.userProfile.stocksAddedToSim.find(stock => stock.symbol === symbol);
+        return this.availableStocks.find(stock => stock.symbol === symbol);
     }
 
     populateDropdown() {
-        const selectElement = document.getElementById("select-stock")
+        const selectElement = document.getElementById("select-stock");
         if (!selectElement) return;
 
         selectElement.innerHTML = "";
 
-        this.userProfile.stocksAddedToSim.forEach(stock => {
+        this.availableStocks.forEach(stock => {
             const option = document.createElement("option");
             option.value = stock.symbol;
-            option.textContent = `${stock.symbol} - ${stock.companyName}`;
+            option.textContent = `${stock.symbol} - ${stock.company_name || stock.companyName || 'Unknown Company'}`;
             selectElement.appendChild(option);
         });
     }
@@ -63,7 +101,7 @@ class PortfolioUIController {
         const greetingElement = document.getElementById("span-welcome-message");
         if (!greetingElement) return;
 
-        const userName = this.userProfile?.username || "Investor";
+        const userName = this.currentUser?.username || "Investor";
         const hour = new Date().getHours();
 
         let timeGreeting = "";
@@ -89,19 +127,21 @@ class PortfolioUIController {
 
     updateCashDisplay() {
         const cashElement = document.getElementById("span-balance");
-        if (cashElement && this.userProfile && this.userProfile.portfolio) {
-            cashElement.textContent = `${this.userProfile.portfolio.balance.toFixed(2)}`;
+        if (cashElement && this.currentPortfolio) {
+            const balance = this.currentPortfolio.cash_balance || this.currentPortfolio.balance || 0;
+            cashElement.textContent = `${balance.toFixed(2)}`;
         }
     }
 
     setStockDropdownListeners() {
-        const dropdown = document.getElementById('select-stock')
+        const dropdown = document.getElementById('select-stock');
         if (!dropdown) return;
 
         dropdown.addEventListener('change', () => {
             const selectedStock = this.getSelectedStock(dropdown.value);
             if (selectedStock) {
-                this.handleDropdownMenuSelection(selectedStock.marketPrice);
+                const stockPrice = selectedStock.marketPrice || selectedStock.value || 0;
+                this.handleDropdownMenuSelection(stockPrice);
             }
         });
     }
@@ -136,7 +176,8 @@ class PortfolioUIController {
             if (selectElement && selectElement.value) {
                 const selectedStock = this.getSelectedStock(selectElement.value);
                 if (selectedStock) {
-                    this.updateStockSellTotalSpan(selectedStock.marketPrice, quantity);
+                    const stockPrice = selectedStock.marketPrice || selectedStock.value || 0;
+                    this.updateStockSellTotalSpan(stockPrice, quantity);
                 }
             }
         });
@@ -152,7 +193,8 @@ class PortfolioUIController {
             if (selectElement && selectElement.value) {
                 const selectedStock = this.getSelectedStock(selectElement.value);
                 if (selectedStock) {
-                    this.updateStockBuyTotalSpan(selectedStock.marketPrice, quantity);
+                    const stockPrice = selectedStock.marketPrice || selectedStock.value || 0;
+                    this.updateStockBuyTotalSpan(stockPrice, quantity);
                 }
             }
         });
@@ -202,16 +244,29 @@ class PortfolioUIController {
             const selectedStock = this.getSelectedStock(selectElement.value);
 
             if (selectedStock && quantity > 0) {
-                const result = await this.userProfile.portfolio.buyStock(selectedStock, quantity);
+                try {
+                    // Disable button during transaction
+                    buyButton.disabled = true;
+                    buyButton.textContent = 'Processing...';
 
-                if (result.success) {
-                    alert(result.message);
-                    this.updateUIAfterTrade();
+                    // Use portfolio service to buy stock
+                    const stockPrice = selectedStock.marketPrice || selectedStock.value || 0;
+                    await portfolioService.buyStock(selectedStock.symbol, quantity, stockPrice);
+
+                    this.showSuccess(`Successfully bought ${quantity} shares of ${selectedStock.symbol}`);
+                    await this.updateUIAfterTrade();
                     quantityInput.value = 1;
-                    this.updateStockBuyTotalSpan(selectedStock.marketPrice, 1);
-                } else {
-                    alert(result.message);
+                    this.updateStockBuyTotalSpan(stockPrice, 1);
+
+                } catch (error) {
+                    console.error('Buy transaction failed:', error);
+                    this.showError(error.message || 'Failed to buy stock');
+                } finally {
+                    buyButton.disabled = false;
+                    buyButton.textContent = 'Buy';
                 }
+            } else {
+                this.showError('Please select a stock and enter a valid quantity');
             }
         });
     }
@@ -230,38 +285,61 @@ class PortfolioUIController {
             const selectedStock = this.getSelectedStock(selectElement.value);
 
             if (selectedStock && quantity > 0) {
-                const result = await this.userProfile.portfolio.sellStock(selectedStock, quantity);
+                try {
+                    // Disable button during transaction
+                    sellButton.disabled = true;
+                    sellButton.textContent = 'Processing...';
 
-                if (result.success) {
-                    alert(result.message);
-                    this.updateUIAfterTrade();
+                    // Use portfolio service to sell stock
+                    const stockPrice = selectedStock.marketPrice || selectedStock.value || 0;
+                    await portfolioService.sellStock(selectedStock.symbol, quantity, stockPrice);
+
+                    this.showSuccess(`Successfully sold ${quantity} shares of ${selectedStock.symbol}`);
+                    await this.updateUIAfterTrade();
                     quantityInput.value = 1;
-                    this.updateStockSellTotalSpan(selectedStock.marketPrice, 1);
-                } else {
-                    alert(result.message);
+                    this.updateStockSellTotalSpan(stockPrice, 1);
+
+                } catch (error) {
+                    console.error('Sell transaction failed:', error);
+                    this.showError(error.message || 'Failed to sell stock');
+                } finally {
+                    sellButton.disabled = false;
+                    sellButton.textContent = 'Sell';
                 }
+            } else {
+                this.showError('Please select a stock and enter a valid quantity');
             }
         });
     }
 
-    updateUIAfterTrade() {
-        this.updateCashDisplay();
-        this.updatePortfolioDisplay();
-        this.updateHoldingsTable();
+    async updateUIAfterTrade() {
+        try {
+            // Reload portfolio data
+            this.currentPortfolio = await portfolioService.loadActivePortfolio();
+
+            // Update UI elements
+            this.updateCashDisplay();
+            this.updatePortfolioDisplay();
+            this.updateHoldingsTable();
+        } catch (error) {
+            console.error('Failed to update UI after trade:', error);
+        }
     }
 
     updatePortfolioDisplay() {
-        this.userProfile.updatePortfolioValues();
-
         const portfolioValueDisplay = document.getElementById('span-portfolio-value');
         const totalAssetsValueDisplay = document.getElementById('span-total-assets-value');
 
-        if (portfolioValueDisplay) {
-            portfolioValueDisplay.textContent = `${this.userProfile.portfolio.portfolioValue.toFixed(2)}`;
+        if (portfolioValueDisplay && this.currentPortfolio) {
+            const portfolioValue = this.currentPortfolio.portfolioValue || 0;
+            portfolioValueDisplay.textContent = `${portfolioValue.toFixed(2)}`;
         }
 
-        if (totalAssetsValueDisplay) {
-            totalAssetsValueDisplay.textContent = `${this.userProfile.portfolio.totalAssetsValue.toFixed(2)}`;
+        if (totalAssetsValueDisplay && this.currentPortfolio) {
+            const balance = this.currentPortfolio.cash_balance || this.currentPortfolio.balance || 0;
+            const portfolioValue = this.currentPortfolio.portfolioValue || 0;
+            const totalAssets = balance + portfolioValue;
+            totalAssetsValueDisplay.textContent = `${totalAssets.toFixed(2)}`;
         }
     }
 
@@ -271,7 +349,7 @@ class PortfolioUIController {
 
         tableBody.innerHTML = '';
 
-        const holdings = this.userProfile?.portfolio?.holdingsMap;
+        const holdings = this.currentPortfolio?.holdingsMap || {};
 
         if (!holdings || Object.keys(holdings).length === 0) {
             const row = document.createElement('tr');
@@ -280,10 +358,15 @@ class PortfolioUIController {
             return;
         }
 
-        Object.values(holdings).forEach(holding => {
-            const currentPrice = holding.stock.marketPrice;
-            const value = currentPrice * holding.quantity;
-            const costBasis = holding.avgPrice * holding.quantity;
+        Object.entries(holdings).forEach(([symbol, holding]) => {
+            // Get current stock price
+            const stock = this.availableStocks.find(s => s.symbol === symbol);
+            const currentPrice = stock ? (stock.marketPrice || stock.value || 0) : 0;
+
+            const quantity = holding.quantity || 0;
+            const avgPrice = holding.avgPrice || holding.avg_price_paid || 0;
+            const value = currentPrice * quantity;
+            const costBasis = avgPrice * quantity;
             const profitLoss = value - costBasis;
             const percentChange = costBasis > 0 ? (profitLoss / costBasis) * 100 : 0;
             const profitLossClass = profitLoss >= 0 ? 'text-green-600' : 'text-red-600';
@@ -292,18 +375,56 @@ class PortfolioUIController {
             row.className = 'border-b border-gray-200 hover:bg-gray-50';
             row.innerHTML = `
                 <td class="py-2">
-                    <div>${holding.stock.symbol}</div>
-                    <div class="text-xs text-gray-500">${holding.quantity} shares @ ${holding.avgPrice.toFixed(2)}</div>
+                    <div>${symbol}</div>
+                    <div class="text-xs text-gray-500">${quantity} shares @ $${avgPrice.toFixed(2)}</div>
                 </td>
-                <td class="py-2 text-right">${holding.quantity}</td>
+                <td class="py-2 text-right">${quantity}</td>
                 <td class="py-2 text-right">
-                    <div>${value.toFixed(2)}</div>
+                    <div>$${value.toFixed(2)}</div>
                     <div class="text-xs ${profitLossClass}">
                         ${profitLoss >= 0 ? '+' : ''}${percentChange.toFixed(2)}%
                     </div>
                 </td>`;
             tableBody.appendChild(row);
         });
+    }
+
+    showSuccess(message) {
+        // Create success notification
+        this.showNotification(message, 'success');
+    }
+
+    showError(message) {
+        // Create error notification
+        this.showNotification(message, 'error');
+    }
+
+    showNotification(message, type) {
+        // Remove existing notifications
+        const existingNotifications = document.querySelectorAll('.notification');
+        existingNotifications.forEach(n => n.remove());
+
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+            type === 'success'
+                ? 'bg-green-100 border border-green-400 text-green-700'
+                : 'bg-red-100 border border-red-400 text-red-700'
+        }`;
+        notification.innerHTML = `
+            <div class="flex items-center">
+                <span class="mr-2">${type === 'success' ? '✓' : '✗'}</span>
+                <span>${message}</span>
+            </div>
+        `;
+
+        // Add to page
+        document.body.appendChild(notification);
+
+        // Remove after 5 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 5000);
     }
 }
 

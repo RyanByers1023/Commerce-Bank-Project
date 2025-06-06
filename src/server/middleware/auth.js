@@ -1,4 +1,3 @@
-// src/server/middleware/auth.js
 const db = require('./db');
 
 /**
@@ -7,7 +6,7 @@ const db = require('./db');
  */
 exports.verifyToken = async (req, res, next) => {
     try {
-        // Check if session exists - FIX: Use consistent session variable name
+        // Check if session exists
         if (!req.session || !req.session.userId) {
             return res.status(401).json({ error: 'Not authenticated' });
         }
@@ -26,7 +25,7 @@ exports.verifyToken = async (req, res, next) => {
             }
         }
 
-        // Get user information - FIX: Use consistent session variable
+        // Get user information
         const [users] = await db.query(
             'SELECT id, username, email, is_admin, is_demo_account FROM user WHERE id = ?',
             [req.session.userId]
@@ -79,7 +78,7 @@ exports.isUserOrAdmin = (req, res, next) => {
     }
 
     // FIX: Compare with user ID, allow admin access
-    if (req.user.id != user_id && !req.user.isAdmin) {
+    if (req.user.id !== user_id && !req.user.isAdmin) {
         return res.status(403).json({ error: 'Unauthorized access' });
     }
 

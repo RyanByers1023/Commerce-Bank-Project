@@ -1,4 +1,7 @@
-// js/dashboard.js
+// js/dashboard.js - FIXED VERSION
+import { databaseService } from './dbServices/databaseService.js';
+import { authService } from './dbServices/authService.js';
+
 class Dashboard {
     constructor() {
         this.currentUser = null;
@@ -8,11 +11,10 @@ class Dashboard {
 
     async init() {
         try {
-            // Check if user is authenticated
-            const authCheck = await fetch('/api/auth/check');
-            const authData = await authCheck.json();
+            // Check if user is authenticated using the auth service
+            const isAuthenticated = await authService.checkAuthStatus();
 
-            if (!authData.authenticated) {
+            if (!isAuthenticated) {
                 window.location.href = '/login.html';
                 return;
             }
@@ -34,10 +36,12 @@ class Dashboard {
 
     async loadCurrentUser() {
         try {
-            const response = await fetch('/api/auth/current-user');
-            if (!response.ok) throw new Error('Failed to get user data');
+            // FIX: Use the database service instead of direct fetch
+            this.currentUser = await databaseService.getCurrentUser();
 
-            this.currentUser = await response.json();
+            if (!this.currentUser) {
+                throw new Error('Failed to get user data');
+            }
         } catch (error) {
             console.error('Error loading user:', error);
             throw error;
@@ -46,20 +50,24 @@ class Dashboard {
 
     async loadDashboardData() {
         try {
-            if (!this.currentUser.activePortfolioId) {
+            // FIX: Use correct field name (activePortfolioID instead of activePortfolioId)
+            if (!this.currentUser.activePortfolioID) {
                 this.showNoPortfolioMessage();
                 return;
             }
 
+            // FIX: Use database service instead of direct fetch
             // Get portfolio data
-            const portfolioResponse = await fetch(`/api/portfolios/${this.currentUser.userId}/${this.currentUser.activePortfolioId}`);
-            if (!portfolioResponse.ok) throw new Error('Failed to get portfolio data');
-
-            this.portfolioData = await portfolioResponse.json();
+            this.portfolioData = await databaseService.getPortfolio(this.currentUser.activePortfolioID);
 
             // Get recent transactions
-            const transactionsResponse = await fetch(`/api/transactions/${this.currentUser.userId}/${this.currentUser.activePortfolioId}`);
-            const transactions = transactionsResponse.ok ? await transactionsResponse.json() : [];
+            let transactions = [];
+            try {
+                transactions = await databaseService.getPortfolioTransactions(this.currentUser.activePortfolioID);
+            } catch (error) {
+                console.error('Failed to load transactions:', error);
+                // Continue without transactions if they fail to load
+            }
 
             // Populate dashboard
             this.populateOverviewCards();
@@ -76,8 +84,8 @@ class Dashboard {
         const portfolioValue = this.portfolioData.portfolioValue || 0;
         const holdingsCount = Object.keys(this.portfolioData.holdingsMap || {}).length;
 
-        // Assume cash balance (you may need to add this to your schema)
-        const availableCash = 1000; // Placeholder - implement cash tracking
+        // FIX: Use the correct field name from the API response
+        const availableCash = this.portfolioData.cash_balance || this.portfolioData.balance || 0;
         const totalAssets = portfolioValue + availableCash;
 
         // Update overview cards
@@ -94,7 +102,9 @@ class Dashboard {
         // This would require historical data to calculate actual change
         // For now, show placeholder
         const changeElement = document.getElementById('portfolio-change');
-        changeElement.innerHTML = '<span class="text-gray-500">Change tracking coming soon</span>';
+        if (changeElement) {
+            changeElement.innerHTML = '<span class="text-gray-500">Change tracking coming soon</span>';
+        }
     }
 
     populateHoldingsTable() {
@@ -117,15 +127,15 @@ class Dashboard {
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm font-medium text-gray-900">${holding.symbol}</div>
-                    <div class="text-sm text-gray-500">${holding.stock_id}</div> <!--TODO: change this to show the stock company name-->
+                    <div class="text-sm text-gray-500">${holding.companyName || 'Unknown Company'}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${holding.quantity}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.avg_price_paid)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.price_paid)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.value)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.avgPrice || holding.avg_price_paid || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.totalPricePaid || holding.price_paid || 0)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(holding.currentValue || holding.value || 0)}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm ${profitLossClass}">
                     ${profitLossSign}${this.formatCurrency(Math.abs(profitLoss))}
-                    <div class="text-xs">(${profitLossSign}${holding.percentChange?.toFixed(2) || '0.00'}%)</div>
+                    <div class="text-xs">(${profitLossSign}${(holding.percentChange || 0).toFixed(2)}%)</div>
                 </td>
             `;
             tbody.appendChild(row);
@@ -156,7 +166,7 @@ class Dashboard {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm font-medium text-gray-900">${transaction.symbol}</div>
-                    <div class="text-sm text-gray-500">${transaction.company_name}</div>
+                    <div class="text-sm text-gray-500">${transaction.company_name || 'Unknown Company'}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${transaction.quantity}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.formatCurrency(transaction.price_paid)}</td>
@@ -168,35 +178,45 @@ class Dashboard {
 
     setupEventListeners() {
         // Refresh button
-        document.getElementById('refresh-btn').addEventListener('click', () => {
-            this.refreshDashboard();
-        });
+        const refreshBtn = document.getElementById('refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                this.refreshDashboard();
+            });
+        }
     }
 
     async refreshDashboard() {
         const refreshBtn = document.getElementById('refresh-btn');
-        refreshBtn.disabled = true;
-        refreshBtn.innerHTML = '<svg class="w-4 h-4 inline-block mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>Refreshing...';
+        if (refreshBtn) {
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = '<svg class="w-4 h-4 inline-block mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>Refreshing...';
 
-        try {
-            await this.loadDashboardData();
-        } catch (error) {
-            console.error('Refresh error:', error);
-            this.showError('Failed to refresh data');
-        } finally {
-            refreshBtn.disabled = false;
-            refreshBtn.innerHTML = '<svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>Refresh';
+            try {
+                await this.loadDashboardData();
+            } catch (error) {
+                console.error('Refresh error:', error);
+                this.showError('Failed to refresh data');
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>Refresh';
+            }
         }
     }
 
     showNoPortfolioMessage() {
         const container = document.querySelector('.container');
-        container.innerHTML = `
-            <div class="text-center py-12">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4">No Active Portfolio</h2>
-                <p class="text-gray-600 mb-6">You don't have an active portfolio set up yet.</p>            
-            </div>
-        `;
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">No Active Portfolio</h2>
+                    <p class="text-gray-600 mb-6">You don't have an active portfolio set up yet.</p>
+                    <button onclick="window.location.href='/portfolio.html'" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        Create Portfolio
+                    </button>
+                </div>
+            `;
+        }
     }
 
     showError(message) {
@@ -210,7 +230,9 @@ class Dashboard {
 
         // Insert at top of container
         const container = document.querySelector('.container');
-        container.insertBefore(errorDiv, container.firstChild);
+        if (container) {
+            container.insertBefore(errorDiv, container.firstChild);
+        }
 
         // Remove after 5 seconds
         setTimeout(() => {
