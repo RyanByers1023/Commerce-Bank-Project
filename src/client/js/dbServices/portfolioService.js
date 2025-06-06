@@ -22,7 +22,8 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            const portfolios = await this.dbService.getPortfolios(user.username);
+            // FIX: Use the corrected database service method
+            const portfolios = await this.dbService.getPortfolios();
             this.portfolios = portfolios;
             return portfolios;
         } catch (error) {
@@ -48,12 +49,12 @@ export default class PortfolioService {
             }
 
             // Find active portfolio
-            const activePortfolioId = user.active_portfolio_id;
+            const activePortfolioId = user.activePortfolioID; // FIX: Use correct field name
 
             if (!activePortfolioId) {
                 // No active portfolio set, use the first one if available
                 if (this.portfolios.length > 0) {
-                    this.currentPortfolio = await this.getPortfolio(this.portfolios[0].portfolioID);
+                    this.currentPortfolio = await this.getPortfolio(this.portfolios[0].id);
                 } else {
                     this.currentPortfolio = null;
                 }
@@ -80,7 +81,8 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            return await this.dbService.getPortfolio(user.username, portfolioId);
+            // FIX: Use the corrected database service method
+            return await this.dbService.getPortfolio(portfolioId);
         } catch (error) {
             console.error('Failed to get portfolio:', error);
             throw error;
@@ -107,7 +109,8 @@ export default class PortfolioService {
                 initialBalance
             };
 
-            const newPortfolio = await this.dbService.createPortfolio(user.username, portfolioData);
+            // FIX: Use the corrected database service method
+            const newPortfolio = await this.dbService.createPortfolio(portfolioData);
 
             // Add to local portfolio list
             this.portfolios.push(newPortfolio);
@@ -132,10 +135,11 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            const result = await this.dbService.updatePortfolio(user.username, portfolioId, updateData);
+            // FIX: Use the corrected database service method
+            const result = await this.dbService.updatePortfolio(portfolioId, updateData);
 
             // Update local portfolio list
-            const index = this.portfolios.findIndex(p => p.portfolioID === portfolioId);
+            const index = this.portfolios.findIndex(p => p.id === portfolioId);
             if (index !== -1) {
                 this.portfolios[index] = {
                     ...this.portfolios[index],
@@ -144,7 +148,7 @@ export default class PortfolioService {
             }
 
             // Update current portfolio if it's the active one
-            if (this.currentPortfolio && this.currentPortfolio.portfolioID === portfolioId) {
+            if (this.currentPortfolio && this.currentPortfolio.id === portfolioId) {
                 this.currentPortfolio = {
                     ...this.currentPortfolio,
                     ...updateData
@@ -170,7 +174,8 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            const result = await this.dbService.setActivePortfolio(user.username, portfolioId);
+            // FIX: Use the corrected database service method
+            const result = await this.dbService.setActivePortfolio(portfolioId);
 
             // Update current portfolio
             this.currentPortfolio = await this.getPortfolio(portfolioId);
@@ -195,10 +200,11 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            const result = await this.dbService.resetPortfolio(user.username, portfolioId, initialBalance);
+            // FIX: Use the corrected database service method
+            const result = await this.dbService.resetPortfolio(portfolioId, initialBalance);
 
             // Refresh portfolio data if it's the current one
-            if (this.currentPortfolio && this.currentPortfolio.portfolioID === portfolioId) {
+            if (this.currentPortfolio && this.currentPortfolio.id === portfolioId) {
                 this.currentPortfolio = await this.getPortfolio(portfolioId);
             }
 
@@ -221,13 +227,14 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            const result = await this.dbService.deletePortfolio(user.username, portfolioId);
+            // FIX: Use the corrected database service method
+            const result = await this.dbService.deletePortfolio(portfolioId);
 
             // Remove from local portfolio list
-            this.portfolios = this.portfolios.filter(p => p.portfolioID !== portfolioId);
+            this.portfolios = this.portfolios.filter(p => p.id !== portfolioId);
 
             // If deleted the current portfolio, set current to null
-            if (this.currentPortfolio && this.currentPortfolio.portfolioID === portfolioId) {
+            if (this.currentPortfolio && this.currentPortfolio.id === portfolioId) {
                 this.currentPortfolio = null;
 
                 // Load portfolios to get the new active one
@@ -256,7 +263,7 @@ export default class PortfolioService {
             }
 
             const transactionData = {
-                portfolioId: this.currentPortfolio.portfolioID,
+                portfolioId: this.currentPortfolio.id, // FIX: Use correct field name
                 symbol,
                 transactionType: 'BUY',
                 quantity,
@@ -298,7 +305,7 @@ export default class PortfolioService {
             }
 
             const transactionData = {
-                portfolioId: this.currentPortfolio.portfolioID,
+                portfolioId: this.currentPortfolio.id, // FIX: Use correct field name
                 symbol,
                 transactionType: 'SELL',
                 quantity,
@@ -335,10 +342,8 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            return await this.dbService.getPortfolioTransactions(
-                user.username,
-                this.currentPortfolio.portfolioID
-            );
+            // FIX: Use the corrected database service method
+            return await this.dbService.getPortfolioTransactions(this.currentPortfolio.id);
         } catch (error) {
             console.error('Failed to get transaction history:', error);
             throw error;
@@ -356,7 +361,8 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            return await this.dbService.getTransactionStats(user.username);
+            // FIX: Use the corrected database service method
+            return await this.dbService.getTransactionStats();
         } catch (error) {
             console.error('Failed to get transaction statistics:', error);
             throw error;
@@ -406,3 +412,7 @@ export default class PortfolioService {
         }
     }
 }
+
+// Create singleton instance
+const portfolioService = new PortfolioService();
+export { portfolioService };

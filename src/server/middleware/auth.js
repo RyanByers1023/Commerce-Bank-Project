@@ -7,8 +7,8 @@ const db = require('./db');
  */
 exports.verifyToken = async (req, res, next) => {
     try {
-        // Check if session exists
-        if (!req.session || !req.session.user_id) {
+        // Check if session exists - FIX: Use consistent session variable name
+        if (!req.session || !req.session.userId) {
             return res.status(401).json({ error: 'Not authenticated' });
         }
 
@@ -26,15 +26,10 @@ exports.verifyToken = async (req, res, next) => {
             }
         }
 
-        // Get user information
+        // Get user information - FIX: Use consistent session variable
         const [users] = await db.query(
-            'SELECT ' +
-                'username, email ' +
-            'FROM ' +
-                'users ' +
-            'WHERE ' +
-                'id = ?',
-            [req.session.user_id]
+            'SELECT id, username, email, is_admin, is_demo_account FROM user WHERE id = ?',
+            [req.session.userId]
         );
 
         if (users.length === 0) {
@@ -43,8 +38,14 @@ exports.verifyToken = async (req, res, next) => {
             return res.status(401).json({ error: 'User not found' });
         }
 
-        // Add user info to request
-        req.user = users[0];
+        // Add user info to request - FIX: Consistent naming
+        req.user = {
+            id: users[0].id,
+            username: users[0].username,
+            email: users[0].email,
+            isAdmin: users[0].is_admin,
+            isDemoAccount: users[0].is_demo_account
+        };
 
         // Proceed to the next middleware or route handler
         next();
@@ -71,13 +72,14 @@ exports.isAdmin = (req, res, next) => {
  * or is an admin
  */
 exports.isUserOrAdmin = (req, res, next) => {
-    const { username } = req.params;
+    const { user_id } = req.params;
 
     if (!req.user) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    if (req.user.username !== username && !req.user.isAdmin) {
+    // FIX: Compare with user ID, allow admin access
+    if (req.user.id != user_id && !req.user.isAdmin) {
         return res.status(403).json({ error: 'Unauthorized access' });
     }
 
@@ -120,12 +122,7 @@ exports.checkDemoAccount = async (req, res, next) => {
         }
 
         // Check if user is a demo account
-        const [users] = await db.query(
-            'SELECT is_demo_account FROM user WHERE id = ?',
-            [req.user.user_id]
-        );
-
-        if (users.length > 0 && users[0].isDemoAccount) {
+        if (req.user.isDemoAccount) {
             // Set demo flag on request
             req.isDemo = true;
 

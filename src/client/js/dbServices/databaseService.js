@@ -38,6 +38,7 @@ class DatabaseService {
 
     /**
      * Get the current authenticated user
+     * FIX: Changed endpoint to match server route
      */
     async getCurrentUser() {
         try {
@@ -45,7 +46,7 @@ class DatabaseService {
                 return null;
             }
 
-            // The server knows the current user from the session
+            // FIX: Call users/current instead of auth/current-user
             const response = await this.sendRequest('users/current', 'GET');
             this.currentUser = response;
             return response;
@@ -130,6 +131,10 @@ class DatabaseService {
         }
     }
 
+    /**
+     * Get user profile by user ID
+     * FIX: Changed parameter name to be clear about expecting user ID
+     */
     async getUserProfile(user_id) {
         try {
             return await this.sendRequest(`users/${user_id}`, 'GET');
@@ -140,12 +145,109 @@ class DatabaseService {
     }
 
     /**
-     * Get all portfolios for a user
-     * @param {string} user_id - user_id
+     * Update user profile
+     * FIX: Now uses current user's ID instead of username
+     * @param {Object} updateData - Data to update (email, currentPassword, newPassword)
+     * @returns {Promise<Object>} Update result
      */
-    async getPortfolios(user_id) {
+    async updateUserProfile(updateData) {
         try {
-            return await this.sendRequest(`portfolio/${user_id}`, 'GET');
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            const result = await this.sendRequest(`users/${this.currentUser.id}`, 'PUT', updateData);
+
+            // Refresh current user data after update
+            await this.getCurrentUser();
+
+            return result;
+        } catch (error) {
+            console.error('Profile update failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete user account
+     * FIX: Now uses current user's ID and requires password
+     * @param {string} password - User's password for confirmation
+     * @returns {Promise<Object>} Delete result
+     */
+    async deleteAccount(password) {
+        try {
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            const result = await this.sendRequest(`users/${this.currentUser.id}`, 'DELETE', {
+                password
+            });
+
+            // Clear auth state after deletion
+            this.isAuthenticated = false;
+            this.currentUser = null;
+
+            return result;
+        } catch (error) {
+            console.error('Account deletion failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Set active portfolio
+     * FIX: Use current user ID and correct field name in body
+     * @param {string} portfolio_id - Portfolio ID to set as active
+     */
+    async setActivePortfolio(portfolio_id) {
+        try {
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            const result = await this.sendRequest(`users/${this.currentUser.id}/active-portfolio`, 'PUT', {
+                activePortfolioID: portfolio_id // FIX: Correct field name
+            });
+
+            // Update current user's active portfolio
+            if (this.currentUser) {
+                this.currentUser.activePortfolioID = portfolio_id;
+            }
+
+            return result;
+        } catch (error) {
+            console.error('Failed to set active portfolio:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get user dashboard data
+     */
+    async getUserDashboard() {
+        try {
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`users/${this.currentUser.id}/dashboard`, 'GET');
+        } catch (error) {
+            console.error('Failed to get user dashboard:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get all portfolios for current user
+     */
+    async getPortfolios() {
+        try {
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`portfolios/${this.currentUser.id}`, 'GET');
         } catch (error) {
             console.error('Failed to get portfolios:', error);
             throw error;
@@ -154,12 +256,15 @@ class DatabaseService {
 
     /**
      * Get a specific portfolio
-     * @param {string} user_id - user_id
      * @param {string} portfolio_id - Portfolio ID
      */
-    async getPortfolio(user_id, portfolio_id) {
+    async getPortfolio(portfolio_id) {
         try {
-            return await this.sendRequest(`portfolio/${user_id}/${portfolio_id}`, 'GET');
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`portfolios/${this.currentUser.id}/${portfolio_id}`, 'GET');
         } catch (error) {
             console.error('Failed to get portfolio:', error);
             throw error;
@@ -168,12 +273,15 @@ class DatabaseService {
 
     /**
      * Create a new portfolio
-     * @param {string} user_id - user_id
      * @param {object} portfolioData - Portfolio data (name, description, initialBalance)
      */
-    async createPortfolio(user_id, portfolioData) {
+    async createPortfolio(portfolioData) {
         try {
-            return await this.sendRequest(`portfolio/${user_id}`, 'POST', portfolioData);
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`portfolios/${this.currentUser.id}`, 'POST', portfolioData);
         } catch (error) {
             console.error('Failed to create portfolio:', error);
             throw error;
@@ -182,13 +290,16 @@ class DatabaseService {
 
     /**
      * Reset a portfolio to initial state
-     * @param {string} user_id - user_id
      * @param {string} portfolio_id - Portfolio ID
      * @param {number} initialBalance - New initial balance (optional)
      */
-    async resetPortfolio(user_id, portfolio_id, initialBalance) {
+    async resetPortfolio(portfolio_id, initialBalance) {
         try {
-            return await this.sendRequest(`portfolio/${user_id}/${portfolio_id}/reset`, 'POST', {
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`portfolios/${this.currentUser.id}/${portfolio_id}/reset`, 'POST', {
                 initialBalance
             });
         } catch (error) {
@@ -199,39 +310,28 @@ class DatabaseService {
 
     /**
      * Delete a portfolio
-     * @param {string} user_id - user_id
      * @param {string} portfolio_id - Portfolio ID
      */
-    async deletePortfolio(user_id, portfolio_id) {
+    async deletePortfolio(portfolio_id) {
         try {
-            return await this.sendRequest(`portfolio/${user_id}/${portfolio_id}`, 'DELETE');
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`portfolios/${this.currentUser.id}/${portfolio_id}`, 'DELETE');
         } catch (error) {
             console.error('Failed to delete portfolio:', error);
             throw error;
         }
     }
 
-    /**
-     * Set active portfolio
-     * @param {string} user_id - user_id
-     * @param {string} portfolio_id - Portfolio ID to set as active
-     */
-    async setActivePortfolio(user_id, portfolio_id) {
-        this.currentUser.setEarnings();
-        this.currentUser.setTotalStocksOwned();
+    async updatePortfolio(portfolio_id, portfolioData) {
         try {
-            return await this.sendRequest(`users/${user_id}/active-portfolio`, 'PUT', {
-                activeportfolio_id: portfolio_id
-            });
-        } catch (error) {
-            console.error('Failed to set active portfolio:', error);
-            throw error;
-        }
-    }
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
 
-    async updatePortfolio(user_id, portfolio_id, portfolioData) {
-        try {
-            return await this.sendRequest(`portfolio/${user_id}/${portfolio_id}`, 'PUT', portfolioData);
+            return await this.sendRequest(`portfolios/${this.currentUser.id}/${portfolio_id}`, 'PUT', portfolioData);
         } catch (error) {
             console.error('Failed to update portfolio data:', error);
             throw error;
@@ -243,7 +343,7 @@ class DatabaseService {
 
         try {
             return await this.sendRequest(
-                `portfolio/${portfolio_id}/transactions`,   // ← note: removed stray space
+                `portfolios/${portfolio_id}/transactions`,
                 'POST',
                 { transactions: payload }
             );
@@ -253,9 +353,13 @@ class DatabaseService {
         }
     }
 
-    async getStocks(userID) {
+    async getStocks() {
         try {
-            return await this.sendRequest(`stocks/${userID}`, 'GET');
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`stocks/${this.currentUser.username}`, 'GET');
         } catch (error) {
             console.error('Failed to get stocks:', error);
             throw error;
@@ -264,12 +368,15 @@ class DatabaseService {
 
     /**
      * Get a specific stock
-     * @param {int} user_id -- user's unique id
      * @param {string} symbol - Stock symbol
      */
-    async getStock(user_id, symbol) {
+    async getStock(symbol) {
         try {
-            return await this.sendRequest(`stocks/${user_id}/${symbol}`, 'GET');
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`stocks/${this.currentUser.username}/${symbol}`, 'GET');
         } catch (error) {
             console.error('Failed to get stock:', error);
             throw error;
@@ -278,12 +385,15 @@ class DatabaseService {
 
     /**
      * Add a custom stock
-     * @param {string} user_id - user_id
      * @param {object} stockData - Stock data (symbol, companyName, sector, initialPrice, volatility)
      */
-    async addCustomStock(user_id, stockData) {
+    async addCustomStock(stockData) {
         try {
-            return await this.sendRequest(`stocks/${user_id}`, 'POST', stockData);
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`stocks/${this.currentUser.username}`, 'POST', stockData);
         } catch (error) {
             console.error('Failed to add custom stock:', error);
             throw error;
@@ -292,12 +402,15 @@ class DatabaseService {
 
     /**
      * Delete a custom stock
-     * @param {string} user_id - user_id
      * @param {string} symbol - Stock symbol
      */
-    async deleteCustomStock(user_id, symbol) {
+    async deleteCustomStock(symbol) {
         try {
-            return await this.sendRequest(`stocks/${user_id}/${symbol}`, 'DELETE');
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`stocks/${this.currentUser.username}/${symbol}`, 'DELETE');
         } catch (error) {
             console.error('Failed to delete custom stock:', error);
             throw error;
@@ -305,12 +418,15 @@ class DatabaseService {
     }
 
     /**
-     * Get all transactions for a user
-     * @param {string} user_id - user_id
+     * Get all transactions for current user
      */
-    async getTransactions(user_id) {
+    async getTransactions() {
         try {
-            return await this.sendRequest(`transactions/${user_id}`, 'GET');
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`transactions/${this.currentUser.username}`, 'GET');
         } catch (error) {
             console.error('Failed to get transactions:', error);
             throw error;
@@ -319,18 +435,20 @@ class DatabaseService {
 
     /**
      * Get transactions for a specific portfolio
-     * @param {string} user_id - user_id
      * @param {string} portfolio_id - Portfolio ID
      */
-    async getPortfolioTransactions(user_id, portfolio_id) {
+    async getPortfolioTransactions(portfolio_id) {
         try {
-            return await this.sendRequest(`transactions/${user_id}/${portfolio_id}`, 'GET');
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`transactions/${this.currentUser.username}/${portfolio_id}`, 'GET');
         } catch (error) {
             console.error('Failed to get portfolio transactions:', error);
             throw error;
         }
     }
-
 
     async executeTransaction(transactionData) {
         try {
@@ -341,36 +459,52 @@ class DatabaseService {
         }
     }
 
-    async getTransactionStats(user_id) {
+    async getTransactionStats() {
         try {
-            return await this.sendRequest(`transactions/${user_id}/stats`, 'GET');
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`transactions/${this.currentUser.username}/stats`, 'GET');
         } catch (error) {
             console.error('Failed to get transaction stats:', error);
             throw error;
         }
     }
 
-    async getSimulationSettings(user_id) {
+    async getSimulationSettings() {
         try {
-            return await this.sendRequest(`settings/${user_id}`, 'GET');
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`settings/${this.currentUser.username}`, 'GET');
         } catch (error) {
             console.error('Failed to get simulation settings:', error);
             throw error;
         }
     }
 
-    async saveSimulationSettings(user_id, settings) {
+    async saveSimulationSettings(settings) {
         try {
-            return await this.sendRequest(`settings/${user_id}`, 'PUT', settings);
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`settings/${this.currentUser.username}`, 'PUT', settings);
         } catch (error) {
             console.error('Failed to save simulation settings:', error);
             throw error;
         }
     }
 
-    async resetSimulationSettings(user_id) {
+    async resetSimulationSettings() {
         try {
-            return await this.sendRequest(`settings/${user_id}/reset`, 'POST');
+            if (!this.currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.sendRequest(`settings/${this.currentUser.username}/reset`, 'POST');
         } catch (error) {
             console.error('Failed to reset simulation settings:', error);
             throw error;

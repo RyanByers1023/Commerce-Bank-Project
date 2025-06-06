@@ -9,7 +9,6 @@ const auth = require('../middleware/auth');
 /**
  * Validate password strength
  */
-//TODO: remove some duplicated code below:
 function validatePassword(password) {
     const result = { isValid: true, error: null };
 
@@ -97,7 +96,7 @@ router.post('/login', async (req, res) => {
             [user.id]
         );
 
-        // Set session data
+        // Set session data - FIX: Use consistent naming
         req.session.userId = user.id;
 
         if (rememberMe) {
@@ -171,15 +170,18 @@ router.post('/register', async (req, res) => {
 
         const userId = userResult.insertId;
 
-        await db.query(
-            'INSERT INTO portfolio (user_id) VALUE (?)',
-            [userId]
+        // Create default portfolio
+        const [portfolioResult] = await db.query(
+            'INSERT INTO portfolio (user_id, name, cash_balance) VALUES (?, ?, ?)',
+            [userId, 'My Portfolio', 500.00]
         );
 
-        // Set active portfolio
+        const portfolioId = portfolioResult.insertId;
+
+        // Set active portfolio - FIX: Use UPDATE instead of INSERT
         await db.query(
-            'INSERT INTO user (active_portfolio_id) SELECT id FROM portfolio WHERE user_id = ?',
-            [userId]
+            'UPDATE user SET active_portfolio_id = ? WHERE id = ?',
+            [portfolioId, userId]
         );
 
         // Create simulation settings with defaults
@@ -200,7 +202,7 @@ router.post('/register', async (req, res) => {
         // Commit transaction
         await db.query('COMMIT');
 
-        // Set session data
+        // Set session data - FIX: Use consistent naming
         req.session.userId = userId;
 
         res.status(201).json({
@@ -252,45 +254,6 @@ router.get('/check', (req, res) => {
     }
 });
 
-// Get current user profile
-router.get('/current-user', async (req, res) => {
-    try {
-        const userId = req.session.userId;
-
-        // Get user data
-        const [users] = await db.query(
-            'SELECT id, username, email, date_created, last_login, active_portfolio_id FROM user WHERE id = ?',
-            [userId]
-        );
-
-        if (users.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        const user = users[0];
-
-        // Get active portfolio
-        const [portfolios] = await db.query(
-            'SELECT id FROM portfolio WHERE id = ?',
-            [user.active_portfolio_id]
-        );
-
-        res.json({
-            userId: user.id,
-            username: user.username,
-            email: user.email,
-            dateCreated: user.date_created,
-            lastLogin: user.last_login,
-            activePortfolioId: user.active_portfolio_id,
-            isDemoAccount: user.is_demo_account,
-            isAdmin: user.is_admin
-        });
-    } catch (error) {
-        console.error('Get current user error:', error);
-        res.status(500).json({ error: 'Failed to get user data' });
-    }
-});
-
 // Demo login route
 router.post('/demo-login', async (req, res) => {
     try {
@@ -320,15 +283,15 @@ router.post('/demo-login', async (req, res) => {
 
             userId = userResult.insertId;
 
-            // Create initial portfolio
-            const portfolioId = `demo-portfolio-${Date.now()}`;
-
-            await db.query(
-                'INSERT INTO portfolios (id, user_id) VALUES (?, ?)',
-                [portfolioId, userId]
+            // Create initial portfolio - FIX: Use proper SQL
+            const [portfolioResult] = await db.query(
+                'INSERT INTO portfolio (user_id, name, cash_balance) VALUES (?, ?, ?)',
+                [userId, 'Demo Portfolio', 10000.00]
             );
 
-            // Set active portfolio
+            const portfolioId = portfolioResult.insertId;
+
+            // Set active portfolio - FIX: Use UPDATE
             await db.query(
                 'UPDATE user SET active_portfolio_id = ? WHERE id = ?',
                 [portfolioId, userId]
@@ -360,7 +323,7 @@ router.post('/demo-login', async (req, res) => {
 
         await db.query('COMMIT');
 
-        // Set session data
+        // Set session data - FIX: Use consistent naming
         req.session.userId = userId;
         req.session.isDemo = true;
 
@@ -409,7 +372,7 @@ router.post('/forgot-password', async (req, res) => {
 
         // Save reset token
         await db.query(
-            'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE token_hash = VALUES(token_hash), expires_at = VALUES(expires_at)',
+            'INSERT INTO password_reset_token (user_id, token_hash, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE token_hash = VALUES(token_hash), expires_at = VALUES(expires_at)',
             [user.id, resetToken, tokenExpiration]
         );
 
@@ -441,7 +404,7 @@ router.post('/reset-password', async (req, res) => {
 
         // Check if token exists and is valid
         const [tokens] = await db.query(
-            'SELECT user_id, expires_at FROM password_reset_tokens WHERE token_hash = ?',
+            'SELECT user_id, expires_at FROM password_reset_token WHERE token_hash = ?',
             [token]
         );
 
@@ -467,7 +430,7 @@ router.post('/reset-password', async (req, res) => {
 
         // Delete the used token
         await db.query(
-            'DELETE FROM password_reset_tokens WHERE token_hash = ?',
+            'DELETE FROM password_reset_token WHERE token_hash = ?',
             [token]
         );
 

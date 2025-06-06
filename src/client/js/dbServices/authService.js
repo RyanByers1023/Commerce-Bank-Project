@@ -153,20 +153,14 @@ export default class AuthService {
 
     /**
      * Update user profile
-     * @param {string} username - Username
-     * @param {Object} updateData - Data to update (email, password)
+     * FIX: Simplified to use the corrected database service method
+     * @param {Object} updateData - Data to update (email, currentPassword, newPassword)
      * @returns {Promise<Object>} Update result
      */
-    async updateUserProfile(username, updateData) {
+    async updateUserProfile(updateData) {
         try {
-            const result = await this.dbService.sendRequest(`users/${username}`, 'PUT', updateData);
-
-            // Refresh current user if it was updated
-            if (this.dbService.currentUser && this.dbService.currentUser.username === username) {
-                await this.dbService.getCurrentUser();
-                this.notifyAuthStateChanged();
-            }
-
+            const result = await this.dbService.updateUserProfile(updateData);
+            this.notifyAuthStateChanged();
             return result;
         } catch (error) {
             console.error('Profile update failed:', error);
@@ -176,23 +170,46 @@ export default class AuthService {
 
     /**
      * Delete user account
-     * @param {string} username - Username to delete
+     * FIX: Simplified to use the corrected database service method
+     * @param {string} password - User's password for confirmation
      * @returns {Promise<Object>} Delete result
      */
-    async deleteAccount(username) {
+    async deleteAccount(password) {
         try {
-            const result = await this.dbService.sendRequest(`users/${username}`, 'DELETE');
-
-            // If current user was deleted, update auth state
-            if (this.dbService.currentUser && this.dbService.currentUser.username === username) {
-                this.dbService.isAuthenticated = false;
-                this.dbService.currentUser = null;
-                this.notifyAuthStateChanged();
-            }
-
+            const result = await this.dbService.deleteAccount(password);
+            this.notifyAuthStateChanged();
             return result;
         } catch (error) {
             console.error('Account deletion failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Set active portfolio
+     * @param {string} portfolio_id - Portfolio ID to set as active
+     * @returns {Promise<Object>} Result
+     */
+    async setActivePortfolio(portfolio_id) {
+        try {
+            const result = await this.dbService.setActivePortfolio(portfolio_id);
+            this.notifyAuthStateChanged();
+            return result;
+        } catch (error) {
+            console.error('Failed to set active portfolio:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get user dashboard data
+     * @returns {Promise<Object>} Dashboard data
+     */
+    async getUserDashboard() {
+        try {
+            return await this.dbService.getUserDashboard();
+        } catch (error) {
+            console.error('Failed to get dashboard data:', error);
             throw error;
         }
     }
