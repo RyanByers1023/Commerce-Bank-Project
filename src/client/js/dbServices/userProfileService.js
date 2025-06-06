@@ -1,7 +1,7 @@
 import { authService } from './authService.js';
 import { stockService } from './stockService.js';
 import { databaseService } from './databaseService.js';
-import { simulationService } from "./simulationService";
+import { simulationService } from './simulationService.js';
 
 import Portfolio from '../models/portfolio.js';
 

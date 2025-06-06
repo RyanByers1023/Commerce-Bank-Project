@@ -1,26 +1,17 @@
 // Fixed portfolioUIController.js
-import { authService } from './dbServices/authService.js';
-import { stockService } from './dbServices/stockService.js';
-import { portfolioService } from './dbServices/portfolioService.js';
-import { databaseService } from './dbServices/databaseService.js';
+import { authService } from '../../dbServices/authService.js';
+import { stockService } from '../../dbServices/stockService.js';
+import { portfolioService } from '../../dbServices/portfolioService.js';
+import { databaseService } from '../../dbServices/databaseService.js';
 
 class PortfolioUIController {
     constructor() {
         this.currentUser = null;
         this.currentPortfolio = null;
         this.availableStocks = [];
-        this.initializeUI();
     }
 
-    async initializeUI() {
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.setupUIAfterLoad());
-        } else {
-            await this.setupUIAfterLoad();
-        }
-    }
-
-    async setupUIAfterLoad() {
+    async initialize() {
         try {
             // Load user data and portfolio
             await this.loadUserData();
@@ -30,9 +21,12 @@ class PortfolioUIController {
 
             // Set up event listeners
             this.initializeUIListeners();
+
+            return this;
         } catch (error) {
             console.error('Failed to setup UI:', error);
             this.showError('Failed to load portfolio data');
+            throw error;
         }
     }
 
@@ -129,7 +123,7 @@ class PortfolioUIController {
         const cashElement = document.getElementById("span-balance");
         if (cashElement && this.currentPortfolio) {
             const balance = this.currentPortfolio.cash_balance || this.currentPortfolio.balance || 0;
-            cashElement.textContent = `${balance.toFixed(2)}`;
+            cashElement.textContent = `$${balance.toFixed(2)}`;
         }
     }
 
@@ -161,7 +155,7 @@ class PortfolioUIController {
 
         elements.forEach(element => {
             if (element) {
-                element.textContent = `${stockPrice.toFixed(2)}`;
+                element.textContent = `$${stockPrice.toFixed(2)}`;
             }
         });
     }
@@ -203,14 +197,14 @@ class PortfolioUIController {
     updateStockBuyTotalSpan(stockPrice, quantity) {
         const totalSpan = document.getElementById('span-buy-total-price');
         if (totalSpan) {
-            totalSpan.textContent = `${(stockPrice * quantity).toFixed(2)}`;
+            totalSpan.textContent = `$${(stockPrice * quantity).toFixed(2)}`;
         }
     }
 
     updateStockSellTotalSpan(stockPrice, quantity) {
         const totalSpan = document.getElementById('span-sell-total-price');
         if (totalSpan) {
-            totalSpan.textContent = `${(stockPrice * quantity).toFixed(2)}`;
+            totalSpan.textContent = `$${(stockPrice * quantity).toFixed(2)}`;
         }
     }
 
@@ -332,19 +326,19 @@ class PortfolioUIController {
 
         if (portfolioValueDisplay && this.currentPortfolio) {
             const portfolioValue = this.currentPortfolio.portfolioValue || 0;
-            portfolioValueDisplay.textContent = `${portfolioValue.toFixed(2)}`;
+            portfolioValueDisplay.textContent = `$${portfolioValue.toFixed(2)}`;
         }
 
         if (totalAssetsValueDisplay && this.currentPortfolio) {
             const balance = this.currentPortfolio.cash_balance || this.currentPortfolio.balance || 0;
             const portfolioValue = this.currentPortfolio.portfolioValue || 0;
             const totalAssets = balance + portfolioValue;
-            totalAssetsValueDisplay.textContent = `${totalAssets.toFixed(2)}`;
+            totalAssetsValueDisplay.textContent = `$${totalAssets.toFixed(2)}`;
         }
     }
 
     updateHoldingsTable() {
-        const tableBody = document.getElementById('holdings-table-body');
+        const tableBody = document.getElementById('table-body-holdings');
         if (!tableBody) return;
 
         tableBody.innerHTML = '';
@@ -390,12 +384,10 @@ class PortfolioUIController {
     }
 
     showSuccess(message) {
-        // Create success notification
         this.showNotification(message, 'success');
     }
 
     showError(message) {
-        // Create error notification
         this.showNotification(message, 'error');
     }
 
