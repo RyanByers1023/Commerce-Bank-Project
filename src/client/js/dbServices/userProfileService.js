@@ -70,18 +70,19 @@ export default class UserProfileService {
             }
 
             this.username = currentUser.username;
+            this.userId = currentUser.userId;
             this.email = currentUser.email;
 
             // Load stocks
             this.stocksAddedToSim = await stockService.loadStocks();
 
             // Load active portfolio
-            const portfolioData = await this.dbService.getPortfolio(this.username, currentUser.activePortfolioID);
+            const portfolioData = await this.dbService.getPortfolio(this.userId, currentUser.activePortfolioID);
 
             // Create Portfolio instance
             this.portfolio = new Portfolio(
                 portfolioData.initialBalance,
-                this.username,
+                this.userId,
                 portfolioData.portfolioID
             );
 
