@@ -77,13 +77,13 @@ export default class UserProfileService {
             this.stocksAddedToSim = await stockService.loadStocks();
 
             // Load active portfolio
-            const portfolioData = await this.dbService.getPortfolio(this.userId, currentUser.activePortfolioId);
+            const portfolioData = await this.dbService.getPortfolio(this.userId, currentUser.activeportfolioId);
 
             // Create Portfolio instance
             this.portfolio = new Portfolio(
                 portfolioData.initialBalance,
                 this.userId,
-                portfolioData.portfolioID
+                portfolioData.portfolioId
             );
 
             // Copy properties from the API data
@@ -225,7 +225,7 @@ export default class UserProfileService {
 
                 // For registered users, use API
                 const result = await this.dbService.executeTransaction({
-                    portfolioId: this.portfolio.portfolioID,
+                    portfolioId: this.portfolio.portfolioId,
                     symbol: stock.symbol,
                     transactionType: 'BUY',
                     quantity: quantity,
@@ -270,7 +270,7 @@ export default class UserProfileService {
 
                 // For registered users, use API
                 const result = await this.dbService.executeTransaction({
-                    portfolioId: this.portfolio.portfolioID,
+                    portfolioId: this.portfolio.portfolioId,
                     symbol: stock.symbol,
                     transactionType: 'SELL',
                     quantity: quantity,
