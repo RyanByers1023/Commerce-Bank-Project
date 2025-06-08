@@ -1,6 +1,6 @@
 class NewsGenerator {
     constructor(userProfile) {
-        this.userProfile  = userProfile;                         // holds stocksAddedToSim
+        this.userProfile  = userProfile;                      
         this.newsContainer = document.getElementById('table-container-news');
         this.newsInterval  = null;
 

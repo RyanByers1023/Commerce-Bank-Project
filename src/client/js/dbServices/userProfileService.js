@@ -77,7 +77,7 @@ export default class UserProfileService {
             this.stocksAddedToSim = await stockService.loadStocks();
 
             // Load active portfolio
-            const portfolioData = await this.dbService.getPortfolio(this.userId, currentUser.activePortfolioID);
+            const portfolioData = await this.dbService.getPortfolio(this.userId, currentUser.activePortfolioId);
 
             // Create Portfolio instance
             this.portfolio = new Portfolio(

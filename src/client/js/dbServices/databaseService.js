@@ -38,7 +38,6 @@ class DatabaseService {
 
     /**
      * Get the current authenticated user
-     * FIX: Changed endpoint to match server route
      */
     async getCurrentUser() {
         try {
@@ -46,7 +45,7 @@ class DatabaseService {
                 return null;
             }
 
-            // FIX: Call users/current instead of auth/current-user
+            //FIXME: make sure this works, check router
             const response = await this.sendRequest('users/current', 'GET');
             this.currentUser = response;
             return response;
@@ -207,12 +206,12 @@ class DatabaseService {
             }
 
             const result = await this.sendRequest(`users/${this.currentUser.id}/active-portfolio`, 'PUT', {
-                activePortfolioID: portfolio_id // FIX: Correct field name
+                activePortfolioId: portfolio_id // FIX: Correct field name
             });
 
             // Update current user's active portfolio
             if (this.currentUser) {
-                this.currentUser.activePortfolioID = portfolio_id;
+                this.currentUser.activePortfolioId = portfolio_id;
             }
 
             return result;

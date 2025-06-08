@@ -41,7 +41,7 @@ class UserProfile {
             const portfolios = await this.dbService.sendRequest(`portfolios/${this.username}`);
             if (portfolios && portfolios.length > 0) {
                 // Find active portfolio
-                this.portfolio = portfolios.find(p => p.id === userData.activePortfolioID) || portfolios[0];
+                this.portfolio = portfolios.find(p => p.id === userData.activePortfolioId) || portfolios[0];
             } else {
                 // Create default portfolio if none exists
                 const multiPortfolioManager = new MultiPortfolioManager(this);

@@ -22,6 +22,7 @@ class SimulatorManager {
             console.log('Initializing simulator...');
 
             // Check authentication status
+            //FIXME: this auth check fails, probably due to some mismatched routing
             const isAuthenticated = await authService.checkAuthStatus();
 
             if (!isAuthenticated) {

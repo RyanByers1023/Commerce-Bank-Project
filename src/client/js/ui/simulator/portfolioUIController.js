@@ -1,7 +1,8 @@
-// Fixed portfolioUIController.js
 import { authService } from '../../dbServices/authService.js';
 import { stockService } from '../../dbServices/stockService.js';
 import { portfolioService } from '../../dbServices/portfolioService.js';
+
+//FIXME: is this singleton not loading
 import { databaseService } from '../../dbServices/databaseService.js';
 
 class PortfolioUIController {

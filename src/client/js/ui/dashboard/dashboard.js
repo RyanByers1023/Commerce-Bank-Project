@@ -49,20 +49,19 @@ class Dashboard {
 
     async loadDashboardData() {
         try {
-            // FIX: Use correct field name (activePortfolioID instead of activePortfolioId)
-            if (!this.currentUser.activePortfolioID) {
+            if (!this.currentUser.activePortfolioId) {
                 this.showNoPortfolioMessage();
                 return;
             }
 
             // FIX: Use database service instead of direct fetch
             // Get portfolio data
-            this.portfolioData = await databaseService.getPortfolio(this.currentUser.activePortfolioID);
+            this.portfolioData = await databaseService.getPortfolio(this.currentUser.activePortfolioId);
 
             // Get recent transactions
             let transactions = [];
             try {
-                transactions = await databaseService.getPortfolioTransactions(this.currentUser.activePortfolioID);
+                transactions = await databaseService.getPortfolioTransactions(this.currentUser.activePortfolioId);
             } catch (error) {
                 console.error('Failed to load transactions:', error);
                 // Continue without transactions if they fail to load

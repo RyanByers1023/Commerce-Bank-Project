@@ -49,7 +49,7 @@ export default class PortfolioService {
             }
 
             // Find active portfolio
-            const activePortfolioId = user.activePortfolioID; // FIX: Use correct field name
+            const activePortfolioId = user.activePortfolioId; // FIX: Use correct field name
 
             if (!activePortfolioId) {
                 // No active portfolio set, use the first one if available
