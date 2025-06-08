@@ -1,4 +1,3 @@
-// js/authentication/authHandler.js
 document.addEventListener('DOMContentLoaded', function() {
     // Get URL parameters
     const urlParams = new URLSearchParams(window.location.search);

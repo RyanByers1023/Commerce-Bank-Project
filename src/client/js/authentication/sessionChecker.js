@@ -1,4 +1,3 @@
-// js/authentication/sessionChecker.js
 (function() {
     // Check if user is already logged in
     async function checkSession() {

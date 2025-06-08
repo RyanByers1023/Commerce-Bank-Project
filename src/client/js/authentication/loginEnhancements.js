@@ -1,4 +1,3 @@
-// js/authentication/loginEnhancements.js
 document.addEventListener('DOMContentLoaded', function() {
     // Add visual feedback to input fields
     const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]');

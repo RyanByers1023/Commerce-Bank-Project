@@ -22,7 +22,6 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            // FIX: Use the corrected database service method
             const portfolios = await this.dbService.getPortfolios();
             this.portfolios = portfolios;
             return portfolios;
@@ -49,7 +48,7 @@ export default class PortfolioService {
             }
 
             // Find active portfolio
-            const activePortfolioId = user.activePortfolioId; // FIX: Use correct field name
+            const activePortfolioId = user.activePortfolioId;
 
             if (!activePortfolioId) {
                 // No active portfolio set, use the first one if available
@@ -81,7 +80,6 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            // FIX: Use the corrected database service method
             return await this.dbService.getPortfolio(portfolioId);
         } catch (error) {
             console.error('Failed to get portfolio:', error);
@@ -109,7 +107,6 @@ export default class PortfolioService {
                 initialBalance
             };
 
-            // FIX: Use the corrected database service method
             const newPortfolio = await this.dbService.createPortfolio(portfolioData);
 
             // Add to local portfolio list
@@ -135,7 +132,6 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            // FIX: Use the corrected database service method
             const result = await this.dbService.updatePortfolio(portfolioId, updateData);
 
             // Update local portfolio list
@@ -174,7 +170,7 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            // FIX: Use the corrected database service method
+
             const result = await this.dbService.setActivePortfolio(portfolioId);
 
             // Update current portfolio
@@ -200,7 +196,7 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            // FIX: Use the corrected database service method
+
             const result = await this.dbService.resetPortfolio(portfolioId, initialBalance);
 
             // Refresh portfolio data if it's the current one
@@ -227,7 +223,6 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            // FIX: Use the corrected database service method
             const result = await this.dbService.deletePortfolio(portfolioId);
 
             // Remove from local portfolio list
@@ -263,7 +258,7 @@ export default class PortfolioService {
             }
 
             const transactionData = {
-                portfolioId: this.currentPortfolio.id, // FIX: Use correct field name
+                portfolioId: this.currentPortfolio.id,
                 symbol,
                 transactionType: 'BUY',
                 quantity,
@@ -305,7 +300,7 @@ export default class PortfolioService {
             }
 
             const transactionData = {
-                portfolioId: this.currentPortfolio.id, // FIX: Use correct field name
+                portfolioId: this.currentPortfolio.id,
                 symbol,
                 transactionType: 'SELL',
                 quantity,
@@ -342,7 +337,6 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            // FIX: Use the corrected database service method
             return await this.dbService.getPortfolioTransactions(this.currentPortfolio.id);
         } catch (error) {
             console.error('Failed to get transaction history:', error);
@@ -361,7 +355,7 @@ export default class PortfolioService {
                 throw new Error('Not authenticated');
             }
 
-            // FIX: Use the corrected database service method
+
             return await this.dbService.getTransactionStats();
         } catch (error) {
             console.error('Failed to get transaction statistics:', error);

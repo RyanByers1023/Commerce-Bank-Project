@@ -153,7 +153,6 @@ export default class AuthService {
 
     /**
      * Update user profile
-     * FIX: Simplified to use the corrected database service method
      * @param {Object} updateData - Data to update (email, currentPassword, newPassword)
      * @returns {Promise<Object>} Update result
      */
@@ -170,7 +169,6 @@ export default class AuthService {
 
     /**
      * Delete user account
-     * FIX: Simplified to use the corrected database service method
      * @param {string} password - User's password for confirmation
      * @returns {Promise<Object>} Delete result
      */

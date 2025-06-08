@@ -12,9 +12,6 @@ class NewsGenerator {
         ];
     }
 
-    /* ────────────────────────────────────────────────────────────────
-       HIGH-LEVEL CONTROL
-    ─────────────────────────────────────────────────────────────────− */
     start(intervalMs = 90_000) {
         if (this.newsInterval) clearInterval(this.newsInterval);
         this.publishNews();
@@ -26,7 +23,6 @@ class NewsGenerator {
         this.newsInterval = null;
     }
 
-    //FETCH (or fabricate) A NEWS ITEM, THEN DISPLAY IT
     async publishNews() {
         try {
             const newsItem = await this.fetchNewsFromAPI();
@@ -40,9 +36,6 @@ class NewsGenerator {
         }
     }
 
-    /* ────────────────────────────────────────────────────────────────
-       1)  GET NEWS FROM /api NEWS ROUTE
-    ─────────────────────────────────────────────────────────────────− */
     async fetchNewsFromAPI() {
         const res = await fetch('/api/news/generate', { method: 'POST' });
         if (!res.ok) throw new Error(`status ${res.status}`);
@@ -68,9 +61,6 @@ class NewsGenerator {
         return { symbol: ticker, companyName: ticker, sector: '', currentSentiment: 0 };
     }
 
-    /* ────────────────────────────────────────────────────────────────
-       2)  CLIENT-SIDE FALLBACK HEADLINES (original behaviour)
-    ─────────────────────────────────────────────────────────────────− */
     createLocalNewsItem() {
         const stocks = this.userProfile.stocksAddedToSim;
         if (!stocks.length) throw new Error('No stocks in sim for fallback news');
@@ -120,17 +110,11 @@ class NewsGenerator {
         return { stock, headline, content, timestamp: new Date(), sentiment };
     }
 
-    /* ────────────────────────────────────────────────────────────────
-       3)  APPLY IMPACT TO STOCK SENTIMENT (for your price logic)
-    ─────────────────────────────────────────────────────────────────− */
     applyImpact({ stock, sentiment }) {
         if (!stock) return;
         stock.currentSentiment = (stock.currentSentiment || 0) + sentiment;
     }
 
-    /* ────────────────────────────────────────────────────────────────
-       4)  RENDER THE NEWS IN THE PANEL
-    ─────────────────────────────────────────────────────────────────− */
     displayNews({ stock, headline, content, timestamp, sentiment }) {
         if (!this.newsContainer) return;
 

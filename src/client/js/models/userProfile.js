@@ -1,6 +1,7 @@
 import Portfolio from './portfolio.js';
 import {databaseService} from '../dbServices/databaseService.js';
 
+//FIXME: IDE states this class is never used, check this
 class UserProfile {
     constructor(userData = null) {
         this.stocksAddedToSim = [];

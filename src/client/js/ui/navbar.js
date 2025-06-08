@@ -8,5 +8,4 @@ function loadNavbar() {
         .catch(error => console.error("Error loading navbar:", error));
 }
 
-// Load the navbar when the page loads
 window.onload = loadNavbar;

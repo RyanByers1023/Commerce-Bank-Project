@@ -132,7 +132,6 @@ class DatabaseService {
 
     /**
      * Get user profile by user ID
-     * FIX: Changed parameter name to be clear about expecting user ID
      */
     async getUserProfile(user_id) {
         try {
@@ -145,7 +144,6 @@ class DatabaseService {
 
     /**
      * Update user profile
-     * FIX: Now uses current user's ID instead of username
      * @param {Object} updateData - Data to update (email, currentPassword, newPassword)
      * @returns {Promise<Object>} Update result
      */
@@ -169,7 +167,6 @@ class DatabaseService {
 
     /**
      * Delete user account
-     * FIX: Now uses current user's ID and requires password
      * @param {string} password - User's password for confirmation
      * @returns {Promise<Object>} Delete result
      */
@@ -196,7 +193,6 @@ class DatabaseService {
 
     /**
      * Set active portfolio
-     * FIX: Use current user ID and correct field name in body
      * @param {string} portfolio_id - Portfolio ID to set as active
      */
     async setActivePortfolio(portfolio_id) {
@@ -206,7 +202,7 @@ class DatabaseService {
             }
 
             const result = await this.sendRequest(`users/${this.currentUser.id}/active-portfolio`, 'PUT', {
-                activePortfolioId: portfolio_id // FIX: Correct field name
+                activePortfolioId: portfolio_id
             });
 
             // Update current user's active portfolio

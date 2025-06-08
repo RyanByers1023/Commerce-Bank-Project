@@ -54,7 +54,6 @@ class Dashboard {
                 return;
             }
 
-            // FIX: Use database service instead of direct fetch
             // Get portfolio data
             this.portfolioData = await databaseService.getPortfolio(this.currentUser.activePortfolioId);
 
@@ -82,7 +81,6 @@ class Dashboard {
         const portfolioValue = this.portfolioData.portfolioValue || 0;
         const holdingsCount = Object.keys(this.portfolioData.holdingsMap || {}).length;
 
-        // FIX: Use the correct field name from the API response
         const availableCash = this.portfolioData.cash_balance || this.portfolioData.balance || 0;
         const totalAssets = portfolioValue + availableCash;
 
