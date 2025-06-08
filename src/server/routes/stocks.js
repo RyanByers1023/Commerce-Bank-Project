@@ -1,8 +1,7 @@
-// server/routes/stocks.js (continued)
+// server/routes/stocks.js - FIXED VERSION
 const express = require('express');
 const router = express.Router();
 
-//get middleware:
 const db = require('../middleware/db');
 const auth = require('../middleware/auth');
 
@@ -26,20 +25,24 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const userID = users[0].userID;
+        const userId = users[0].id;
 
         // Get stocks (system stocks + user's custom stocks)
         const [stocks] = await db.query(
-            `SELECT s.id, s.symbol, s.company_name, s.sector, s.isCustom, 
-              sd.openPrice, sd.closePrice, sd.highPrice, sd.lowPrice, sd.volume,
-              (SELECT closePrice FROM stock_data 
-               WHERE id = s.id 
-               ORDER BY dataDate DESC LIMIT 1) as marketPrice
-       FROM stock s
-       LEFT JOIN stock_data sd ON s.id = sd.stockID AND sd.dataDate = CURDATE()
-       WHERE s.user_id IS NULL OR s.user_id = ?
-       ORDER BY s.symbol`,
-            [userID]
+            `SELECT s.id, s.symbol, s.company_name, s.sector, s.is_custom,
+                    (SELECT closePrice FROM stock_data 
+                     WHERE stock_id = s.id 
+                     ORDER BY dataDate DESC LIMIT 1) as marketPrice,
+                    (SELECT openPrice FROM stock_data 
+                     WHERE stock_id = s.id 
+                     ORDER BY dataDate DESC LIMIT 1) as openPrice,
+                    (SELECT volume FROM stock_data 
+                     WHERE stock_id = s.id 
+                     ORDER BY dataDate DESC LIMIT 1) as volume
+             FROM stock s
+             WHERE s.user_id IS NULL OR s.user_id = ?
+             ORDER BY s.symbol`,
+            [userId]
         );
 
         // For each stock, get recent price history
@@ -47,24 +50,29 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
             // Get historical price data (last 30 days)
             const [priceHistory] = await db.query(
                 `SELECT dataDate, closePrice 
-         FROM stock_data 
-         WHERE stockID = ? 
-         ORDER BY dataDate DESC 
-         LIMIT 30`,
-                [stock.stockID]
+                 FROM stock_data 
+                 WHERE stock_id = ? 
+                 ORDER BY dataDate DESC 
+                 LIMIT 30`,
+                [stock.id]
             );
 
             // Format price history (oldest first)
             stock.priceHistory = priceHistory.reverse().map(p => p.closePrice);
+
+            // Set value property for compatibility
+            stock.value = stock.marketPrice || 100;
 
             // Calculate price change
             if (stock.priceHistory.length > 1) {
                 const previousClose = stock.priceHistory[stock.priceHistory.length - 2];
                 stock.priceChange = stock.marketPrice - previousClose;
                 stock.priceChangePercent = (stock.priceChange / previousClose) * 100;
+                stock.previousClosePrice = previousClose;
             } else {
                 stock.priceChange = 0;
                 stock.priceChangePercent = 0;
+                stock.previousClosePrice = stock.marketPrice;
             }
 
             // Estimate volatility based on price history
@@ -114,19 +122,23 @@ router.get('/:username/:symbol', auth.verifyToken, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const userID = users[0].userID;
+        const userId = users[0].id;
 
         // Get stock
         const [stocks] = await db.query(
-            `SELECT s.id, s.symbol, s.company_name, s.sector, s.isCustom, 
-              sd.openPrice, sd.closePrice, sd.highPrice, sd.lowPrice, sd.volume,
-              (SELECT closePrice FROM stock_data 
-               WHERE id = s.id 
-               ORDER BY dataDate DESC LIMIT 1) as marketPrice
-       FROM stock s
-       LEFT JOIN stock_data sd ON s.id = sd.stockID AND sd.dataDate = CURDATE()
-       WHERE (s.user_id IS NULL OR s.user_id = ?) AND s.symbol = ?`,
-            [userID, symbol]
+            `SELECT s.id, s.symbol, s.company_name, s.sector, s.is_custom,
+                    (SELECT closePrice FROM stock_data 
+                     WHERE stock_id = s.id 
+                     ORDER BY dataDate DESC LIMIT 1) as marketPrice,
+                    (SELECT openPrice FROM stock_data 
+                     WHERE stock_id = s.id 
+                     ORDER BY dataDate DESC LIMIT 1) as openPrice,
+                    (SELECT volume FROM stock_data 
+                     WHERE stock_id = s.id 
+                     ORDER BY dataDate DESC LIMIT 1) as volume
+             FROM stock s
+             WHERE (s.user_id IS NULL OR s.user_id = ?) AND s.symbol = ?`,
+            [userId, symbol]
         );
 
         if (stocks.length === 0) {
@@ -138,11 +150,11 @@ router.get('/:username/:symbol', auth.verifyToken, async (req, res) => {
         // Get historical price data (last 90 days)
         const [priceHistory] = await db.query(
             `SELECT dataDate, openPrice, highPrice, lowPrice, closePrice, volume
-       FROM stock_data 
-       WHERE stockID = ? 
-       ORDER BY dataDate DESC 
-       LIMIT 90`,
-            [stock.stockID]
+             FROM stock_data 
+             WHERE stock_id = ? 
+             ORDER BY dataDate DESC 
+             LIMIT 90`,
+            [stock.id]
         );
 
         // Format price history (oldest first)
@@ -157,14 +169,19 @@ router.get('/:username/:symbol', auth.verifyToken, async (req, res) => {
 
         stock.priceHistory = stock.priceData.map(p => p.close);
 
+        // Set value property for compatibility
+        stock.value = stock.marketPrice || 100;
+
         // Calculate price change
         if (stock.priceHistory.length > 1) {
             const previousClose = stock.priceHistory[stock.priceHistory.length - 2];
             stock.priceChange = stock.marketPrice - previousClose;
             stock.priceChangePercent = (stock.priceChange / previousClose) * 100;
+            stock.previousClosePrice = previousClose;
         } else {
             stock.priceChange = 0;
             stock.priceChangePercent = 0;
+            stock.previousClosePrice = stock.marketPrice;
         }
 
         // Calculate volatility
@@ -229,13 +246,13 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const userID = users[0].userID;
+        const userId = users[0].id;
 
         // Check if symbol already exists in the system stocks or user's custom stocks
         const [existingStocks] = await db.query(
             `SELECT * FROM stock 
-       WHERE symbol = ? AND (user_id IS NULL OR user_id = ?)`,
-            [symbol, userID]
+             WHERE symbol = ? AND (user_id IS NULL OR user_id = ?)`,
+            [symbol, userId]
         );
 
         if (existingStocks.length > 0) {
@@ -247,12 +264,12 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
 
         // Add custom stock
         const [result] = await db.query(
-            `INSERT INTO stock (symbol, company_name, sector, isCustom, user_id)
-       VALUES (?, ?, ?, TRUE, ?)`,
-            [symbol, companyName, sector || 'Custom', userID]
+            `INSERT INTO stock (symbol, company_name, sector, is_custom, user_id)
+             VALUES (?, ?, ?, TRUE, ?)`,
+            [symbol, companyName, sector || 'Custom', userId]
         );
 
-        const stockID = result.insertId;
+        const stockId = result.insertId;
 
         // Add initial price data
         const today = new Date();
@@ -265,9 +282,9 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
         const volume = Math.floor(10000 + Math.random() * 990000); // Random volume between 10k and 1M
 
         await db.query(
-            `INSERT INTO stock_data (stockID, dataDate, openPrice, highPrice, lowPrice, closePrice, volume)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [stockID, todayStr, openPrice, highPrice, lowPrice, initialPrice, volume]
+            `INSERT INTO stock_data (stock_id, dataDate, openPrice, highPrice, lowPrice, closePrice, volume)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [stockId, todayStr, openPrice, highPrice, lowPrice, initialPrice, volume]
         );
 
         // Generate historical data (30 days)
@@ -288,9 +305,9 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
             const prevVolume = Math.floor(10000 + Math.random() * 990000);
 
             await db.query(
-                `INSERT INTO stock_data (stockID, dataDate, openPrice, highPrice, lowPrice, closePrice, volume)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [stockID, dateStr, prevOpen, prevHigh, prevLow, previousPrice, prevVolume]
+                `INSERT INTO stock_data (stock_id, dataDate, openPrice, highPrice, lowPrice, closePrice, volume)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [stockId, dateStr, prevOpen, prevHigh, prevLow, previousPrice, prevVolume]
             );
 
             currentPrice = previousPrice;
@@ -301,11 +318,11 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
 
         // Get the created stock with its data
         const [createdStocks] = await db.query(
-            `SELECT s.id, s.symbol, s.company_name, s.sector, s.isCustom, 
-              ? as marketPrice, ? as openPrice
-       FROM stock s
-       WHERE s.id = ?`,
-            [initialPrice, openPrice, stockID]
+            `SELECT s.id, s.symbol, s.company_name, s.sector, s.is_custom, 
+                    ? as marketPrice, ? as value, ? as openPrice
+             FROM stock s
+             WHERE s.id = ?`,
+            [initialPrice, initialPrice, openPrice, stockId]
         );
 
         if (createdStocks.length === 0) {
@@ -317,10 +334,10 @@ router.post('/:username', auth.verifyToken, async (req, res) => {
         // Get historical price data
         const [priceHistory] = await db.query(
             `SELECT dataDate, closePrice 
-       FROM stock_data 
-       WHERE stockID = ? 
-       ORDER BY dataDate`,
-            [stockID]
+             FROM stock_data 
+             WHERE stock_id = ? 
+             ORDER BY dataDate`,
+            [stockId]
         );
 
         createdStock.priceHistory = priceHistory.map(p => p.closePrice);
@@ -355,13 +372,13 @@ router.delete('/:username/:symbol', auth.verifyToken, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const userID = users[0].userID;
+        const userId = users[0].id;
 
         // Check if stock exists and is a custom stock owned by the user
         const [stocks] = await db.query(
-            `SELECT s.id, s.isCustom FROM stock s
-       WHERE s.symbol = ? AND s.user_id = ?`,
-            [symbol, userID]
+            `SELECT s.id, s.is_custom FROM stock s
+             WHERE s.symbol = ? AND s.user_id = ?`,
+            [symbol, userId]
         );
 
         if (stocks.length === 0) {
@@ -370,17 +387,16 @@ router.delete('/:username/:symbol', auth.verifyToken, async (req, res) => {
 
         const stock = stocks[0];
 
-        if (!stock.isCustom) {
+        if (!stock.is_custom) {
             return res.status(400).json({ error: 'Cannot delete system stock' });
         }
 
         // Check if user owns any shares of this stock
         const [holdings] = await db.query(
             `SELECT h.id FROM holding h
-       JOIN portfolio p ON h.portfolio_id = p.id
-       JOIN stock s ON h.stockID = s.id
-       WHERE p.user_id = ? AND s.symbol = ? AND h.quantity > 0`,
-            [userID, symbol]
+             JOIN portfolio p ON h.portfolio_id = p.id
+             WHERE p.user_id = ? AND h.stock_id = ? AND h.quantity > 0`,
+            [userId, stock.id]
         );
 
         if (holdings.length > 0) {
@@ -390,7 +406,7 @@ router.delete('/:username/:symbol', auth.verifyToken, async (req, res) => {
         // Delete stock (will cascade to stock_data)
         await db.query(
             'DELETE FROM stock WHERE id = ?',
-            [stock.stockID]
+            [stock.id]
         );
 
         res.json({ message: 'Custom stock deleted successfully' });

@@ -27,7 +27,7 @@ router.get('/current', auth.verifyToken, async (req, res) => {
             email: user.email,
             dateCreated: user.date_created,
             lastLogin: user.last_login,
-            activePortfolioID: user.active_portfolio_id, // FIX: Match client expectation
+            activePortfolioId: user.active_portfolio_id, // FIX: Match client expectation
             isDemoAccount: Boolean(user.is_demo_account),
             isAdmin: Boolean(user.is_admin)
         });
@@ -183,7 +183,7 @@ router.put('/:user_id', auth.verifyToken, auth.isUserOrAdmin, async (req, res) =
 router.put('/:user_id/active-portfolio', auth.verifyToken, auth.isUserOrAdmin, async (req, res) => {
     try {
         const { user_id } = req.params;
-        const { activePortfolioID } = req.body; // FIX: Match client field name
+        const { activePortfolioId } = req.body; // FIX: Match client field name
 
         if (!activePortfolioID) {
             return res.status(400).json({ error: 'Portfolio ID is required' });
@@ -192,7 +192,7 @@ router.put('/:user_id/active-portfolio', auth.verifyToken, auth.isUserOrAdmin, a
         // Verify portfolio belongs to user
         const [portfolios] = await db.query(
             'SELECT id FROM portfolio WHERE user_id = ? AND id = ?',
-            [user_id, activePortfolioID]
+            [user_id, activePortfolioId]
         );
 
         if (portfolios.length === 0) {
@@ -202,7 +202,7 @@ router.put('/:user_id/active-portfolio', auth.verifyToken, auth.isUserOrAdmin, a
         // Update active portfolio
         await db.query(
             'UPDATE user SET active_portfolio_id = ? WHERE id = ?',
-            [activePortfolioID, user_id]
+            [activePortfolioI, user_id]
         );
 
         res.json({ message: 'Active portfolio updated successfully' });
@@ -238,15 +238,20 @@ router.get('/:user_id/dashboard', auth.verifyToken, auth.isUserOrAdmin, async (r
         // Get total holdings value (if active portfolio exists)
         let totalHoldingsValue = 0;
         if (activePortfolioId) {
-            const [holdings] = await db.query(
-                `SELECT SUM(h.quantity * s.value) as total_value
-                 FROM holding h
-                          JOIN stock s ON h.stock_id = s.id
-                 WHERE h.portfolio_id = ?`,
-                [activePortfolioId]
-            );
+        const [holdings] = await db.query(
+            `SELECT SUM(h.quantity * sd.closePrice) as total_value
+                FROM holding h
+                JOIN stock s ON h.stock_id = s.id
+                JOIN (
+                    SELECT stock_id, closePrice, 
+                        ROW_NUMBER() OVER (PARTITION BY stock_id ORDER BY dataDate DESC) as rn
+                    FROM stock_data
+                ) sd ON s.id = sd.stock_id AND sd.rn = 1
+                WHERE h.portfolio_id = ?`,
+            [activePortfolioId]
+        );
 
-            totalHoldingsValue = holdings[0].total_value || 0;
+        totalHoldingsValue = holdings[0].total_value || 0;
         }
 
         // Get recent transactions (last 5)

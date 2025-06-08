@@ -1,6 +1,5 @@
-// js/dashboard.js - FIXED VERSION
-import { databaseService } from './dbServices/databaseService.js';
-import { authService } from './dbServices/authService.js';
+import { databaseService } from '../../dbServices/databaseService.js';
+import { authService } from '../../dbServices/authService.js';
 
 class Dashboard {
     constructor() {

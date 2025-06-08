@@ -219,7 +219,7 @@ router.post('/:username/reset', auth.verifyToken, async (req, res) => {
 
         // Get updated settings
         const [updatedSettings] = await db.query(
-            'SELECT * FROM simulation_settings WHERE user_id = ?',
+            'SELECT * FROM settings WHERE user_id = ?',
             [userId]
         );
 

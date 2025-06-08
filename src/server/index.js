@@ -15,6 +15,7 @@ const portfolioRoutes   = require('./routes/portfolios');
 const stockRoutes       = require('./routes/stocks');
 const transactionRoutes = require('./routes/transactions');
 const settingsRoutes    = require('./routes/settings');
+const newsRoutes        = require('./routes/news');
 
 
 const PORT = process.env.PORT
@@ -55,7 +56,7 @@ app.use('/api/portfolios',  portfolioRoutes);
 app.use('/api/stocks',      stockRoutes);
 app.use('/api/transactions',transactionRoutes);
 app.use('/api/settings',    settingsRoutes);
-//app.use('/api/news', newsRoutes);
+app.use('/api/news',        newsRoutes);
 
 // Simple liveness check
 app.get('/api/test', (_, res) => res.json({ message: 'Server is running!' }));

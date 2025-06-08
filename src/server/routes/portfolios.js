@@ -1,4 +1,4 @@
-// server/routes/portfolios.js
+// server/routes/portfolios.js - FIXED VERSION
 const express = require('express');
 const router = express.Router();
 
@@ -25,9 +25,12 @@ router.get('/:user_id', auth.verifyToken, auth.isUserOrAdmin, async (req, res) =
 
         // For each portfolio, get total value of holdings
         for (const portfolio of portfolios) {
-            // Get holdings with stock prices
+            // Get holdings with current stock prices from stock_data
             const [holdingsResult] = await db.query(
-                `SELECT h.quantity, h.avg_price_paid, s.symbol, s.value as current_price
+                `SELECT h.quantity, h.avg_price_paid, s.symbol,
+                        (SELECT closePrice FROM stock_data 
+                         WHERE stock_id = s.id 
+                         ORDER BY dataDate DESC LIMIT 1) as current_price
                  FROM holding h
                  JOIN stock s ON h.stock_id = s.id
                  WHERE h.portfolio_id = ?`,
@@ -37,7 +40,7 @@ router.get('/:user_id', auth.verifyToken, auth.isUserOrAdmin, async (req, res) =
             // Calculate portfolio value
             let portfolioValue = 0;
             for (const holding of holdingsResult) {
-                portfolioValue += holding.quantity * holding.current_price;
+                portfolioValue += holding.quantity * (holding.current_price || 0);
             }
 
             portfolio.portfolioValue = portfolioValue;
@@ -70,10 +73,13 @@ router.get('/:user_id/:portfolio_id', auth.verifyToken, auth.isUserOrAdmin, asyn
 
         const portfolio = portfolios[0];
 
-        // Get holdings
+        // Get holdings with current prices
         const [holdings] = await db.query(
-            `SELECT h.quantity, h.avg_price_paid, h.price_paid, s.id as stock_id, s.symbol, 
-                    s.company_name, s.sector, s.value as current_price
+            `SELECT h.quantity, h.avg_price_paid, h.price_paid, 
+                    s.id as stock_id, s.symbol, s.company_name, s.sector,
+                    (SELECT closePrice FROM stock_data 
+                     WHERE stock_id = s.id 
+                     ORDER BY dataDate DESC LIMIT 1) as current_price
              FROM holding h
              JOIN stock s ON h.stock_id = s.id
              WHERE h.portfolio_id = ?`,
@@ -85,7 +91,8 @@ router.get('/:user_id/:portfolio_id', auth.verifyToken, auth.isUserOrAdmin, asyn
         let portfolioValue = 0;
 
         for (const holding of holdings) {
-            const value = holding.quantity * holding.current_price;
+            const currentPrice = holding.current_price || 0;
+            const value = holding.quantity * currentPrice;
             portfolioValue += value;
 
             holdingsMap[holding.symbol] = {
@@ -96,16 +103,16 @@ router.get('/:user_id/:portfolio_id', auth.verifyToken, auth.isUserOrAdmin, asyn
                 quantity: holding.quantity,
                 avgPrice: holding.avg_price_paid,
                 totalPricePaid: holding.price_paid,
-                currentPrice: holding.current_price,
+                currentPrice: currentPrice,
                 currentValue: value,
-                profitLoss: (holding.current_price - holding.avg_price_paid) * holding.quantity,
-                percentChange: ((holding.current_price - holding.avg_price_paid) / holding.avg_price_paid) * 100
+                profitLoss: value - holding.price_paid,
+                percentChange: holding.price_paid > 0 ? ((value - holding.price_paid) / holding.price_paid) * 100 : 0
             };
         }
 
         portfolio.portfolioValue = portfolioValue;
         portfolio.holdingsMap = holdingsMap;
-        portfolio.balance = portfolio.cash_balance; // FIX: Add balance alias
+        portfolio.balance = portfolio.cash_balance; // Add balance alias
         portfolio.totalAssetsValue = portfolioValue + portfolio.cash_balance;
 
         res.json(portfolio);

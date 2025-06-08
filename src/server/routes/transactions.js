@@ -40,9 +40,15 @@ const getPortfolioWithUser = async (portfolioId) => {
     return portfolios[0] || null;
 };
 
+//FIXME: check this for correctness
 const getStockBySymbol = async (symbol) => {
     const [stocks] = await db.query(
-        'SELECT s.id, s.symbol, s.company_name, s.value FROM stock s JOIN user u ON s.user_id = u.id WHERE s.symbol = ?',
+        `SELECT s.id, s.symbol, s.company_name,
+                (SELECT closePrice FROM stock_data 
+                 WHERE stock_id = s.id 
+                 ORDER BY dataDate DESC LIMIT 1) as value
+         FROM stock s 
+         WHERE s.symbol = ?`,
         [symbol]
     );
     return stocks[0] || null;
