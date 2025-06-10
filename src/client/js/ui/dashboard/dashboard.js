@@ -17,6 +17,8 @@ class Dashboard {
                 window.location.href = '/login.html';
                 return;
             }
+            
+            console.log("isAuthenticated is: ${isAuthenticated}");
 
             // Get current user data
             await this.loadCurrentUser();
@@ -35,7 +37,6 @@ class Dashboard {
 
     async loadCurrentUser() {
         try {
-            // FIX: Use the database service instead of direct fetch
             this.currentUser = await databaseService.getCurrentUser();
 
             if (!this.currentUser) {

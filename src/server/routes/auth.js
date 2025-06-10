@@ -96,8 +96,10 @@ router.post('/login', async (req, res) => {
             [user.id]
         );
 
-        // Set session data - FIX: Use consistent naming
+        // Set session data
         req.session.userId = user.id;
+
+        console.log("userId set for req.session.userId");
 
         if (rememberMe) {
             req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; //30 days
@@ -107,7 +109,7 @@ router.post('/login', async (req, res) => {
             message: 'Login successful',
             user: {
                 username: user.username,
-                email: user.email
+                email: user.email,
             }
         });
     } catch (error) {
