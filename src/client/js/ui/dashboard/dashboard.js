@@ -17,6 +17,8 @@ class Dashboard {
                 window.location.href = '/login.html';
                 return;
             }
+            
+            console.log("isAuthenticated is: ${isAuthenticated}");
 
             // Get current user data
             await this.loadCurrentUser();

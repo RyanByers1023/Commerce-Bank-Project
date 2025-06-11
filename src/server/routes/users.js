@@ -11,7 +11,7 @@ router.get('/current', auth.verifyToken, async (req, res) => {
         // Get user data with active portfolio info
         const [users] = await db.query(
             'SELECT id, username, email, date_created, last_login, active_portfolio_id, is_demo_account, is_admin FROM user WHERE id = ?',
-            [req.user.id]
+            [req.session.userId]
         );
 
         if (users.length === 0) {

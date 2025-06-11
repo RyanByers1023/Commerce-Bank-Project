@@ -48,6 +48,7 @@ class DatabaseService {
             //FIXME: make sure this works, check router
             const response = await this.sendRequest('users/current', 'GET');
             this.currentUser = response;
+            //FIXME: should i be returning this and setting it locally?
             return response;
         } catch (error) {
             console.error('Failed to get current user:', error);
@@ -64,7 +65,7 @@ class DatabaseService {
         try {
             const response = await this.sendRequest('auth/login', 'POST', {
                 email,
-                password
+                password,
             });
 
             this.isAuthenticated = true;
