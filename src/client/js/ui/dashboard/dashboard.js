@@ -35,7 +35,6 @@ class Dashboard {
 
     async loadCurrentUser() {
         try {
-            // FIX: Use the database service instead of direct fetch
             this.currentUser = await databaseService.getCurrentUser();
 
             if (!this.currentUser) {

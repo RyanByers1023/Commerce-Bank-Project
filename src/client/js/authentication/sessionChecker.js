@@ -8,7 +8,7 @@
             if (data.authenticated) {
                 // User is already logged in
                 const currentPath = window.location.pathname;
-                const publicPaths = ['/index.html', '/about.html', '/login.html', '/register.html', '/resetPassword.html', '/'];
+                const publicPaths = ['/index.html', '/about.html', '/login.html', '/register.html', '/resetPassword.html', '/dashboard.html', '/simulator.html'];
 
                 // If on login/register page and already authenticated, redirect to dashboard
                 if (currentPath.includes('login.html') || currentPath.includes('register.html')) {

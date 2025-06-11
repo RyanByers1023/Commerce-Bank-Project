@@ -18,6 +18,7 @@ class Portfolio {
         this.portfolioService = portfolioService;
     }
 
+    //FIXME: this doesnt exist
     createTransaction(symbol, transactionType, quantity) {
         return new Transaction(symbol, transactionType, quantity, this.portfolioID);
     }
