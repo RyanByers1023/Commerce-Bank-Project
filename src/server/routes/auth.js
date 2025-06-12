@@ -285,12 +285,13 @@ router.post('/demo-login', async (req, res) => {
 
             userId = userResult.insertId;
 
-            // Create initial portfolio - FIX: Use proper SQL
-            const [portfolioResult] = await db.query(
-                'INSERT INTO portfolio (user_id, name, cash_balance) VALUES (?, ?, ?)',
-                [userId, 'Demo Portfolio', 10000.00]
-            );
+            // Explicitly specify columns
+            const [portfolioResult] = await db.query(`
+            INSERT INTO portfolio (user_id, name, cash_balance) 
+            VALUES (?, ?, ?)
+        `, [userId, 'Demo Portfolio', 10000.00]);
 
+            // Get the inserted ID
             const portfolioId = portfolioResult.insertId;
 
             // Set active portfolio - FIX: Use UPDATE
