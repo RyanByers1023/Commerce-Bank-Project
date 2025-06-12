@@ -1,5 +1,5 @@
 import { databaseService } from './databaseService.js';
-import { getCurrentUser } from './authService.js';
+import { getCurrentUser, getCurrentUserId } from './authService.js';
 
 /**
  * Service for managing simulation settings and state
@@ -8,12 +8,12 @@ class SimulationService {
     constructor() {
         this.dbService = databaseService;
 
-        // Default settings
+        // Default settings (matching backend schema)
         this.settings = {
-            simulationSpeed: 1,
-            marketVolatility: 'medium',
-            eventFrequency: 'medium',
-            startingCash: 500
+            sim_speed: 1,
+            market_volatility: 'medium',
+            event_frequency: 'medium',
+            initial_balance: 500.00
         };
 
         // Volatility factors by level
@@ -33,54 +33,80 @@ class SimulationService {
 
         // Listeners for settings changes
         this.settingsChangeListeners = [];
+        this.isLoaded = false;
     }
 
     /**
      * Load simulation settings for current user
+     * @param {boolean} forceRefresh - Force refresh from server
      * @returns {Promise<Object>} Simulation settings
      */
-    async loadSettings() {
+    async loadSettings(forceRefresh = false) {
         try {
-            const user = await getCurrentUser();
-            if (!user) {
+            const userId = getCurrentUserId();
+            if (!userId) {
                 // If not authenticated, use defaults
                 return this.settings;
             }
 
-            const settings = await this.dbService.getSimulationSettings(user.username);
-            this.settings = settings;
+            // Return cached settings if already loaded and not forcing refresh
+            if (this.isLoaded && !forceRefresh) {
+                return this.settings;
+            }
+
+            // FIXED: Use correct method name and user ID
+            const settings = await this.dbService.getUserSettings(userId);
+
+            // Update local settings with server data
+            this.settings = {
+                sim_speed: settings.sim_speed || 1,
+                market_volatility: settings.market_volatility || 'medium',
+                event_frequency: settings.event_frequency || 'medium',
+                initial_balance: settings.initial_balance || 500.00
+            };
+
+            this.isLoaded = true;
 
             // Notify listeners
             this.notifySettingsChanged();
 
-            return settings;
+            return this.settings;
         } catch (error) {
             console.error('Failed to load simulation settings:', error);
-            // Return defaults on error
+            // Return defaults on error but still mark as loaded to avoid infinite retries
+            this.isLoaded = true;
             return this.settings;
         }
     }
 
     /**
      * Save simulation settings
-     * @param {Object} settings - Settings to save
+     * @param {Object} newSettings - Settings to save
      * @returns {Promise<Object>} Updated settings
      */
-    async saveSettings(settings) {
+    async saveSettings(newSettings) {
         try {
-            const user = await getCurrentUser();
-            if (!user) {
+            const userId = getCurrentUserId();
+            if (!userId) {
                 throw new Error('Not authenticated');
             }
 
-            // Update settings
-            const updatedSettings = await this.dbService.saveSimulationSettings(user.username, settings);
-            this.settings = updatedSettings;
+            // Validate settings
+            const validatedSettings = this.validateSettings(newSettings);
+
+            // FIXED: Use correct method name and parameter order
+            const updatedSettings = await this.dbService.updateUserSettings(userId, validatedSettings);
+
+            // Update local settings
+            this.settings = {
+                ...this.settings,
+                ...validatedSettings
+            };
 
             // Notify listeners
             this.notifySettingsChanged();
 
-            return updatedSettings;
+            return this.settings;
         } catch (error) {
             console.error('Failed to save simulation settings:', error);
             throw error;
@@ -93,20 +119,87 @@ class SimulationService {
      */
     async resetSettings() {
         try {
-            const user = await getCurrentUser();
-            if (!user) {
+            const userId = getCurrentUserId();
+            if (!userId) {
                 throw new Error('Not authenticated');
             }
 
-            const defaultSettings = await this.dbService.resetSimulationSettings(user.username);
-            this.settings = defaultSettings;
+            // FIXED: Use correct method name and user ID
+            const defaultSettings = await this.dbService.resetUserSettings(userId);
+
+            // Update local settings
+            this.settings = {
+                sim_speed: defaultSettings.sim_speed || 1,
+                market_volatility: defaultSettings.market_volatility || 'medium',
+                event_frequency: defaultSettings.event_frequency || 'medium',
+                initial_balance: defaultSettings.initial_balance || 500.00
+            };
 
             // Notify listeners
             this.notifySettingsChanged();
 
-            return defaultSettings;
+            return this.settings;
         } catch (error) {
             console.error('Failed to reset simulation settings:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Validate settings before saving
+     * @param {Object} settings - Settings to validate
+     * @returns {Object} Validated settings
+     */
+    validateSettings(settings) {
+        const validated = {};
+
+        // Validate sim_speed
+        if (settings.sim_speed !== undefined) {
+            if (!Number.isInteger(settings.sim_speed) || settings.sim_speed < 1 || settings.sim_speed > 40) {
+                throw new Error('Simulation speed must be an integer between 1 and 40');
+            }
+            validated.sim_speed = settings.sim_speed;
+        }
+
+        // Validate market_volatility
+        if (settings.market_volatility !== undefined) {
+            if (!['low', 'medium', 'high'].includes(settings.market_volatility)) {
+                throw new Error('Market volatility must be "low", "medium", or "high"');
+            }
+            validated.market_volatility = settings.market_volatility;
+        }
+
+        // Validate event_frequency
+        if (settings.event_frequency !== undefined) {
+            if (!['none', 'low', 'medium', 'high'].includes(settings.event_frequency)) {
+                throw new Error('Event frequency must be "none", "low", "medium", or "high"');
+            }
+            validated.event_frequency = settings.event_frequency;
+        }
+
+        // Validate initial_balance
+        if (settings.initial_balance !== undefined) {
+            if (typeof settings.initial_balance !== 'number' || settings.initial_balance < 100 || settings.initial_balance > 10000) {
+                throw new Error('Initial balance must be a number between 100 and 10000');
+            }
+            validated.initial_balance = settings.initial_balance;
+        }
+
+        return validated;
+    }
+
+    /**
+     * Update a specific setting
+     * @param {string} key - Setting key
+     * @param {*} value - Setting value
+     * @returns {Promise<Object>} Updated settings
+     */
+    async updateSetting(key, value) {
+        try {
+            const settingsUpdate = { [key]: value };
+            return await this.saveSettings(settingsUpdate);
+        } catch (error) {
+            console.error(`Failed to update setting ${key}:`, error);
             throw error;
         }
     }
@@ -116,7 +209,7 @@ class SimulationService {
      * @returns {number} Speed multiplier
      */
     getSimulationSpeed() {
-        return this.settings.simulationSpeed;
+        return this.settings.sim_speed || 1;
     }
 
     /**
@@ -124,7 +217,7 @@ class SimulationService {
      * @returns {number} Volatility factor
      */
     getVolatilityFactor() {
-        const level = this.settings.marketVolatility;
+        const level = this.settings.market_volatility || 'medium';
         return this.volatilityFactors[level] || 1.0;
     }
 
@@ -133,16 +226,32 @@ class SimulationService {
      * @returns {number} Event probability
      */
     getEventProbability() {
-        const level = this.settings.eventFrequency;
+        const level = this.settings.event_frequency || 'medium';
         return this.eventProbabilities[level] || 0.05;
     }
 
     /**
-     * Get starting cash amount
-     * @returns {number} Starting cash
+     * Get initial balance amount
+     * @returns {number} Initial balance
      */
-    getStartingCash() {
-        return this.settings.startingCash;
+    getInitialBalance() {
+        return this.settings.initial_balance || 500.00;
+    }
+
+    /**
+     * Get all current settings
+     * @returns {Object} Current settings
+     */
+    getCurrentSettings() {
+        return { ...this.settings };
+    }
+
+    /**
+     * Check if settings are loaded
+     * @returns {boolean} Whether settings are loaded
+     */
+    isSettingsLoaded() {
+        return this.isLoaded;
     }
 
     /**
@@ -158,8 +267,14 @@ class SimulationService {
 
         this.settingsChangeListeners.push(listener);
 
-        // Call immediately with current settings
-        listener(this.settings);
+        // Call immediately with current settings if loaded
+        if (this.isLoaded) {
+            try {
+                listener(this.settings);
+            } catch (error) {
+                console.error('Error in settings change listener:', error);
+            }
+        }
 
         // Return unsubscribe function
         return () => {
@@ -173,7 +288,11 @@ class SimulationService {
     notifySettingsChanged() {
         this.settingsChangeListeners.forEach(listener => {
             if (typeof listener === 'function') {
-                listener(this.settings);
+                try {
+                    listener(this.settings);
+                } catch (error) {
+                    console.error('Error in settings change listener:', error);
+                }
             }
         });
     }
@@ -198,9 +317,24 @@ class SimulationService {
      */
     getVolatilityOptions() {
         return [
-            { value: 'low', label: 'Low', description: 'Lower price fluctuations', factor: this.volatilityFactors.low },
-            { value: 'medium', label: 'Medium', description: 'Moderate price fluctuations', factor: this.volatilityFactors.medium },
-            { value: 'high', label: 'High', description: 'Higher price fluctuations', factor: this.volatilityFactors.high }
+            {
+                value: 'low',
+                label: 'Low',
+                description: 'Lower price fluctuations',
+                factor: this.volatilityFactors.low
+            },
+            {
+                value: 'medium',
+                label: 'Medium',
+                description: 'Moderate price fluctuations',
+                factor: this.volatilityFactors.medium
+            },
+            {
+                value: 'high',
+                label: 'High',
+                description: 'Higher price fluctuations',
+                factor: this.volatilityFactors.high
+            }
         ];
     }
 
@@ -210,11 +344,88 @@ class SimulationService {
      */
     getEventFrequencyOptions() {
         return [
-            { value: 'none', label: 'None', description: 'No market events', probability: this.eventProbabilities.none },
-            { value: 'low', label: 'Low', description: 'Occasional market events', probability: this.eventProbabilities.low },
-            { value: 'medium', label: 'Medium', description: 'Regular market events', probability: this.eventProbabilities.medium },
-            { value: 'high', label: 'High', description: 'Frequent market events', probability: this.eventProbabilities.high }
+            {
+                value: 'none',
+                label: 'None',
+                description: 'No market events',
+                probability: this.eventProbabilities.none
+            },
+            {
+                value: 'low',
+                label: 'Low',
+                description: 'Occasional market events',
+                probability: this.eventProbabilities.low
+            },
+            {
+                value: 'medium',
+                label: 'Medium',
+                description: 'Regular market events',
+                probability: this.eventProbabilities.medium
+            },
+            {
+                value: 'high',
+                label: 'High',
+                description: 'Frequent market events',
+                probability: this.eventProbabilities.high
+            }
         ];
+    }
+
+    /**
+     * Get available initial balance options
+     * @returns {Array} Balance options
+     */
+    getInitialBalanceOptions() {
+        return [
+            { value: 500, label: '$500', description: 'Conservative starting amount' },
+            { value: 1000, label: '$1,000', description: 'Standard starting amount' },
+            { value: 2500, label: '$2,500', description: 'Moderate starting amount' },
+            { value: 5000, label: '$5,000', description: 'Aggressive starting amount' },
+            { value: 10000, label: '$10,000', description: 'Maximum starting amount' }
+        ];
+    }
+
+    /**
+     * Clear settings cache
+     */
+    clearCache() {
+        this.isLoaded = false;
+        this.settings = {
+            sim_speed: 1,
+            market_volatility: 'medium',
+            event_frequency: 'medium',
+            initial_balance: 500.00
+        };
+    }
+
+    /**
+     * Export settings for backup
+     * @returns {Object} Settings export
+     */
+    exportSettings() {
+        return {
+            settings: { ...this.settings },
+            timestamp: new Date().toISOString(),
+            version: '1.0'
+        };
+    }
+
+    /**
+     * Import settings from backup
+     * @param {Object} exportData - Exported settings data
+     * @returns {Promise<Object>} Imported settings
+     */
+    async importSettings(exportData) {
+        try {
+            if (!exportData || !exportData.settings) {
+                throw new Error('Invalid export data');
+            }
+
+            return await this.saveSettings(exportData.settings);
+        } catch (error) {
+            console.error('Failed to import settings:', error);
+            throw error;
+        }
     }
 }
 

@@ -1,420 +1,439 @@
-import { authService } from './authService.js';
-import { stockService } from './stockService.js';
+import { authService, getCurrentUser, getCurrentUserId, isDemoAccount } from './authService.js';
+import { portfolioService } from './portfolioService.js';
 import { databaseService } from './databaseService.js';
-import { simulationService } from './simulationService.js';
-
-import Portfolio from '../models/portfolio.js';
 
 /**
- * Central service for managing the user profile, portfolio, and stocks
- * This service brings together all the different services to provide
- * a unified interface for the application
+ * Central service for managing the user profile and application state
+ * This service coordinates between auth, portfolio, and other services
  */
 export default class UserProfileService {
     constructor() {
         this.dbService = databaseService;
-        this.username = null;
-        this.email = null;
-        this.stocksAddedToSim = [];
-        this.portfolio = null;
         this.isInitialized = false;
         this.profileLoadedCallbacks = [];
+        this.currentUser = null;
+        this.userSettings = null;
+
+        // Subscribe to auth state changes
+        this.authUnsubscribe = authService.onAuthStateChanged((user, isAuthenticated) => {
+            this.handleAuthStateChange(user, isAuthenticated);
+        });
     }
 
     /**
-     * Initialize the user profile
-     * @param {boolean} demoMode - Whether to use demo mode
-     * @returns {Promise<Object>} User profile
+     * Handle authentication state changes
+     * @param {Object} user - Current user or null
+     * @param {boolean} isAuthenticated - Authentication status
      */
-    async initialize(demoMode = false) {
+    async handleAuthStateChange(user, isAuthenticated) {
+        this.currentUser = user;
+
+        if (isAuthenticated && user) {
+            // User logged in - initialize their profile
+            await this.initializeUserProfile();
+        } else {
+            // User logged out - clear state
+            this.clearUserState();
+        }
+    }
+
+    /**
+     * Initialize the user profile service
+     * @returns {Promise<Object>} Initialization result
+     */
+    async initialize() {
         try {
             // Check if already initialized
             if (this.isInitialized) {
-                return this;
+                return { success: true, user: this.currentUser };
             }
 
-            // Load user data if authenticated
-            if (await authService.checkAuthStatus()) {
-                await this.loadUserProfile();
-            } else if (demoMode) {
-                // Create demo profile if not authenticated and in demo mode
-                await this.createDemoProfile();
-            } else {
+            // Check authentication status
+            const isAuthenticated = await authService.checkAuthStatus();
+
+            if (isAuthenticated) {
+                const user = await getCurrentUser();
+                if (user) {
+                    await this.initializeUserProfile();
+                    return { success: true, user: this.currentUser };
+                }
+            }
+
+            // Not authenticated
+            return { success: false, message: 'Not authenticated' };
+        } catch (error) {
+            console.error('Failed to initialize user profile service:', error);
+            return { success: false, message: error.message };
+        }
+    }
+
+    /**
+     * Initialize user profile data
+     * @returns {Promise<void>}
+     */
+    async initializeUserProfile() {
+        try {
+            const user = await getCurrentUser();
+            if (!user) {
                 throw new Error('Not authenticated');
             }
 
-            // Load simulation settings
-            await simulationService.loadSettings();
+            this.currentUser = user;
+
+            // Load user settings
+            await this.loadUserSettings();
+
+            // Load user's portfolios and set active portfolio
+            await portfolioService.loadPortfolios(true); // Force refresh
+            await portfolioService.loadActivePortfolio(true);
 
             this.isInitialized = true;
-
-            // Notify listeners
             this.notifyProfileLoaded();
 
-            return this;
         } catch (error) {
             console.error('Failed to initialize user profile:', error);
+            this.isInitialized = false;
             throw error;
         }
     }
 
     /**
-     * Load user profile from the server
-     * @returns {Promise<Object>} User profile
+     * Load user settings
+     * @returns {Promise<Object>} User settings
      */
-    async loadUserProfile() {
+    async loadUserSettings() {
         try {
-            const currentUser = await authService.getCurrentUser();
-            if (!currentUser) {
+            const userId = getCurrentUserId();
+            if (!userId) {
                 throw new Error('Not authenticated');
             }
 
-            this.username = currentUser.username;
-            this.userId = currentUser.userId;
-            this.email = currentUser.email;
-
-            // Load stocks
-            this.stocksAddedToSim = await stockService.loadStocks();
-
-            // Load active portfolio
-            const portfolioData = await this.dbService.getPortfolio(this.userId, currentUser.activeportfolioId);
-
-            // Create Portfolio instance
-            this.portfolio = new Portfolio(
-                portfolioData.initialBalance,
-                this.userId,
-                portfolioData.portfolioId
-            );
-
-            // Copy properties from the API data
-            this.portfolio.balance = portfolioData.balance;
-            this.portfolio.name = portfolioData.name;
-            this.portfolio.description = portfolioData.description;
-            this.portfolio.holdingsMap = portfolioData.holdingsMap || {};
-            this.portfolio.portfolioValue = portfolioData.portfolioValue || 0;
-            this.portfolio.totalAssetsValue = portfolioData.totalAssetsValue || portfolioData.balance;
-
-            // Attach buy/sell methods
-            this.attachPortfolioMethods();
-
-            return this;
+            this.userSettings = await this.dbService.getUserSettings(userId);
+            return this.userSettings;
         } catch (error) {
-            console.error('Failed to load user profile:', error);
-            throw error;
+            console.error('Failed to load user settings:', error);
+            // Set default settings if loading fails
+            this.userSettings = {
+                sim_speed: 1,
+                market_volatility: 'medium',
+                event_frequency: 'medium',
+                initial_balance: 500.00
+            };
+            return this.userSettings;
         }
     }
 
     /**
-     * Create a demo profile for guest users
-     * @returns {Promise<Object>} Demo profile
+     * Update user settings
+     * @param {Object} newSettings - Settings to update
+     * @returns {Promise<Object>} Update result
      */
-    async createDemoProfile() {
+    async updateUserSettings(newSettings) {
         try {
-            // Set demo user info
-            this.username = 'demo_user';
-            this.email = 'demo@example.com';
+            const userId = getCurrentUserId();
+            if (!userId) {
+                throw new Error('Not authenticated');
+            }
 
-            // Create a demo portfolio
-            this.portfolio = new Portfolio(500.00, this.username);
-            this.portfolio.name = 'Demo Portfolio';
-            this.portfolio.description = 'Demo portfolio for guest users';
+            const result = await this.dbService.updateUserSettings(userId, newSettings);
 
-            // Attach buy/sell methods
-            this.attachPortfolioMethods();
+            // Update local settings
+            this.userSettings = { ...this.userSettings, ...newSettings };
 
-            // Load sample stocks
-            await this.createDemoStocks();
-
-            return this;
+            return result;
         } catch (error) {
-            console.error('Failed to create demo profile:', error);
+            console.error('Failed to update user settings:', error);
             throw error;
         }
     }
 
     /**
-     * Create demo stocks for the simulation
-     * @returns {Promise<Array>} Demo stocks
+     * Get user dashboard data
+     * @returns {Promise<Object>} Dashboard data
      */
-    async createDemoStocks() {
+    async getDashboardData() {
         try {
-            // Add demo stocks data
-            const demoStocks = [
-                { symbol: 'AAPL', name: 'Apple Inc.', sector: 'Technology', price: 178.72, volatility: 0.018 },
-                { symbol: 'MSFT', name: 'Microsoft Corp.', sector: 'Technology', price: 397.58, volatility: 0.016 },
-                { symbol: 'AMZN', name: 'Amazon.com Inc.', sector: 'Consumer Cyclical', price: 145.92, volatility: 0.022 },
-                { symbol: 'TSLA', name: 'Tesla Inc.', sector: 'Automotive', price: 235.45, volatility: 0.035 },
-                { symbol: 'GOOGL', name: 'Alphabet Inc.', sector: 'Communication', price: 157.73, volatility: 0.015 }
-            ];
-
-            // Create stock objects
-            this.stocksAddedToSim = [];
-
-            for (const stockData of demoStocks) {
-                const stock = this.createDemoStock(stockData);
-                this.stocksAddedToSim.push(stock);
+            const userId = getCurrentUserId();
+            if (!userId) {
+                throw new Error('Not authenticated');
             }
 
-            return this.stocksAddedToSim;
+            // Get portfolio data
+            const currentPortfolio = portfolioService.getCurrentPortfolio();
+            const portfolios = portfolioService.getPortfolios();
+            const portfolioValue = await portfolioService.calculatePortfolioValue();
+
+            // Get transaction stats
+            const transactionStats = await this.dbService.getTransactionStats(userId);
+
+            // Get recent transactions
+            const recentTransactions = await portfolioService.getTransactionHistory();
+
+            return {
+                user: this.currentUser,
+                currentPortfolio,
+                portfolios,
+                portfolioValue,
+                transactionStats,
+                recentTransactions: recentTransactions?.slice(0, 10) || [], // Last 10 transactions
+                settings: this.userSettings
+            };
         } catch (error) {
-            console.error('Failed to create demo stocks:', error);
+            console.error('Failed to get dashboard data:', error);
             throw error;
         }
     }
 
     /**
-     * Create a demo stock with given data
-     * @param {Object} data - Stock data
-     * @returns {Object} Stock object
+     * Get available stocks for the user
+     * @returns {Promise<Array>} Available stocks
      */
-    createDemoStock(data) {
-        const stock = {
-            symbol: data.symbol,
-            companyName: data.name,
-            sector: data.sector,
-            marketPrice: data.price,
-            priceHistory: [],
-            volatility: data.volatility || 0.015,
-            currentSentiment: 0,
-            previousClosePrice: data.price * (0.99 + Math.random() * 0.02),
-            openPrice: data.price * (0.99 + Math.random() * 0.02),
-            volume: Math.floor(100000 + Math.random() * 9900000)
-        };
-
-        // Generate price history
-        this.generatePriceHistory(stock, 50);
-
-        return stock;
-    }
-
-    /**
-     * Generate realistic price history for a stock
-     * @param {Object} stock - Stock object
-     * @param {number} days - Number of days to generate
-     */
-    generatePriceHistory(stock, days) {
-        let currentPrice = stock.marketPrice;
-
-        // Add current price
-        stock.priceHistory.push(currentPrice);
-
-        // Generate historical prices (going backward)
-        for (let i = 1; i < days; i++) {
-            // Random daily percentage change based on volatility
-            const change = (Math.random() - 0.5) * 2 * stock.volatility;
-
-            // Calculate previous day's price
-            currentPrice = currentPrice / (1 + change);
-
-            // Add to the beginning of the array (oldest first)
-            stock.priceHistory.unshift(currentPrice);
-        }
-    }
-
-    /**
-     * Attach buy/sell methods to the portfolio
-     */
-    attachPortfolioMethods() {
-        // Attach buy method
-        this.portfolio.buyStock = async (stock, quantity) => {
-            try {
-                if (this.username === 'demo_user') {
-                    // For demo user, use local implementation
-                    return this.buyStockLocal(stock, quantity);
-                }
-
-                // For registered users, use API
-                const result = await this.dbService.executeTransaction({
-                    portfolioId: this.portfolio.portfolioId,
-                    symbol: stock.symbol,
-                    transactionType: 'BUY',
-                    quantity: quantity,
-                    price: stock.marketPrice
-                });
-
-                // Update portfolio with new balance
-                this.portfolio.balance = result.newBalance;
-
-                // Reload portfolio to get updated holdings
-                await this.loadUserProfile();
-
-                return {
-                    success: true,
-                    message: `Successfully bought ${quantity} shares of ${stock.symbol} for $${(stock.marketPrice * quantity).toFixed(2)}`
-                };
-            } catch (error) {
-                console.error('Failed to buy stock:', error);
-                return {
-                    success: false,
-                    message: `Failed to buy ${quantity} shares of ${stock.symbol}: ${error.message}`
-                };
+    async getAvailableStocks() {
+        try {
+            const userId = getCurrentUserId();
+            if (!userId) {
+                throw new Error('Not authenticated');
             }
-        };
 
-        // Attach sell method
-        this.portfolio.sellStock = async (stock, quantity) => {
-            try {
-                if (this.username === 'demo_user') {
-                    // For demo user, use local implementation
-                    return this.sellStockLocal(stock, quantity);
-                }
+            return await this.dbService.getStocks(userId);
+        } catch (error) {
+            console.error('Failed to get available stocks:', error);
+            throw error;
+        }
+    }
 
-                // Check if user has enough shares
-                const holding = this.portfolio.holdingsMap[stock.symbol];
-                if (!holding || holding.quantity < quantity) {
-                    return {
-                        success: false,
-                        message: `Failed to sell ${quantity} shares of ${stock.symbol}: Insufficient shares`
-                    };
-                }
-
-                // For registered users, use API
-                const result = await this.dbService.executeTransaction({
-                    portfolioId: this.portfolio.portfolioId,
-                    symbol: stock.symbol,
-                    transactionType: 'SELL',
-                    quantity: quantity,
-                    price: stock.marketPrice
-                });
-
-                // Update portfolio with new balance
-                this.portfolio.balance = result.newBalance;
-
-                // Reload portfolio to get updated holdings
-                await this.loadUserProfile();
-
-                return {
-                    success: true,
-                    message: `Successfully sold ${quantity} shares of ${stock.symbol} for $${(stock.marketPrice * quantity).toFixed(2)}`
-                };
-            } catch (error) {
-                console.error('Failed to sell stock:', error);
-                return {
-                    success: false,
-                    message: `Failed to sell ${quantity} shares of ${stock.symbol}: ${error.message}`
-                };
+    /**
+     * Get specific stock data
+     * @param {string} symbol - Stock symbol
+     * @returns {Promise<Object>} Stock data
+     */
+    async getStock(symbol) {
+        try {
+            const userId = getCurrentUserId();
+            if (!userId) {
+                throw new Error('Not authenticated');
             }
-        };
+
+            return await this.dbService.getStock(symbol, userId);
+        } catch (error) {
+            console.error('Failed to get stock data:', error);
+            throw error;
+        }
     }
 
     /**
-     * Local implementation of buy stock for demo users
-     * @param {Object} stock - Stock to buy
-     * @param {number} quantity - Number of shares to buy
-     * @returns {Object} Transaction result
+     * Add a custom stock (if not demo account)
+     * @param {Object} stockData - Stock data to add
+     * @returns {Promise<Object>} Result
      */
-    buyStockLocal(stock, quantity) {
-        // Check valid inputs
-        if (!stock || isNaN(quantity) || quantity <= 0 || quantity > 10) {
-            return {
-                success: false,
-                message: `Failed to buy ${quantity} shares of ${stock ? stock.symbol : 'unknown'}: Invalid inputs`
-            };
+    async addCustomStock(stockData) {
+        try {
+            if (isDemoAccount()) {
+                throw new Error('Demo accounts cannot add custom stocks');
+            }
+
+            const userId = getCurrentUserId();
+            if (!userId) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.dbService.addCustomStock(stockData, userId);
+        } catch (error) {
+            console.error('Failed to add custom stock:', error);
+            throw error;
         }
-
-        const totalCost = quantity * stock.marketPrice;
-
-        // Check if user has enough cash
-        if (totalCost > this.portfolio.balance) {
-            return {
-                success: false,
-                message: `Failed to buy ${quantity} shares of ${stock.symbol}: Insufficient funds`
-            };
-        }
-
-        // Deduct from balance
-        this.portfolio.balance -= totalCost;
-
-        // Add to holdings
-        const holding = this.portfolio.holdingsMap[stock.symbol];
-
-        if (holding) {
-            // Update existing holding
-            const oldCost = holding.avgPrice * holding.quantity;
-            const newCost = stock.marketPrice * quantity;
-            holding.quantity += quantity;
-            holding.avgPrice = (oldCost + newCost) / holding.quantity;
-            holding.price = stock.marketPrice;
-        } else {
-            // Add new holding
-            this.portfolio.holdingsMap[stock.symbol] = {
-                stock: stock,
-                quantity: quantity,
-                price: stock.marketPrice,
-                avgPrice: stock.marketPrice
-            };
-        }
-
-        // Update portfolio values
-        this.updatePortfolioValues();
-
-        return {
-            success: true,
-            message: `Successfully bought ${quantity} shares of ${stock.symbol} for $${(stock.marketPrice * quantity).toFixed(2)}`
-        };
     }
 
     /**
-     * Local implementation of sell stock for demo users
-     * @param {Object} stock - Stock to sell
-     * @param {number} quantity - Number of shares to sell
-     * @returns {Object} Transaction result
+     * Delete a custom stock (if not demo account)
+     * @param {string} symbol - Stock symbol to delete
+     * @returns {Promise<Object>} Result
      */
-    sellStockLocal(stock, quantity) {
-        // Check valid inputs
-        if (!stock || isNaN(quantity) || quantity <= 0) {
-            return {
-                success: false,
-                message: `Failed to sell ${quantity} shares of ${stock ? stock.symbol : 'unknown'}: Invalid inputs`
-            };
+    async deleteCustomStock(symbol) {
+        try {
+            if (isDemoAccount()) {
+                throw new Error('Demo accounts cannot delete custom stocks');
+            }
+
+            const userId = getCurrentUserId();
+            if (!userId) {
+                throw new Error('Not authenticated');
+            }
+
+            return await this.dbService.deleteCustomStock(symbol, userId);
+        } catch (error) {
+            console.error('Failed to delete custom stock:', error);
+            throw error;
         }
-
-        // Check if user has enough shares
-        const holding = this.portfolio.holdingsMap[stock.symbol];
-        if (!holding || holding.quantity < quantity) {
-            return {
-                success: false,
-                message: `Failed to sell ${quantity} shares of ${stock.symbol}: Insufficient shares`
-            };
-        }
-
-        const totalValue = quantity * stock.marketPrice;
-
-        // Add to balance
-        this.portfolio.balance += totalValue;
-
-        // Update holdings
-        holding.quantity -= quantity;
-
-        // Remove holding if quantity is zero
-        if (holding.quantity <= 0) {
-            delete this.portfolio.holdingsMap[stock.symbol];
-        }
-
-        // Update portfolio values
-        this.updatePortfolioValues();
-
-        return {
-            success: true,
-            message: `Successfully sold ${quantity} shares of ${stock.symbol} for $${(stock.marketPrice * quantity).toFixed(2)}`
-        };
     }
 
     /**
-     * Update portfolio value calculations
+     * Execute a stock transaction
+     * @param {string} symbol - Stock symbol
+     * @param {number} quantity - Number of shares
+     * @param {number} price - Price per share
+     * @param {string} type - Transaction type ('BUY' or 'SELL')
+     * @returns {Promise<Object>} Transaction result
      */
-    updatePortfolioValues() {
-        // Calculate portfolio value
-        let portfolioValue = 0;
-        const holdings = this.portfolio.holdingsMap;
-
-        for (const symbol in holdings) {
-            const holding = holdings[symbol];
-            portfolioValue += holding.quantity * holding.stock.marketPrice;
+    async executeTransaction(symbol, quantity, price, type) {
+        try {
+            if (type === 'BUY') {
+                return await portfolioService.buyStock(symbol, quantity, price);
+            } else if (type === 'SELL') {
+                return await portfolioService.sellStock(symbol, quantity, price);
+            } else {
+                throw new Error('Invalid transaction type');
+            }
+        } catch (error) {
+            console.error('Failed to execute transaction:', error);
+            throw error;
         }
+    }
 
-        this.portfolio.portfolioValue = portfolioValue;
-        this.portfolio.totalAssetsValue = portfolioValue + this.portfolio.balance;
+    /**
+     * Create a new portfolio
+     * @param {string} name - Portfolio name
+     * @param {string} description - Portfolio description
+     * @param {number} initialBalance - Initial balance
+     * @returns {Promise<Object>} Created portfolio
+     */
+    async createPortfolio(name, description = '', initialBalance = 500) {
+        try {
+            return await portfolioService.createPortfolio(name, description, initialBalance);
+        } catch (error) {
+            console.error('Failed to create portfolio:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Switch to a different portfolio
+     * @param {number} portfolioId - Portfolio ID to switch to
+     * @returns {Promise<Object>} Result
+     */
+    async switchPortfolio(portfolioId) {
+        try {
+            const result = await portfolioService.setActivePortfolio(portfolioId);
+
+            // Notify profile updated
+            this.notifyProfileLoaded();
+
+            return result;
+        } catch (error) {
+            console.error('Failed to switch portfolio:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Reset current portfolio
+     * @param {number} initialBalance - New initial balance (optional)
+     * @returns {Promise<Object>} Result
+     */
+    async resetPortfolio(initialBalance) {
+        try {
+            const currentPortfolio = portfolioService.getCurrentPortfolio();
+            if (!currentPortfolio) {
+                throw new Error('No active portfolio');
+            }
+
+            return await portfolioService.resetPortfolio(currentPortfolio.id, initialBalance);
+        } catch (error) {
+            console.error('Failed to reset portfolio:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete a portfolio
+     * @param {number} portfolioId - Portfolio ID to delete
+     * @returns {Promise<Object>} Result
+     */
+    async deletePortfolio(portfolioId) {
+        try {
+            return await portfolioService.deletePortfolio(portfolioId);
+        } catch (error) {
+            console.error('Failed to delete portfolio:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update user profile information
+     * @param {Object} updateData - Data to update
+     * @returns {Promise<Object>} Update result
+     */
+    async updateProfile(updateData) {
+        try {
+            const result = await authService.updateUserProfile(updateData);
+
+            if (result.success) {
+                // Refresh current user data
+                this.currentUser = await getCurrentUser();
+                this.notifyProfileLoaded();
+            }
+
+            return result;
+        } catch (error) {
+            console.error('Failed to update profile:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get current user
+     * @returns {Object|null} Current user
+     */
+    getCurrentUser() {
+        return this.currentUser;
+    }
+
+    /**
+     * Get current portfolio
+     * @returns {Object|null} Current portfolio
+     */
+    getCurrentPortfolio() {
+        return portfolioService.getCurrentPortfolio();
+    }
+
+    /**
+     * Get all user portfolios
+     * @returns {Array} User portfolios
+     */
+    getPortfolios() {
+        return portfolioService.getPortfolios();
+    }
+
+    /**
+     * Get user settings
+     * @returns {Object} User settings
+     */
+    getUserSettings() {
+        return this.userSettings;
+    }
+
+    /**
+     * Check if user is authenticated
+     * @returns {boolean} Authentication status
+     */
+    isAuthenticated() {
+        return authService.isAuthenticated();
+    }
+
+    /**
+     * Check if current user is demo account
+     * @returns {boolean} Demo account status
+     */
+    isDemoAccount() {
+        return isDemoAccount();
+    }
+
+    /**
+     * Check if service is initialized
+     * @returns {boolean} Initialization status
+     */
+    getInitializationStatus() {
+        return this.isInitialized;
     }
 
     /**
@@ -432,7 +451,11 @@ export default class UserProfileService {
 
         // Call immediately if already initialized
         if (this.isInitialized) {
-            callback(this);
+            try {
+                callback(this);
+            } catch (error) {
+                console.error('Error in profile loaded callback:', error);
+            }
         }
 
         // Return unsubscribe function
@@ -447,27 +470,50 @@ export default class UserProfileService {
     notifyProfileLoaded() {
         this.profileLoadedCallbacks.forEach(callback => {
             if (typeof callback === 'function') {
-                callback(this);
+                try {
+                    callback(this);
+                } catch (error) {
+                    console.error('Error in profile loaded callback:', error);
+                }
             }
         });
     }
 
     /**
-     * Reset the user profile
+     * Clear user state (called on logout)
+     */
+    clearUserState() {
+        this.isInitialized = false;
+        this.currentUser = null;
+        this.userSettings = null;
+
+        // Clear portfolio service cache
+        portfolioService.clearCache();
+
+        // Notify listeners
+        this.notifyProfileLoaded();
+    }
+
+    /**
+     * Cleanup service (removes auth listener)
+     */
+    cleanup() {
+        if (this.authUnsubscribe) {
+            this.authUnsubscribe();
+        }
+        this.clearUserState();
+    }
+
+    /**
+     * Reset the user profile service
      * @returns {Promise<void>}
      */
     async reset() {
         try {
-            this.isInitialized = false;
-            this.username = null;
-            this.email = null;
-            this.stocksAddedToSim = [];
-            this.portfolio = null;
-
-            // Clear auth
             await authService.logout();
+            this.clearUserState();
         } catch (error) {
-            console.error('Failed to reset user profile:', error);
+            console.error('Failed to reset user profile service:', error);
             throw error;
         }
     }

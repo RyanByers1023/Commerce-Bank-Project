@@ -1,5 +1,5 @@
 import { databaseService } from './databaseService.js';
-import { getCurrentUser } from './authService.js';
+import { getCurrentUser, getCurrentUserId, isDemoAccount } from './authService.js';
 
 /**
  * Service for managing stocks and market data
@@ -10,30 +10,33 @@ export default class StockService {
         this.stocks = [];
         this.stockCache = new Map(); // Cache for detailed stock data
         this.lastUpdateTime = 0;
+        this.cacheExpiryTime = 60000; // 1 minute cache
     }
 
     /**
      * Load all available stocks for the current user
+     * @param {boolean} forceRefresh - Force refresh from server
      * @returns {Promise<Array>} List of stocks
      */
-    async loadStocks() {
+    async loadStocks(forceRefresh = false) {
         try {
-            const user = await getCurrentUser();
-            if (!user) {
+            const userId = getCurrentUserId();
+            if (!userId) {
                 throw new Error('Not authenticated');
             }
 
-            // Check if we need to update (every 60 seconds)
+            // Check if we need to update
             const now = Date.now();
-            if (this.stocks.length > 0 && now - this.lastUpdateTime < 60000) {
+            if (!forceRefresh && this.stocks.length > 0 && now - this.lastUpdateTime < this.cacheExpiryTime) {
                 return this.stocks;
             }
 
-            const stocks = await this.dbService.getStocks(user.username);
-            this.stocks = stocks;
+            // FIXED: Use user ID instead of username
+            const stocks = await this.dbService.getStocks(userId);
+            this.stocks = stocks || [];
             this.lastUpdateTime = now;
 
-            return stocks;
+            return this.stocks;
         } catch (error) {
             console.error('Failed to load stocks:', error);
             throw error;
@@ -43,31 +46,38 @@ export default class StockService {
     /**
      * Get detailed information for a specific stock
      * @param {string} symbol - Stock symbol
+     * @param {boolean} useCache - Whether to use cached data
      * @returns {Promise<Object>} Stock data
      */
-    async getStock(symbol) {
+    async getStock(symbol, useCache = true) {
         try {
-            const user = await getCurrentUser();
-            if (!user) {
+            if (!symbol || typeof symbol !== 'string') {
+                throw new Error('Valid stock symbol is required');
+            }
+
+            const userId = getCurrentUserId();
+            if (!userId) {
                 throw new Error('Not authenticated');
             }
 
-            // Check cache first (expires after 60 seconds)
-            const now = Date.now();
-            if (this.stockCache.has(symbol)) {
-                const cacheEntry = this.stockCache.get(symbol);
-                if (now - cacheEntry.timestamp < 60000) {
+            const symbolUpper = symbol.trim().toUpperCase();
+
+            // Check cache first
+            if (useCache && this.stockCache.has(symbolUpper)) {
+                const cacheEntry = this.stockCache.get(symbolUpper);
+                const now = Date.now();
+                if (now - cacheEntry.timestamp < this.cacheExpiryTime) {
                     return cacheEntry.data;
                 }
             }
 
-            // Fetch from server
-            const stock = await this.dbService.getStock(user.username, symbol);
+            // FIXED: Use user ID instead of username, correct parameter order
+            const stock = await this.dbService.getStock(symbolUpper, userId);
 
             // Update cache
-            this.stockCache.set(symbol, {
+            this.stockCache.set(symbolUpper, {
                 data: stock,
-                timestamp: now
+                timestamp: Date.now()
             });
 
             return stock;
@@ -79,13 +89,18 @@ export default class StockService {
 
     /**
      * Add a custom stock
-     * @param {object} stockData - Stock data (symbol, companyName, sector, initialPrice, volatility)
+     * @param {object} stockData - Stock data (symbol, companyName, sector, initialPrice)
      * @returns {Promise<Object>} Created stock
      */
     async addCustomStock(stockData) {
         try {
-            const user = await getCurrentUser();
-            if (!user) {
+            // Check if demo account
+            if (isDemoAccount()) {
+                throw new Error('Demo accounts cannot add custom stocks');
+            }
+
+            const userId = getCurrentUserId();
+            if (!userId) {
                 throw new Error('Not authenticated');
             }
 
@@ -97,9 +112,10 @@ export default class StockService {
                 }
             }
 
-            // Validate symbol format (1-5 uppercase letters)
-            if (!/^[A-Z]{1,5}$/.test(stockData.symbol)) {
-                throw new Error('Symbol must be 1-5 uppercase letters');
+            // Validate and normalize symbol (1-6 uppercase letters to match schema)
+            const symbol = stockData.symbol.trim().toUpperCase();
+            if (!/^[A-Z]{1,6}$/.test(symbol)) {
+                throw new Error('Symbol must be 1-6 uppercase letters');
             }
 
             // Validate price
@@ -107,17 +123,33 @@ export default class StockService {
                 throw new Error('Initial price must be a positive number');
             }
 
-            // Create the stock
-            const newStock = await this.dbService.addCustomStock(user.username, stockData);
+            // Validate company name
+            if (typeof stockData.companyName !== 'string' || stockData.companyName.trim().length === 0) {
+                throw new Error('Company name is required');
+            }
+
+            // Prepare stock data
+            const normalizedStockData = {
+                symbol: symbol,
+                companyName: stockData.companyName.trim(),
+                sector: stockData.sector?.trim() || 'Custom',
+                initialPrice: stockData.initialPrice
+            };
+
+            // FIXED: Use user ID instead of username, correct parameter order
+            const newStock = await this.dbService.addCustomStock(normalizedStockData, userId);
 
             // Add to local stocks list
             this.stocks.push(newStock);
 
             // Update cache
-            this.stockCache.set(newStock.symbol, {
+            this.stockCache.set(symbol, {
                 data: newStock,
                 timestamp: Date.now()
             });
+
+            // Clear stocks cache to force refresh on next load
+            this.lastUpdateTime = 0;
 
             return newStock;
         } catch (error) {
@@ -133,18 +165,33 @@ export default class StockService {
      */
     async deleteCustomStock(symbol) {
         try {
-            const user = await getCurrentUser();
-            if (!user) {
+            // Check if demo account
+            if (isDemoAccount()) {
+                throw new Error('Demo accounts cannot delete custom stocks');
+            }
+
+            if (!symbol || typeof symbol !== 'string') {
+                throw new Error('Valid stock symbol is required');
+            }
+
+            const userId = getCurrentUserId();
+            if (!userId) {
                 throw new Error('Not authenticated');
             }
 
-            const result = await this.dbService.deleteCustomStock(user.username, symbol);
+            const symbolUpper = symbol.trim().toUpperCase();
+
+            // FIXED: Use user ID instead of username, correct parameter order
+            const result = await this.dbService.deleteCustomStock(symbolUpper, userId);
 
             // Remove from local stocks list
-            this.stocks = this.stocks.filter(s => s.symbol !== symbol);
+            this.stocks = this.stocks.filter(s => s.symbol !== symbolUpper);
 
             // Remove from cache
-            this.stockCache.delete(symbol);
+            this.stockCache.delete(symbolUpper);
+
+            // Clear stocks cache to force refresh on next load
+            this.lastUpdateTime = 0;
 
             return result;
         } catch (error) {
@@ -160,13 +207,20 @@ export default class StockService {
      */
     async getStocksBySector(sector) {
         try {
+            if (!sector || typeof sector !== 'string') {
+                throw new Error('Valid sector name is required');
+            }
+
             // Load all stocks if not already loaded
             if (this.stocks.length === 0) {
                 await this.loadStocks();
             }
 
-            // Filter by sector
-            return this.stocks.filter(stock => stock.sector === sector);
+            // Filter by sector (case-insensitive)
+            const normalizedSector = sector.trim().toLowerCase();
+            return this.stocks.filter(stock =>
+                stock.sector && stock.sector.toLowerCase() === normalizedSector
+            );
         } catch (error) {
             console.error(`Failed to get stocks for sector ${sector}:`, error);
             throw error;
@@ -180,21 +234,54 @@ export default class StockService {
      */
     async searchStocks(query) {
         try {
+            if (!query || typeof query !== 'string') {
+                return [];
+            }
+
             // Load all stocks if not already loaded
             if (this.stocks.length === 0) {
                 await this.loadStocks();
             }
 
             // Normalize query
-            const normalizedQuery = query.trim().toUpperCase();
+            const normalizedQuery = query.trim().toLowerCase();
 
-            // Filter by symbol or company name
-            return this.stocks.filter(stock =>
-                stock.symbol.includes(normalizedQuery) ||
-                stock.companyName.toUpperCase().includes(normalizedQuery)
-            );
+            if (normalizedQuery.length === 0) {
+                return [];
+            }
+
+            // Filter by symbol or company name (case-insensitive partial match)
+            return this.stocks.filter(stock => {
+                const symbolMatch = stock.symbol && stock.symbol.toLowerCase().includes(normalizedQuery);
+                const nameMatch = stock.companyName && stock.companyName.toLowerCase().includes(normalizedQuery);
+                return symbolMatch || nameMatch;
+            });
         } catch (error) {
             console.error(`Failed to search stocks for "${query}":`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get all unique sectors
+     * @returns {Promise<Array>} List of sectors
+     */
+    async getSectors() {
+        try {
+            // Load all stocks if not already loaded
+            if (this.stocks.length === 0) {
+                await this.loadStocks();
+            }
+
+            // Get unique sectors
+            const sectors = [...new Set(this.stocks
+                .map(stock => stock.sector)
+                .filter(sector => sector && sector.trim().length > 0)
+            )];
+
+            return sectors.sort();
+        } catch (error) {
+            console.error('Failed to get sectors:', error);
             throw error;
         }
     }
@@ -207,6 +294,14 @@ export default class StockService {
      */
     async getPriceHistory(symbol, days = 30) {
         try {
+            if (!symbol || typeof symbol !== 'string') {
+                throw new Error('Valid stock symbol is required');
+            }
+
+            if (!Number.isInteger(days) || days <= 0) {
+                throw new Error('Days must be a positive integer');
+            }
+
             // Get detailed stock data which includes price history
             const stock = await this.getStock(symbol);
 
@@ -215,7 +310,8 @@ export default class StockService {
                 return stock.priceHistory.slice(-days);
             }
 
-            return [];
+            // If no price history, return array with current price
+            return stock.value || stock.marketPrice ? [stock.value || stock.marketPrice] : [];
         } catch (error) {
             console.error(`Failed to get price history for ${symbol}:`, error);
             throw error;
@@ -229,64 +325,154 @@ export default class StockService {
      */
     async calculatePerformanceMetrics(symbol) {
         try {
+            if (!symbol || typeof symbol !== 'string') {
+                throw new Error('Valid stock symbol is required');
+            }
+
             const stock = await this.getStock(symbol);
 
-            if (!stock || !Array.isArray(stock.priceHistory) || stock.priceHistory.length < 2) {
-                throw new Error('Insufficient price data');
+            if (!stock) {
+                throw new Error('Stock not found');
             }
 
-            // Get current price and history
-            const currentPrice = stock.marketPrice;
-            const history = stock.priceHistory;
+            // Get current price
+            const currentPrice = stock.value || stock.marketPrice || 0;
 
-            // Calculate daily change
-            const previousClose = stock.previousClosePrice || history[history.length - 2];
-            const dailyChange = currentPrice - previousClose;
-            const dailyChangePercent = (dailyChange / previousClose) * 100;
-
-            // Calculate weekly change (5 trading days)
-            let weeklyChange = 0;
-            let weeklyChangePercent = 0;
-
-            if (history.length >= 5) {
-                const weekAgoPrice = history[history.length - 5];
-                weeklyChange = currentPrice - weekAgoPrice;
-                weeklyChangePercent = (weeklyChange / weekAgoPrice) * 100;
+            if (currentPrice <= 0) {
+                throw new Error('Invalid stock price data');
             }
 
-            // Calculate monthly change (20 trading days)
-            let monthlyChange = 0;
-            let monthlyChangePercent = 0;
-
-            if (history.length >= 20) {
-                const monthAgoPrice = history[history.length - 20];
-                monthlyChange = currentPrice - monthAgoPrice;
-                monthlyChangePercent = (monthlyChange / monthAgoPrice) * 100;
-            }
-
-            // Calculate highs and lows
-            const high52Week = stock.fiftyTwoWeekHigh || Math.max(...history);
-            const low52Week = stock.fiftyTwoWeekLow || Math.min(...history);
-
-            return {
+            // Initialize metrics
+            const metrics = {
                 symbol: stock.symbol,
-                companyName: stock.companyName,
+                companyName: stock.company_name || stock.companyName,
+                sector: stock.sector,
                 currentPrice,
-                previousClose,
-                dailyChange,
-                dailyChangePercent,
-                weeklyChange,
-                weeklyChangePercent,
-                monthlyChange,
-                monthlyChangePercent,
-                high52Week,
-                low52Week,
+                dailyChange: 0,
+                dailyChangePercent: 0,
+                weeklyChange: 0,
+                weeklyChangePercent: 0,
+                monthlyChange: 0,
+                monthlyChangePercent: 0,
+                high52Week: currentPrice,
+                low52Week: currentPrice,
                 volatility: stock.volatility || 0
             };
+
+            // If we have price history, calculate metrics
+            const history = stock.priceHistory;
+            if (Array.isArray(history) && history.length > 1) {
+                // Calculate daily change
+                const previousClose = stock.previousClosePrice || history[history.length - 2];
+                if (previousClose && previousClose > 0) {
+                    metrics.dailyChange = currentPrice - previousClose;
+                    metrics.dailyChangePercent = (metrics.dailyChange / previousClose) * 100;
+                }
+
+                // Calculate weekly change (5 trading days)
+                if (history.length >= 5) {
+                    const weekAgoPrice = history[history.length - 5];
+                    if (weekAgoPrice && weekAgoPrice > 0) {
+                        metrics.weeklyChange = currentPrice - weekAgoPrice;
+                        metrics.weeklyChangePercent = (metrics.weeklyChange / weekAgoPrice) * 100;
+                    }
+                }
+
+                // Calculate monthly change (20 trading days)
+                if (history.length >= 20) {
+                    const monthAgoPrice = history[history.length - 20];
+                    if (monthAgoPrice && monthAgoPrice > 0) {
+                        metrics.monthlyChange = currentPrice - monthAgoPrice;
+                        metrics.monthlyChangePercent = (metrics.monthlyChange / monthAgoPrice) * 100;
+                    }
+                }
+
+                // Calculate highs and lows
+                const validPrices = history.filter(price => price && price > 0);
+                if (validPrices.length > 0) {
+                    metrics.high52Week = Math.max(...validPrices, currentPrice);
+                    metrics.low52Week = Math.min(...validPrices, currentPrice);
+                }
+            }
+
+            return metrics;
         } catch (error) {
             console.error(`Failed to calculate performance metrics for ${symbol}:`, error);
             throw error;
         }
+    }
+
+    /**
+     * Get top performing stocks
+     * @param {number} limit - Number of stocks to return
+     * @returns {Promise<Array>} Top performing stocks
+     */
+    async getTopPerformers(limit = 10) {
+        try {
+            // Load all stocks if not already loaded
+            if (this.stocks.length === 0) {
+                await this.loadStocks();
+            }
+
+            const performances = [];
+
+            // Calculate performance for each stock
+            for (const stock of this.stocks) {
+                try {
+                    const metrics = await this.calculatePerformanceMetrics(stock.symbol);
+                    performances.push(metrics);
+                } catch (error) {
+                    // Skip stocks with calculation errors
+                    console.warn(`Skipping performance calculation for ${stock.symbol}:`, error.message);
+                }
+            }
+
+            // Sort by daily change percent (descending)
+            performances.sort((a, b) => b.dailyChangePercent - a.dailyChangePercent);
+
+            return performances.slice(0, limit);
+        } catch (error) {
+            console.error('Failed to get top performers:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Clear all caches
+     */
+    clearCache() {
+        this.stocks = [];
+        this.stockCache.clear();
+        this.lastUpdateTime = 0;
+    }
+
+    /**
+     * Get cached stocks (without API call)
+     * @returns {Array} Cached stocks
+     */
+    getCachedStocks() {
+        return this.stocks;
+    }
+
+    /**
+     * Check if stocks are loaded
+     * @returns {boolean} Whether stocks are loaded
+     */
+    isLoaded() {
+        return this.stocks.length > 0;
+    }
+
+    /**
+     * Get cache statistics
+     * @returns {Object} Cache statistics
+     */
+    getCacheStats() {
+        return {
+            stocksCount: this.stocks.length,
+            cacheSize: this.stockCache.size,
+            lastUpdate: this.lastUpdateTime ? new Date(this.lastUpdateTime).toISOString() : null,
+            cacheAge: this.lastUpdateTime ? Date.now() - this.lastUpdateTime : null
+        };
     }
 }
 

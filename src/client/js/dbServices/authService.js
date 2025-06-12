@@ -7,6 +7,8 @@ export default class AuthService {
     constructor() {
         this.dbService = databaseService;
         this.authStateChangedCallbacks = [];
+        this._currentUser = null;
+        this._isAuthenticated = false;
 
         // Initialize auth state
         this.checkAuthStatus();
@@ -18,41 +20,82 @@ export default class AuthService {
      */
     async checkAuthStatus() {
         try {
-            const isAuthenticated = await this.dbService.checkAuthStatus();
+            const authResult = await this.dbService.checkAuthStatus();
+
+            if (authResult && authResult.authenticated && authResult.user) {
+                this._currentUser = authResult.user;
+                this._isAuthenticated = true;
+            } else {
+                this._currentUser = null;
+                this._isAuthenticated = false;
+            }
+
             this.notifyAuthStateChanged();
-            return isAuthenticated;
+            return this._isAuthenticated;
         } catch (error) {
             console.error('Auth check failed:', error);
+            this._currentUser = null;
+            this._isAuthenticated = false;
+            this.notifyAuthStateChanged();
             return false;
         }
     }
 
     /**
      * Get current user
-     * @returns {Promise<Object|null>} User data or null if not authenticated
+     * @returns {Object|null} User data or null if not authenticated
      */
-    async getCurrentUser() {
-        try {
-            return await this.dbService.getCurrentUser();
-        } catch (error) {
-            console.error('Failed to get current user:', error);
-            return null;
-        }
+    getCurrentUser() {
+        return this._currentUser;
+    }
+
+    /**
+     * Get current user ID
+     * @returns {number|null} User ID or null if not authenticated
+     */
+    getCurrentUserId() {
+        return this._currentUser?.id || null;
+    }
+
+    /**
+     * Check if current user is a demo account
+     * @returns {boolean} Whether current user is demo account
+     */
+    isDemoAccount() {
+        return this._currentUser?.isDemo || false;
+    }
+
+    /**
+     * Check if current user is an admin
+     * @returns {boolean} Whether current user is admin
+     */
+    isAdmin() {
+        return this._currentUser?.isAdmin || false;
     }
 
     /**
      * Login user
      * @param {string} email - User email
      * @param {string} password - User password
+     * @param {boolean} rememberMe - Whether to remember login
      * @returns {Promise<Object>} Login result
      */
-    async login(email, password) {
+    async login(email, password, rememberMe = false) {
         try {
-            const result = await this.dbService.login(email, password);
+            const result = await this.dbService.login(email, password, rememberMe);
+
+            if (result.user) {
+                this._currentUser = result.user;
+                this._isAuthenticated = true;
+            }
+
             this.notifyAuthStateChanged();
             return result;
         } catch (error) {
             console.error('Login failed:', error);
+            this._currentUser = null;
+            this._isAuthenticated = false;
+            this.notifyAuthStateChanged();
             throw error;
         }
     }
@@ -67,10 +110,19 @@ export default class AuthService {
     async register(username, email, password) {
         try {
             const result = await this.dbService.register(username, email, password);
+
+            if (result.user) {
+                this._currentUser = result.user;
+                this._isAuthenticated = true;
+            }
+
             this.notifyAuthStateChanged();
             return result;
         } catch (error) {
             console.error('Registration failed:', error);
+            this._currentUser = null;
+            this._isAuthenticated = false;
+            this.notifyAuthStateChanged();
             throw error;
         }
     }
@@ -82,10 +134,16 @@ export default class AuthService {
     async logout() {
         try {
             await this.dbService.logout();
+            this._currentUser = null;
+            this._isAuthenticated = false;
             this.notifyAuthStateChanged();
             return true;
         } catch (error) {
             console.error('Logout failed:', error);
+            // Still clear local state even if server call fails
+            this._currentUser = null;
+            this._isAuthenticated = false;
+            this.notifyAuthStateChanged();
             throw error;
         }
     }
@@ -97,10 +155,19 @@ export default class AuthService {
     async demoLogin() {
         try {
             const result = await this.dbService.demoLogin();
+
+            if (result.user) {
+                this._currentUser = result.user;
+                this._isAuthenticated = true;
+            }
+
             this.notifyAuthStateChanged();
             return result;
         } catch (error) {
             console.error('Demo login failed:', error);
+            this._currentUser = null;
+            this._isAuthenticated = false;
+            this.notifyAuthStateChanged();
             throw error;
         }
     }
@@ -110,7 +177,7 @@ export default class AuthService {
      * @returns {boolean} Authentication status
      */
     isAuthenticated() {
-        return this.dbService.isAuthenticated;
+        return this._isAuthenticated;
     }
 
     /**
@@ -127,9 +194,7 @@ export default class AuthService {
         this.authStateChangedCallbacks.push(callback);
 
         // Call immediately with current state
-        const currentUser = this.dbService.currentUser;
-        const isAuthenticated = this.dbService.isAuthenticated;
-        callback(currentUser, isAuthenticated);
+        callback(this._currentUser, this._isAuthenticated);
 
         // Return unsubscribe function
         return () => {
@@ -141,12 +206,13 @@ export default class AuthService {
      * Notify all listeners of auth state change
      */
     notifyAuthStateChanged() {
-        const currentUser = this.dbService.currentUser;
-        const isAuthenticated = this.dbService.isAuthenticated;
-
         this.authStateChangedCallbacks.forEach(callback => {
             if (typeof callback === 'function') {
-                callback(currentUser, isAuthenticated);
+                try {
+                    callback(this._currentUser, this._isAuthenticated);
+                } catch (error) {
+                    console.error('Error in auth state change callback:', error);
+                }
             }
         });
     }
@@ -159,7 +225,12 @@ export default class AuthService {
     async updateUserProfile(updateData) {
         try {
             const result = await this.dbService.updateUserProfile(updateData);
-            this.notifyAuthStateChanged();
+
+            // If update was successful, refresh user data
+            if (result.success) {
+                await this.checkAuthStatus();
+            }
+
             return result;
         } catch (error) {
             console.error('Profile update failed:', error);
@@ -175,7 +246,14 @@ export default class AuthService {
     async deleteAccount(password) {
         try {
             const result = await this.dbService.deleteAccount(password);
-            this.notifyAuthStateChanged();
+
+            // Clear auth state after successful deletion
+            if (result.success) {
+                this._currentUser = null;
+                this._isAuthenticated = false;
+                this.notifyAuthStateChanged();
+            }
+
             return result;
         } catch (error) {
             console.error('Account deletion failed:', error);
@@ -185,13 +263,24 @@ export default class AuthService {
 
     /**
      * Set active portfolio
-     * @param {string} portfolio_id - Portfolio ID to set as active
+     * @param {number} portfolioId - Portfolio ID to set as active
      * @returns {Promise<Object>} Result
      */
-    async setActivePortfolio(portfolio_id) {
+    async setActivePortfolio(portfolioId) {
         try {
-            const result = await this.dbService.setActivePortfolio(portfolio_id);
-            this.notifyAuthStateChanged();
+            const userId = this.getCurrentUserId();
+            if (!userId) {
+                throw new Error('User not authenticated');
+            }
+
+            const result = await this.dbService.setActivePortfolio(userId, portfolioId);
+
+            // Update current user data if successful
+            if (result.success && this._currentUser) {
+                this._currentUser.activePortfolioId = portfolioId;
+                this.notifyAuthStateChanged();
+            }
+
             return result;
         } catch (error) {
             console.error('Failed to set active portfolio:', error);
@@ -205,9 +294,80 @@ export default class AuthService {
      */
     async getUserDashboard() {
         try {
-            return await this.dbService.getUserDashboard();
+            const userId = this.getCurrentUserId();
+            if (!userId) {
+                throw new Error('User not authenticated');
+            }
+
+            return await this.dbService.getUserDashboard(userId);
         } catch (error) {
             console.error('Failed to get dashboard data:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Request password reset
+     * @param {string} email - User email
+     * @returns {Promise<Object>} Reset request result
+     */
+    async requestPasswordReset(email) {
+        try {
+            return await this.dbService.requestPasswordReset(email);
+        } catch (error) {
+            console.error('Password reset request failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Reset password with token
+     * @param {string} token - Reset token
+     * @param {string} newPassword - New password
+     * @returns {Promise<Object>} Reset result
+     */
+    async resetPassword(token, newPassword) {
+        try {
+            return await this.dbService.resetPassword(token, newPassword);
+        } catch (error) {
+            console.error('Password reset failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get user preferences/settings
+     * @returns {Promise<Object>} User settings
+     */
+    async getUserSettings() {
+        try {
+            const userId = this.getCurrentUserId();
+            if (!userId) {
+                throw new Error('User not authenticated');
+            }
+
+            return await this.dbService.getUserSettings(userId);
+        } catch (error) {
+            console.error('Failed to get user settings:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update user settings
+     * @param {Object} settings - Settings to update
+     * @returns {Promise<Object>} Update result
+     */
+    async updateUserSettings(settings) {
+        try {
+            const userId = this.getCurrentUserId();
+            if (!userId) {
+                throw new Error('User not authenticated');
+            }
+
+            return await this.dbService.updateUserSettings(userId, settings);
+        } catch (error) {
+            console.error('Failed to update user settings:', error);
             throw error;
         }
     }
@@ -222,13 +382,34 @@ export function getCurrentUser() {
     return authService.getCurrentUser();
 }
 
+export function getCurrentUserId() {
+    return authService.getCurrentUserId();
+}
+
 export function isAuthenticated() {
     return authService.isAuthenticated();
 }
 
+export function isDemoAccount() {
+    return authService.isDemoAccount();
+}
+
+export function isAdmin() {
+    return authService.isAdmin();
+}
+
 export function requireAuth(redirectUrl = '/login.html') {
     if (!authService.isAuthenticated()) {
-        window.location.href = `${redirectUrl}?redirect=${encodeURIComponent(window.location.pathname)}`;
+        const currentPath = window.location.pathname + window.location.search;
+        window.location.href = `${redirectUrl}?redirect=${encodeURIComponent(currentPath)}`;
+        return false;
+    }
+    return true;
+}
+
+export function requireNonDemo(message = 'This action is not available for demo accounts') {
+    if (authService.isDemoAccount()) {
+        alert(message);
         return false;
     }
     return true;
@@ -236,7 +417,15 @@ export function requireAuth(redirectUrl = '/login.html') {
 
 export function redirectIfAuthenticated(redirectUrl = '/dashboard.html') {
     if (authService.isAuthenticated()) {
-        window.location.href = redirectUrl;
+        // Check for redirect parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirect = urlParams.get('redirect');
+
+        if (redirect && redirect.startsWith('/')) {
+            window.location.href = redirect;
+        } else {
+            window.location.href = redirectUrl;
+        }
         return true;
     }
     return false;
