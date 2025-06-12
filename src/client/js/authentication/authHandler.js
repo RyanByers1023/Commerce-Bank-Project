@@ -1,5 +1,5 @@
 // Import services (adjust paths as needed)
-import { authService, redirectIfAuthenticated } from './services/authService.js';
+import { authService, redirectIfAuthenticated } from '../dbServices/authService.js';
 
 /**
  * Authentication handler for login/register page

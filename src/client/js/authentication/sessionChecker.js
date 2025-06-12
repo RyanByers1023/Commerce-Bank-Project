@@ -1,5 +1,4 @@
-// Import auth service (adjust path as needed)
-import { authService, requireAuth, redirectIfAuthenticated } from './services/authService.js';
+import { authService, requireAuth, redirectIfAuthenticated } from '../dbServices/authService.js';
 
 /**
  * Session management and route protection service
