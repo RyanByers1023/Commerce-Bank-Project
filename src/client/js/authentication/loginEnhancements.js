@@ -1,6 +1,3 @@
-// Import services (adjust paths as needed)
-import { authService } from './services/authService.js';
-
 /**
  * Enhanced login/register form interactions and visual improvements
  */
