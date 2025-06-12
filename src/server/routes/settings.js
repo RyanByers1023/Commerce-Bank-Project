@@ -6,30 +6,29 @@ const db = require('../middleware/db');
 const auth = require('../middleware/auth');
 
 // Get simulation settings for a user
-router.get('/:username', auth.verifyToken, async (req, res) => {
+router.get('/:user_id', auth.verifyToken, async (req, res) => {
     try {
-        const { username } = req.params;
+        const { user_id } = req.params;
+        const userId = parseInt(user_id);
 
         // Verify user is accessing their own data
-        if (req.user.username !== username) {
+        if (req.user.userId !== userId) {
             return res.status(403).json({ error: 'Unauthorized access to settings data' });
         }
 
-        // Get user ID
+        // Verify user exists
         const [users] = await db.query(
-            'SELECT id FROM user WHERE username = ?',
-            [username]
+            'SELECT id FROM user WHERE id = ?',
+            [userId]
         );
 
         if (users.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const userId = users[0].id;
-
-        // Get settings
+        // Get settings (using correct table name 'settings')
         const [settings] = await db.query(
-            'SELECT * FROM simulation_settings WHERE user_id = ?',
+            'SELECT * FROM settings WHERE user_id = ?',
             [userId]
         );
 
@@ -52,13 +51,14 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
 });
 
 // Save simulation settings
-router.put('/:username', auth.verifyToken, async (req, res) => {
+router.put('/:user_id', auth.verifyToken, async (req, res) => {
     try {
-        const { username } = req.params;
+        const { user_id } = req.params;
+        const userId = parseInt(user_id);
         const { sim_speed, market_volatility, event_frequency, initial_balance } = req.body;
 
         // Verify user is updating their own settings
-        if (req.user.username !== username) {
+        if (req.user.userId !== userId) {
             return res.status(403).json({ error: 'Unauthorized access to update settings' });
         }
 
@@ -79,21 +79,19 @@ router.put('/:username', auth.verifyToken, async (req, res) => {
             return res.status(400).json({ error: 'Initial balance must be a number between 100 and 10000' });
         }
 
-        // Get user ID
+        // Verify user exists
         const [users] = await db.query(
-            'SELECT id FROM user WHERE username = ?',
-            [username]
+            'SELECT id FROM user WHERE id = ?',
+            [userId]
         );
 
         if (users.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const userId = users[0].id;
-
         // Check if settings exist
         const [settings] = await db.query(
-            'SELECT id FROM simulation_settings WHERE user_id = ?',
+            'SELECT id FROM settings WHERE user_id = ?',
             [userId]
         );
 
@@ -114,7 +112,7 @@ router.put('/:username', auth.verifyToken, async (req, res) => {
             const updateValues = [...Object.values(updates), userId];
 
             await db.query(
-                `UPDATE simulation_settings SET ${updateFields}, updated_at = NOW() WHERE user_id = ?`,
+                `UPDATE settings SET ${updateFields}, updated_at = NOW() WHERE user_id = ?`,
                 updateValues
             );
         } else {
@@ -132,14 +130,14 @@ router.put('/:username', auth.verifyToken, async (req, res) => {
             const values = Object.values(settingsObj);
 
             await db.query(
-                `INSERT INTO simulation_settings (${fields}) VALUES (${placeholders})`,
+                `INSERT INTO settings (${fields}) VALUES (${placeholders})`,
                 values
             );
         }
 
         // Get updated settings
         const [updatedSettings] = await db.query(
-            'SELECT * FROM simulation_settings WHERE user_id = ?',
+            'SELECT * FROM settings WHERE user_id = ?',
             [userId]
         );
 
@@ -151,26 +149,25 @@ router.put('/:username', auth.verifyToken, async (req, res) => {
 });
 
 // Reset all settings to defaults
-router.post('/:username/reset', auth.verifyToken, async (req, res) => {
+router.post('/:user_id/reset', auth.verifyToken, async (req, res) => {
     try {
-        const { username } = req.params;
+        const { user_id } = req.params;
+        const userId = parseInt(user_id);
 
         // Verify user is resetting their own settings
-        if (req.user.username !== username) {
+        if (req.user.userId !== userId) {
             return res.status(403).json({ error: 'Unauthorized access to reset settings' });
         }
 
-        // Get user ID
+        // Verify user exists
         const [users] = await db.query(
-            'SELECT id FROM user WHERE username = ?',
-            [username]
+            'SELECT id FROM user WHERE id = ?',
+            [userId]
         );
 
         if (users.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
-
-        const userId = users[0].id;
 
         // Default settings
         const defaultSettings = {
@@ -182,14 +179,14 @@ router.post('/:username/reset', auth.verifyToken, async (req, res) => {
 
         // Check if settings exist
         const [settings] = await db.query(
-            'SELECT id FROM simulation_settings WHERE user_id = ?',
+            'SELECT id FROM settings WHERE user_id = ?',
             [userId]
         );
 
         if (settings.length > 0) {
             // Update to defaults
             await db.query(
-                `UPDATE simulation_settings 
+                `UPDATE settings 
                  SET sim_speed = ?, market_volatility = ?, event_frequency = ?, 
                      initial_balance = ?, updated_at = NOW()
                  WHERE user_id = ?`,
@@ -204,7 +201,7 @@ router.post('/:username/reset', auth.verifyToken, async (req, res) => {
         } else {
             // Create with defaults
             await db.query(
-                `INSERT INTO simulation_settings 
+                `INSERT INTO settings 
                  (sim_speed, market_volatility, event_frequency, initial_balance, user_id)
                  VALUES (?, ?, ?, ?, ?)`,
                 [

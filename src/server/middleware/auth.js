@@ -12,17 +12,15 @@ exports.verifyToken = async (req, res, next) => {
         }
 
         // Check if session is still valid in database
-        if (req.session.id) {
-            const [sessions] = await db.query(
-                'SELECT * FROM session WHERE id = ? AND expires_at > NOW()',
-                [req.session.id]
-            );
+        const [sessions] = await db.query(
+            'SELECT id, expires_at FROM session WHERE user_id = ? AND expires_at > NOW()',
+            [req.session.userId]
+        );
 
-            if (sessions.length === 0) {
-                // Session expired or not found
-                req.session.destroy();
-                return res.status(401).json({ error: 'Session expired' });
-            }
+        if (sessions.length === 0) {
+            // Session expired or not found
+            req.session.destroy();
+            return res.status(401).json({ error: 'Session expired' });
         }
 
         // Get user information
@@ -37,13 +35,14 @@ exports.verifyToken = async (req, res, next) => {
             return res.status(401).json({ error: 'User not found' });
         }
 
-        // Add user info to request - FIX: Consistent naming
+        // FIXED: Add user info to request with consistent naming for route files
         req.user = {
-            id: users[0].id,
+            userId: users[0].id,        // FIXED: Use userId instead of id
+            id: users[0].id,           // Keep id for backward compatibility
             username: users[0].username,
             email: users[0].email,
-            isAdmin: users[0].is_admin,
-            isDemoAccount: users[0].is_demo_account
+            isAdmin: Boolean(users[0].is_admin),
+            isDemoAccount: Boolean(users[0].is_demo_account)
         };
 
         // Proceed to the next middleware or route handler
@@ -77,8 +76,15 @@ exports.isUserOrAdmin = (req, res, next) => {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    // FIX: Compare with user ID, allow admin access
-    if (req.user.id !== user_id && !req.user.isAdmin) {
+    // FIXED: Convert user_id to integer and compare properly
+    const requestedUserId = parseInt(user_id);
+
+    if (isNaN(requestedUserId)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    // Allow access if user is accessing their own data OR is an admin
+    if (req.user.userId !== requestedUserId && !req.user.isAdmin) {
         return res.status(403).json({ error: 'Unauthorized access' });
     }
 
@@ -91,14 +97,14 @@ exports.isUserOrAdmin = (req, res, next) => {
  */
 exports.extendSession = async (req, res, next) => {
     try {
-        if (req.session && req.session.sessionID) {
+        if (req.session && req.session.userId) {
             // Extend session expiration in database
             const expiresAt = new Date();
             expiresAt.setDate(expiresAt.getDate() + 1); // Extend by 24 hours
 
             await db.query(
-                'UPDATE session SET expires_at = ? WHERE id = ?',
-                [expiresAt, req.session.sessionID]
+                'UPDATE session SET expires_at = ? WHERE user_id = ? AND expires_at > NOW()',
+                [expiresAt, req.session.userId]
             );
         }
 
@@ -147,4 +153,59 @@ exports.checkDemoAccount = async (req, res, next) => {
         console.error('Demo account check error:', error);
         next();
     }
+};
+
+/**
+ * Additional middleware to check ownership of resources
+ * Useful for routes that need to verify user owns a specific resource
+ */
+exports.checkResourceOwnership = (resourceType) => {
+    return async (req, res, next) => {
+        try {
+            if (!req.user) {
+                return res.status(401).json({ error: 'Not authenticated' });
+            }
+
+            // Skip ownership check for admins
+            if (req.user.isAdmin) {
+                return next();
+            }
+
+            const userId = req.user.userId;
+            let query, params, resourceId;
+
+            switch (resourceType) {
+                case 'portfolio':
+                    resourceId = req.params.portfolio_id;
+                    query = 'SELECT user_id FROM portfolio WHERE id = ?';
+                    params = [resourceId];
+                    break;
+
+                case 'stock':
+                    const symbol = req.params.symbol;
+                    const user_id = req.params.user_id || userId;
+                    query = 'SELECT user_id FROM stock WHERE symbol = ? AND user_id = ?';
+                    params = [symbol, user_id];
+                    break;
+
+                default:
+                    return res.status(400).json({ error: 'Invalid resource type' });
+            }
+
+            const [results] = await db.query(query, params);
+
+            if (results.length === 0) {
+                return res.status(404).json({ error: `${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)} not found` });
+            }
+
+            if (results[0].user_id !== userId) {
+                return res.status(403).json({ error: 'Unauthorized access to resource' });
+            }
+
+            next();
+        } catch (error) {
+            console.error(`Resource ownership check error for ${resourceType}:`, error);
+            res.status(500).json({ error: 'Failed to verify resource ownership' });
+        }
+    };
 };

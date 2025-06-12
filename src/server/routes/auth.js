@@ -60,7 +60,7 @@ router.post('/login', async (req, res) => {
 
         // Get user by email
         const [users] = await db.query(
-            'SELECT id, username, email, password_hash FROM user WHERE email = ?',
+            'SELECT id, username, email, password_hash, is_demo_account FROM user WHERE email = ?',
             [email]
         );
 
@@ -96,10 +96,9 @@ router.post('/login', async (req, res) => {
             [user.id]
         );
 
-        // Set session data
+        // Set session data - FIXED: Use consistent naming
         req.session.userId = user.id;
-
-        console.log("userId set for req.session.userId");
+        req.session.username = user.username;
 
         if (rememberMe) {
             req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; //30 days
@@ -108,8 +107,10 @@ router.post('/login', async (req, res) => {
         res.json({
             message: 'Login successful',
             user: {
+                id: user.id,
                 username: user.username,
                 email: user.email,
+                isDemo: Boolean(user.is_demo_account)
             }
         });
     } catch (error) {
@@ -180,10 +181,10 @@ router.post('/register', async (req, res) => {
 
         const portfolioId = portfolioResult.insertId;
 
-        // Set active portfolio - FIX: Use UPDATE instead of INSERT
+        // FIXED: Set active portfolio using string conversion for varchar(50) field
         await db.query(
             'UPDATE user SET active_portfolio_id = ? WHERE id = ?',
-            [portfolioId, userId]
+            [portfolioId.toString(), userId]
         );
 
         // Create simulation settings with defaults
@@ -204,14 +205,17 @@ router.post('/register', async (req, res) => {
         // Commit transaction
         await db.query('COMMIT');
 
-        // Set session data - FIX: Use consistent naming
+        // Set session data - FIXED: Use consistent naming
         req.session.userId = userId;
+        req.session.username = username;
 
         res.status(201).json({
             message: 'Registration successful',
             user: {
+                id: userId,
                 username,
-                email
+                email,
+                isDemo: false
             }
         });
     } catch (error) {
@@ -248,10 +252,36 @@ router.post('/logout', async (req, res) => {
 });
 
 // Check if user is authenticated
-router.get('/check', (req, res) => {
-    if (req.session && req.session.userId) {
-        res.json({ authenticated: true });
-    } else {
+router.get('/check', async (req, res) => {
+    try {
+        if (req.session && req.session.userId) {
+            // Get current user info
+            const [users] = await db.query(
+                'SELECT id, username, email, is_demo_account FROM user WHERE id = ?',
+                [req.session.userId]
+            );
+
+            if (users.length > 0) {
+                const user = users[0];
+                res.json({
+                    authenticated: true,
+                    user: {
+                        id: user.id,
+                        username: user.username,
+                        email: user.email,
+                        isDemo: Boolean(user.is_demo_account)
+                    }
+                });
+            } else {
+                // User no longer exists, clear session
+                req.session.destroy();
+                res.json({ authenticated: false });
+            }
+        } else {
+            res.json({ authenticated: false });
+        }
+    } catch (error) {
+        console.error('Auth check error:', error);
         res.json({ authenticated: false });
     }
 });
@@ -285,19 +315,18 @@ router.post('/demo-login', async (req, res) => {
 
             userId = userResult.insertId;
 
-            // Explicitly specify columns
-            const [portfolioResult] = await db.query(`
-            INSERT INTO portfolio (user_id, name, cash_balance) 
-            VALUES (?, ?, ?)
-        `, [userId, 'Demo Portfolio', 10000.00]);
+            // Create demo portfolio
+            const [portfolioResult] = await db.query(
+                'INSERT INTO portfolio (user_id, name, cash_balance) VALUES (?, ?, ?)',
+                [userId, 'Demo Portfolio', 10000.00]
+            );
 
-            // Get the inserted ID
             const portfolioId = portfolioResult.insertId;
 
-            // Set active portfolio - FIX: Use UPDATE
+            // FIXED: Set active portfolio using string conversion for varchar(50) field
             await db.query(
                 'UPDATE user SET active_portfolio_id = ? WHERE id = ?',
-                [portfolioId, userId]
+                [portfolioId.toString(), userId]
             );
 
             // Create simulation settings
@@ -326,13 +355,14 @@ router.post('/demo-login', async (req, res) => {
 
         await db.query('COMMIT');
 
-        // Set session data - FIX: Use consistent naming
+        // Set session data - FIXED: Use consistent naming
         req.session.userId = userId;
-        req.session.isDemo = true;
+        req.session.username = demoUsername;
 
         res.json({
             message: 'Demo login successful',
             user: {
+                id: userId,
                 username: demoUsername,
                 email: demoEmail,
                 isDemo: true
@@ -373,9 +403,14 @@ router.post('/forgot-password', async (req, res) => {
         const tokenExpiration = new Date();
         tokenExpiration.setHours(tokenExpiration.getHours() + 1);
 
-        // Save reset token
+        // FIXED: Remove existing tokens first, then insert new one
         await db.query(
-            'INSERT INTO password_reset_token (user_id, token_hash, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE token_hash = VALUES(token_hash), expires_at = VALUES(expires_at)',
+            'DELETE FROM password_reset_token WHERE user_id = ?',
+            [user.id]
+        );
+
+        await db.query(
+            'INSERT INTO password_reset_token (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
             [user.id, resetToken, tokenExpiration]
         );
 

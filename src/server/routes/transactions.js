@@ -1,4 +1,3 @@
-// server/routes/transactions.js
 const express = require('express');
 const router = express.Router();
 
@@ -33,23 +32,21 @@ const getPortfolioWithUser = async (portfolioId) => {
     const [portfolios] = await db.query(
         `SELECT p.id, p.user_id, u.username
          FROM portfolio p
-         JOIN user u ON p.user_id = u.id
+                  JOIN user u ON p.user_id = u.id
          WHERE p.id = ?`,
         [portfolioId]
     );
     return portfolios[0] || null;
 };
 
-//FIXME: check this for correctness
-const getStockBySymbol = async (symbol) => {
+// FIXED: Use stock.value and include user_id for per-user symbol uniqueness
+const getStockBySymbol = async (symbol, userId) => {
     const [stocks] = await db.query(
-        `SELECT s.id, s.symbol, s.company_name,
-                (SELECT closePrice FROM stock_data 
-                 WHERE stock_id = s.id 
-                 ORDER BY dataDate DESC LIMIT 1) as value
-         FROM stock s 
-         WHERE s.symbol = ?`,
-        [symbol]
+        `SELECT s.id, s.symbol, s.company_name, s.value
+         FROM stock s
+         WHERE s.symbol = ? AND (s.user_id = ? OR s.user_id IS NULL)
+         ORDER BY s.user_id DESC LIMIT 1`,
+        [symbol, userId]
     );
     return stocks[0] || null;
 };
@@ -82,8 +79,8 @@ const deleteHolding = async (holdingId) => {
 
 const createTransaction = async (portfolioId, stockId, transactionType, quantity, price, totalValue, userId) => {
     const [result] = await db.query(
-        `INSERT INTO transaction 
-         (portfolio_id, stock_id, transaction_type, quantity, price_paid, total_value, user_id) 
+        `INSERT INTO transaction
+         (portfolio_id, stock_id, transaction_type, quantity, price_paid, total_value, user_id)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [portfolioId, stockId, transactionType, quantity, price, totalValue, userId]
     );
@@ -130,33 +127,29 @@ const processSellTransaction = async (portfolioId, stockId, quantity, price, tot
 // Routes
 
 // Get all transactions for a user
-router.get('/:username', auth.verifyToken, async (req, res) => {
+router.get('/:user_id', auth.verifyToken, async (req, res) => {
     try {
-        const { username } = req.params;
+        const { user_id } = req.params;
+        const userId = parseInt(user_id);
 
         // Check authorization - users can only access their own data
-        if (req.session.userId) {
-            const [users] = await db.query('SELECT username FROM user WHERE id = ?', [req.session.userId]);
-            if (!users[0] || users[0].username !== username) {
-                return res.status(403).json({ error: 'Unauthorized access to transaction data' });
-            }
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Unauthorized access to transaction data' });
         }
 
-        // Get user ID
-        const [users] = await db.query('SELECT id FROM user WHERE username = ?', [username]);
+        // Verify user exists
+        const [users] = await db.query('SELECT id FROM user WHERE id = ?', [userId]);
         if (users.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const userId = users[0].id;
-
         // Get transactions
         const [transactions] = await db.query(
-            `SELECT t.id, t.portfolio_id, t.stock_id, t.transaction_type, 
+            `SELECT t.id, t.portfolio_id, t.stock_id, t.transaction_type,
                     t.quantity, t.price_paid, t.total_value, t.timestamp,
                     s.symbol, s.company_name
              FROM transaction t
-             JOIN stock s ON t.stock_id = s.id
+                      JOIN stock s ON t.stock_id = s.id
              WHERE t.user_id = ?
              ORDER BY t.timestamp DESC`,
             [userId]
@@ -170,24 +163,21 @@ router.get('/:username', auth.verifyToken, async (req, res) => {
 });
 
 // Get transactions for a specific portfolio
-router.get('/:username/:portfolioId', auth.verifyToken, async (req, res) => {
+router.get('/:user_id/:portfolioId', auth.verifyToken, async (req, res) => {
     try {
-        const { username, portfolioId } = req.params;
+        const { user_id, portfolioId } = req.params;
+        const userId = parseInt(user_id);
 
         // Check authorization
-        if (req.session.userId) {
-            const [users] = await db.query('SELECT username FROM user WHERE id = ?', [req.session.userId]);
-            if (!users[0] || users[0].username !== username) {
-                return res.status(403).json({ error: 'Unauthorized access to transaction data' });
-            }
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Unauthorized access to transaction data' });
         }
 
         // Verify portfolio belongs to user
         const [portfolios] = await db.query(
             `SELECT p.id FROM portfolio p
-             JOIN user u ON p.user_id = u.id
-             WHERE u.username = ? AND p.id = ?`,
-            [username, portfolioId]
+             WHERE p.user_id = ? AND p.id = ?`,
+            [userId, portfolioId]
         );
 
         if (portfolios.length === 0) {
@@ -200,7 +190,7 @@ router.get('/:username/:portfolioId', auth.verifyToken, async (req, res) => {
                     t.quantity, t.price_paid, t.total_value, t.timestamp,
                     s.symbol, s.company_name
              FROM transaction t
-             JOIN stock s ON t.stock_id = s.id
+                      JOIN stock s ON t.stock_id = s.id
              WHERE t.portfolio_id = ?
              ORDER BY t.timestamp DESC`,
             [portfolioId]
@@ -231,22 +221,49 @@ router.post('/', auth.verifyToken, async (req, res) => {
         }
 
         // Verify user owns this portfolio
-        if (req.session.userId !== portfolio.user_id) {
+        if (req.user.userId !== portfolio.user_id) {
             return res.status(403).json({ error: 'Unauthorized access to portfolio' });
         }
 
-        // Get stock information
-        const stock = await getStockBySymbol(symbol);
+        // Get stock information (include user_id for per-user symbol uniqueness)
+        const stock = await getStockBySymbol(symbol, portfolio.user_id);
         if (!stock) {
             return res.status(404).json({ error: 'Stock not found' });
         }
 
         const totalValue = price * quantity;
 
+        // Check if user has sufficient funds for BUY transactions
+        if (transactionType === 'BUY') {
+            const [portfolioBalance] = await db.query(
+                'SELECT cash_balance FROM portfolio WHERE id = ?',
+                [portfolioId]
+            );
+
+            if (portfolioBalance[0].cash_balance < totalValue) {
+                return res.status(400).json({ error: 'Insufficient funds' });
+            }
+        }
+
         // Begin database transaction
         await db.query('START TRANSACTION');
 
         try {
+            // Update portfolio cash balance
+            if (transactionType === 'BUY') {
+                // Deduct cash for purchase
+                await db.query(
+                    'UPDATE portfolio SET cash_balance = cash_balance - ? WHERE id = ?',
+                    [totalValue, portfolioId]
+                );
+            } else {
+                // Add cash from sale
+                await db.query(
+                    'UPDATE portfolio SET cash_balance = cash_balance + ? WHERE id = ?',
+                    [totalValue, portfolioId]
+                );
+            }
+
             // Process the transaction based on type
             if (transactionType === 'BUY') {
                 await processBuyTransaction(portfolioId, stock.id, quantity, price, totalValue);
@@ -305,11 +322,11 @@ router.get('/details/:transactionId', auth.verifyToken, async (req, res) => {
 
         // Get transaction with user info
         const [transactions] = await db.query(
-            `SELECT t.id, t.portfolio_id, t.stock_id, t.transaction_type, 
+            `SELECT t.id, t.portfolio_id, t.stock_id, t.transaction_type,
                     t.quantity, t.price_paid, t.total_value, t.timestamp,
                     s.symbol, s.company_name, t.user_id
              FROM transaction t
-             JOIN stock s ON t.stock_id = s.id
+                      JOIN stock s ON t.stock_id = s.id
              WHERE t.id = ?`,
             [transactionId]
         );
@@ -321,7 +338,7 @@ router.get('/details/:transactionId', auth.verifyToken, async (req, res) => {
         const transaction = transactions[0];
 
         // Verify user owns this transaction
-        if (req.session.userId !== transaction.user_id) {
+        if (req.user.userId !== transaction.user_id) {
             return res.status(403).json({ error: 'Unauthorized access to transaction data' });
         }
 
@@ -336,25 +353,21 @@ router.get('/details/:transactionId', auth.verifyToken, async (req, res) => {
 });
 
 // Get transaction statistics
-router.get('/:username/stats', auth.verifyToken, async (req, res) => {
+router.get('/:user_id/stats', auth.verifyToken, async (req, res) => {
     try {
-        const { username } = req.params;
+        const { user_id } = req.params;
+        const userId = parseInt(user_id);
 
         // Check authorization
-        if (req.session.userId) {
-            const [users] = await db.query('SELECT username FROM user WHERE id = ?', [req.session.userId]);
-            if (!users[0] || users[0].username !== username) {
-                return res.status(403).json({ error: 'Unauthorized access to transaction statistics' });
-            }
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Unauthorized access to transaction statistics' });
         }
 
-        // Get user ID
-        const [users] = await db.query('SELECT id FROM user WHERE username = ?', [username]);
+        // Verify user exists
+        const [users] = await db.query('SELECT id FROM user WHERE id = ?', [userId]);
         if (users.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
-
-        const userId = users[0].id;
 
         // Get basic transaction stats
         const [stats] = await db.query(

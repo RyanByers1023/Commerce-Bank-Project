@@ -25,12 +25,9 @@ router.get('/:user_id', auth.verifyToken, auth.isUserOrAdmin, async (req, res) =
 
         // For each portfolio, get total value of holdings
         for (const portfolio of portfolios) {
-            // Get holdings with current stock prices from stock_data
+            // Get holdings with current stock prices from stock table
             const [holdingsResult] = await db.query(
-                `SELECT h.quantity, h.avg_price_paid, s.symbol,
-                        (SELECT closePrice FROM stock_data 
-                         WHERE stock_id = s.id 
-                         ORDER BY dataDate DESC LIMIT 1) as current_price
+                `SELECT h.quantity, h.avg_price_paid, s.symbol, s.value as current_price
                  FROM holding h
                  JOIN stock s ON h.stock_id = s.id
                  WHERE h.portfolio_id = ?`,
@@ -73,13 +70,10 @@ router.get('/:user_id/:portfolio_id', auth.verifyToken, auth.isUserOrAdmin, asyn
 
         const portfolio = portfolios[0];
 
-        // Get holdings with current prices
+        // Get holdings with current prices from stock table
         const [holdings] = await db.query(
             `SELECT h.quantity, h.avg_price_paid, h.price_paid, 
-                    s.id as stock_id, s.symbol, s.company_name, s.sector,
-                    (SELECT closePrice FROM stock_data 
-                     WHERE stock_id = s.id 
-                     ORDER BY dataDate DESC LIMIT 1) as current_price
+                    s.id as stock_id, s.symbol, s.company_name, s.sector, s.value as current_price
              FROM holding h
              JOIN stock s ON h.stock_id = s.id
              WHERE h.portfolio_id = ?`,
@@ -126,11 +120,21 @@ router.get('/:user_id/:portfolio_id', auth.verifyToken, auth.isUserOrAdmin, asyn
 router.post('/:user_id', auth.verifyToken, auth.isUserOrAdmin, async (req, res) => {
     try {
         const { user_id } = req.params;
-        const { name = 'Portfolio', description = '', initialBalance = 500.00 } = req.body;
+        const { name = 'Portfolio', initialBalance = 500.00 } = req.body;
 
         // Validate input
         if (typeof initialBalance !== 'number' || initialBalance < 100 || initialBalance > 10000) {
             return res.status(400).json({ error: 'Initial balance must be between 100 and 10000' });
+        }
+
+        // Verify user exists
+        const [users] = await db.query(
+            'SELECT id FROM user WHERE id = ?',
+            [user_id]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
         }
 
         // Create portfolio
@@ -171,7 +175,7 @@ router.post('/:user_id', auth.verifyToken, auth.isUserOrAdmin, async (req, res) 
 router.put('/:user_id/:portfolio_id', auth.verifyToken, auth.isUserOrAdmin, async (req, res) => {
     try {
         const { user_id, portfolio_id } = req.params;
-        const { name, description, cash_balance } = req.body;
+        const { name, cash_balance } = req.body;
 
         // Check if portfolio exists and belongs to user
         const [portfolios] = await db.query(
